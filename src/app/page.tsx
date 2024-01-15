@@ -8,13 +8,17 @@ export default function Home() {
 				<Image
 					src="/White.png"
 					alt="Whimco"
-					width={1200}
+					width={500}
 					height={100}
 					layout="intrinsic"
 				/>
 			</div>
 
-			<h1 className="text-resize mt-20">Turning Whims into Wonders</h1>
+			<h1 className="text-resize mt-2">Turning Whims into Wonders</h1>
 		</main>
 	);
+}
+
+{
+	/* <h1 className="text-resize mt-20">Turning Whims into Wonders</h1> */
 }
