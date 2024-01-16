@@ -27,5 +27,5 @@ body {
 }
 
 .text-resize {
-	font-size: clamp(1rem, 1.25vw, 3rem); /* Adjust these values as needed */
+	font-size: clamp(0.1rem, 2.5vw, 3rem); /* Adjust these values as needed */
 }
