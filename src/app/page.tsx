@@ -8,7 +8,7 @@ export default function Home() {
 				<Image
 					src="/White.png"
 					alt="Whimco"
-					width={1000}
+					width={500}
 					height={100}
 					layout="intrinsic"
 				/>
