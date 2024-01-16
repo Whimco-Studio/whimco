@@ -18,14 +18,21 @@
 
 body {
 	color: rgb(var(--foreground-rgb));
+	background: rgb(255, 134, 255);
 	background: linear-gradient(
+		45deg,
+		rgba(255, 134, 255, 1) 0%,
+		rgba(132, 134, 240, 1) 50%,
+		rgba(0, 255, 255, 1) 100%
+	);
+	/* background: linear-gradient(
 			to bottom,
 			transparent,
 			rgb(var(--background-end-rgb))
 		)
-		rgb(var(--background-start-rgb));
+		rgb(var(--background-start-rgb)); */
 }
 
 .text-resize {
-	font-size: clamp(0.1rem, 1.5vw, 3rem); /* Adjust these values as needed */
+	font-size: clamp(0.1rem, 1.25vw, 3rem); /* Adjust these values as needed */
 }
