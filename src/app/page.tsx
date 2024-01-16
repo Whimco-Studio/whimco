@@ -1,11 +1,23 @@
+"use client";
+
 import Image from "next/image";
+import { useEffect, useState } from "react";
 
 export default function Home() {
+	const [showText, setShowText] = useState(false);
+
+	useEffect(() => {
+		// Start the text animation after 2s (assuming this is the duration of the image fade-in)
+		const timer = setTimeout(() => {
+			setShowText(true);
+		}, 2000);
+
+		return () => clearTimeout(timer);
+	}, []);
+
 	return (
-		// <main className="flex min-h-screen flex-col items-center justify-center p-24 bg-custom-gradient">
 		<main className="flex min-h-screen flex-col items-center justify-center p-24 bg-custom-gradient">
-			{/* Centered image container */}
-			<div className="flex justify-center items-center w-full max-w-screen-xl mx-auto">
+			<div className="fade-in">
 				<Image
 					src="/White.png"
 					alt="Whimco"
@@ -15,7 +27,10 @@ export default function Home() {
 				/>
 			</div>
 
-			<h1 className="text-resize mt-2">Turning Whims Into Wonders</h1>
+			{/* Temporarily render the text without the conditional */}
+			<div className="typewriter">
+				<h1 className="text-resize mt-2">Turning Whims Into Wonders</h1>
+			</div>
 		</main>
 	);
 }

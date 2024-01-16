@@ -36,3 +36,36 @@ body {
 .text-resize {
 	font-size: clamp(0.1rem, 1.25vw, 3rem); /* Adjust these values as needed */
 }
+
+/* Animations */
+/* Fade In */
+@keyframes fadeIn {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+.fade-in {
+	animation: fadeIn 2s ease-in-out;
+}
+/* Typewriter */
+@keyframes slideCursor {
+	from {
+		clip-path: inset(0 100% 0 0);
+	}
+	to {
+		clip-path: inset(0 0 0 0);
+	}
+}
+
+.typewriter h1 {
+	position: relative;
+	overflow: hidden;
+	white-space: nowrap;
+	color: white; /* Set text color */
+	clip-path: inset(0 100% 0 0); /* Initially hide text */
+	animation: slideCursor 2s ease 2s forwards; /* 4s duration, 2s delay */
+}
