@@ -25,10 +25,12 @@ export default function Home() {
 		// Adjust viewBox based on screen width
 		const adjustViewBox = () => {
 			const svgElement = document.getElementById("logo-svg");
-			if (window.innerWidth < 1500) {
-				svgElement.setAttribute("viewBox", "0 0 1080 1080");
-			} else {
-				svgElement.setAttribute("viewBox", "250 325 500 500");
+			if (svgElement) {
+				if (window.innerWidth < 1500) {
+					svgElement.setAttribute("viewBox", "0 0 1080 1080");
+				} else {
+					svgElement.setAttribute("viewBox", "250 325 500 500");
+				}
 			}
 		};
 
