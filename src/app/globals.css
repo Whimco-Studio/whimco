@@ -10,14 +10,21 @@ body {
 	overflow-x: hidden; /* Prevent horizontal scrollbars */
 }
 
-.fullscreen-background {
-	position: absolute; /* Ensure the background is fixed */
-	top: 0;
-	left: 0;
-	width: 100vw;
-	height: 100vh; /* Cover the entire viewport */
-	z-index: -1; /* Ensure it's behind other content */
-	object-fit: cover; /* Cover the entire area without stretching */
+body {
+	color: rgb(var(--foreground-rgb));
+	background: rgb(255, 134, 255);
+	background: linear-gradient(
+		45deg,
+		rgba(255, 134, 255, 1) 0%,
+		rgba(132, 134, 240, 1) 50%,
+		rgba(0, 255, 255, 1) 100%
+	);
+	/* background: linear-gradient(
+			to bottom,
+			transparent,
+			rgb(var(--background-end-rgb))
+		)
+		rgb(var(--background-start-rgb)); */
 }
 
 .text-resize {
