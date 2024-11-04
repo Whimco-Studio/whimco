@@ -1,56 +1,17 @@
-"use client";
-import { useEffect, useLayoutEffect, useState } from "react";
-import gsap from "gsap";
+import Image from "next/image";
 
 export default function Home() {
-	const [showText, setShowText] = useState(false);
-
-	useLayoutEffect(() => {
-		// Reset the properties
-		gsap.set(".svg-container path", { fillOpacity: 0 });
-
-		// Animation code
-		gsap.fromTo(
-			".svg-container path",
-			{ fillOpacity: 0 },
-			{ fillOpacity: 1, duration: 5, stagger: 0.2 }
-		);
-	}, []);
-
-	useEffect(() => {
-		const timer = setTimeout(() => {
-			setShowText(true);
-		}, 2000);
-
-		// Adjust viewBox based on screen width
-		const adjustViewBox = () => {
-			const svgElement = document.getElementById("logo-svg");
-			if (svgElement) {
-				if (window.innerWidth < 1500) {
-					svgElement.setAttribute("viewBox", "0 0 1080 1080");
-				} else {
-					svgElement.setAttribute("viewBox", "250 325 500 500");
-				}
-			}
-		};
-
-		adjustViewBox(); // Initial call
-		window.addEventListener("resize", adjustViewBox);
-
-		return () => {
-			clearTimeout(timer);
-			window.removeEventListener("resize", adjustViewBox);
-		};
-	}, []);
-
 	return (
+		// <main className="flex min-h-screen flex-col items-center justify-center p-24 bg-custom-gradient">
 		<main className="flex min-h-screen flex-col items-center justify-center p-24 bg-custom-gradient">
-			<div className="svg-container svg-pathfill">
-				{/* SVG goes here */}
-				<img
-					src="/background.svg"
-					alt="Background SVG"
-					className="fullscreen-background"
+			{/* Centered image container */}
+			<div className="flex justify-center items-center w-full max-w-screen-xl mx-auto">
+				<Image
+					src="/White.png"
+					alt="Whimco"
+					width={500}
+					height={100}
+					layout="intrinsic"
 				/>
 				<svg
 					id="logo-svg" // Add this ID
@@ -69,13 +30,7 @@ export default function Home() {
 				</svg>
 			</div>
 
-			{/* {showText && (
-				<div className="typewriter subtext">
-					<h1 className="text-resize mt-2">
-						Turning Whims Into Wonders
-					</h1>
-				</div>
-			)} */}
+			<h1 className="text-resize mt-2">Turning Whims Into Wonders</h1>
 		</main>
 	);
 }
