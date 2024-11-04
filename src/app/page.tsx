@@ -40,9 +40,9 @@ export default function Home() {
 			</div>
 
 			{/* Temporarily render the text without the conditional */}
-			{/* <div className="typewriter">
+			<div className="typewriter">
 				<h1 className="text-resize mt-2">Turning Whims Into Wonders</h1>
-			</div> */}
+			</div>
 		</main>
 	);
 }
