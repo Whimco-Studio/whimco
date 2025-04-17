@@ -16,6 +16,10 @@
 	}
 }
 
+@theme {
+	--font-display: "Oswald", "sans-serif"; 
+}
+
 body {
 	color: rgb(var(--foreground-rgb));
 	background: rgb(255, 134, 255);
