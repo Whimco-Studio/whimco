@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import React from "react";
 import { useEffect, useState } from "react";
 
 export default function Home() {
@@ -16,8 +16,34 @@ export default function Home() {
 	}, []);
 
 	return (
-		<main className="flex min-h-screen flex-col items-center justify-center p-4 sm:p-8 md:p-16 lg:p-24 bg-custom-gradient">
-			<div className="svg-container svg-pathfill w-full max-w-[90vw] sm:max-w-[80vw] md:max-w-[70vw] lg:max-w-[60vw]">
+		<main className="relative flex min-h-screen flex-col items-center justify-center p-4 sm:p-8 md:p-16 lg:p-24 bg-custom-gradient overflow-hidden">
+			{/* Floating orbs background */}
+			<div className="absolute inset-0 overflow-hidden pointer-events-none">
+				{/* Large slow orbs */}
+				<div className="orb orb-1"></div>
+				<div className="orb orb-2"></div>
+				<div className="orb orb-3"></div>
+				<div className="orb orb-4"></div>
+				<div className="orb orb-5"></div>
+				{/* Small fast particles */}
+				<div className="particle particle-1"></div>
+				<div className="particle particle-2"></div>
+				<div className="particle particle-3"></div>
+				<div className="particle particle-4"></div>
+				<div className="particle particle-5"></div>
+				<div className="particle particle-6"></div>
+				<div className="particle particle-7"></div>
+				<div className="particle particle-8"></div>
+				{/* Sparkles */}
+				<div className="sparkle sparkle-1"></div>
+				<div className="sparkle sparkle-2"></div>
+				<div className="sparkle sparkle-3"></div>
+				<div className="sparkle sparkle-4"></div>
+				<div className="sparkle sparkle-5"></div>
+				<div className="sparkle sparkle-6"></div>
+			</div>
+
+			<div className="svg-container svg-pathfill w-full max-w-[90vw] sm:max-w-[80vw] md:max-w-[70vw] lg:max-w-[60vw] relative z-10">
 				{/* SVG goes here */}
 
 				<svg
@@ -39,7 +65,7 @@ export default function Home() {
 			</div>
 
 			{/* Temporarily render the text without the conditional */}
-			<div className="typewriter">
+			<div className="typewriter relative z-10">
 				<h1 className="text-resize mt-2">Turning Whims Into Wonders</h1>
 			</div>
 		</main>

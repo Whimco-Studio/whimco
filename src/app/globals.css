@@ -120,3 +120,170 @@ body {
 	clip-path: inset(0 100% 0 0); /* Initially hide text */
 	animation: slideCursor 2s ease 2s forwards; /* 4s duration, 2s delay */
 }
+
+/* ========== Background Animation ========== */
+
+/* Floating Orbs - Large glowing circles */
+.orb {
+	position: absolute;
+	border-radius: 50%;
+	filter: blur(60px);
+	opacity: 0.4;
+	animation: float 20s ease-in-out infinite;
+}
+
+.orb-1 {
+	width: 400px;
+	height: 400px;
+	background: radial-gradient(circle, rgba(255, 255, 255, 0.3) 0%, transparent 70%);
+	top: -10%;
+	left: -5%;
+	animation-duration: 25s;
+	animation-delay: 0s;
+}
+
+.orb-2 {
+	width: 300px;
+	height: 300px;
+	background: radial-gradient(circle, rgba(0, 255, 255, 0.25) 0%, transparent 70%);
+	top: 60%;
+	right: -5%;
+	animation-duration: 22s;
+	animation-delay: -5s;
+}
+
+.orb-3 {
+	width: 350px;
+	height: 350px;
+	background: radial-gradient(circle, rgba(255, 134, 255, 0.25) 0%, transparent 70%);
+	bottom: -10%;
+	left: 20%;
+	animation-duration: 28s;
+	animation-delay: -10s;
+}
+
+.orb-4 {
+	width: 250px;
+	height: 250px;
+	background: radial-gradient(circle, rgba(132, 134, 240, 0.3) 0%, transparent 70%);
+	top: 20%;
+	right: 20%;
+	animation-duration: 20s;
+	animation-delay: -3s;
+}
+
+.orb-5 {
+	width: 200px;
+	height: 200px;
+	background: radial-gradient(circle, rgba(255, 255, 255, 0.2) 0%, transparent 70%);
+	top: 40%;
+	left: 10%;
+	animation-duration: 18s;
+	animation-delay: -8s;
+}
+
+@keyframes float {
+	0%, 100% {
+		transform: translate(0, 0) scale(1);
+	}
+	25% {
+		transform: translate(30px, -40px) scale(1.05);
+	}
+	50% {
+		transform: translate(-20px, 20px) scale(0.95);
+	}
+	75% {
+		transform: translate(40px, 30px) scale(1.02);
+	}
+}
+
+/* Particles - Small floating dots */
+.particle {
+	position: absolute;
+	width: 6px;
+	height: 6px;
+	background: rgba(255, 255, 255, 0.6);
+	border-radius: 50%;
+	animation: drift 15s ease-in-out infinite;
+}
+
+.particle-1 { top: 10%; left: 20%; animation-duration: 12s; animation-delay: 0s; }
+.particle-2 { top: 30%; left: 80%; animation-duration: 14s; animation-delay: -2s; }
+.particle-3 { top: 70%; left: 15%; animation-duration: 16s; animation-delay: -4s; }
+.particle-4 { top: 85%; left: 60%; animation-duration: 13s; animation-delay: -6s; }
+.particle-5 { top: 50%; left: 40%; animation-duration: 15s; animation-delay: -8s; }
+.particle-6 { top: 20%; left: 70%; animation-duration: 11s; animation-delay: -1s; }
+.particle-7 { top: 60%; left: 90%; animation-duration: 17s; animation-delay: -3s; }
+.particle-8 { top: 40%; left: 5%; animation-duration: 14s; animation-delay: -5s; }
+
+@keyframes drift {
+	0%, 100% {
+		transform: translate(0, 0);
+		opacity: 0.6;
+	}
+	25% {
+		transform: translate(50px, -80px);
+		opacity: 0.8;
+	}
+	50% {
+		transform: translate(-30px, -150px);
+		opacity: 0.4;
+	}
+	75% {
+		transform: translate(20px, -100px);
+		opacity: 0.7;
+	}
+}
+
+/* Sparkles - Twinkling stars */
+.sparkle {
+	position: absolute;
+	width: 4px;
+	height: 4px;
+	background: white;
+	border-radius: 50%;
+	box-shadow: 0 0 10px 2px rgba(255, 255, 255, 0.8);
+	animation: twinkle 3s ease-in-out infinite;
+}
+
+.sparkle-1 { top: 15%; left: 25%; animation-delay: 0s; }
+.sparkle-2 { top: 25%; left: 75%; animation-delay: 0.5s; }
+.sparkle-3 { top: 65%; left: 85%; animation-delay: 1s; }
+.sparkle-4 { top: 75%; left: 35%; animation-delay: 1.5s; }
+.sparkle-5 { top: 45%; left: 55%; animation-delay: 2s; }
+.sparkle-6 { top: 35%; left: 10%; animation-delay: 2.5s; }
+
+@keyframes twinkle {
+	0%, 100% {
+		transform: scale(1);
+		opacity: 0.3;
+	}
+	50% {
+		transform: scale(1.5);
+		opacity: 1;
+	}
+}
+
+/* Custom gradient background class */
+.bg-custom-gradient {
+	background: linear-gradient(
+		135deg,
+		rgba(255, 134, 255, 1) 0%,
+		rgba(132, 134, 240, 1) 50%,
+		rgba(0, 255, 255, 1) 100%
+	);
+	background-size: 200% 200%;
+	animation: gradientShift 15s ease infinite;
+}
+
+@keyframes gradientShift {
+	0% {
+		background-position: 0% 50%;
+	}
+	50% {
+		background-position: 100% 50%;
+	}
+	100% {
+		background-position: 0% 50%;
+	}
+}

@@ -38,19 +38,32 @@ export default function SpotlightPage() {
   const animateScene1 = useCallback(() => {
     anime.timeline()
       .add({
+        targets: '#spotlightBeam',
+        opacity: [0, 0.8],
+        duration: 1000,
+        easing: 'easeOutCubic'
+      })
+      .add({
+        targets: '#logoWrapper',
+        opacity: [0, 1],
+        scale: [0.85, 1],
+        duration: 1200,
+        easing: 'easeOutExpo'
+      }, '-=600')
+      .add({
         targets: '#logo',
         opacity: [0, 1],
-        scale: [0.8, 1],
-        duration: 800,
+        scale: [0.9, 1],
+        duration: 1000,
         easing: 'easeOutExpo'
-      })
+      }, '-=1000')
       .add({
         targets: '#tagline',
         opacity: [0, 1],
-        translateY: [20, 0],
-        duration: 600,
+        translateY: [30, 0],
+        duration: 800,
         easing: 'easeOutCubic'
-      }, '-=300');
+      }, '-=400');
   }, []);
 
   const animateScene2 = useCallback(() => {
@@ -748,9 +761,7 @@ export default function SpotlightPage() {
         }
 
         .spotlight-page {
-          background: linear-gradient(135deg, #050508 0%, #0a0a0f 25%, #080810 50%, #0c0c14 75%, #050508 100%);
-          background-size: 200% 200%;
-          animation: gradientShift 30s ease-in-out infinite;
+          background: radial-gradient(ellipse at 50% 0%, #12121a 0%, #0a0a0f 50%, #050508 100%);
           font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
           color: var(--text-primary);
           overflow: hidden;
@@ -763,10 +774,15 @@ export default function SpotlightPage() {
           justify-content: center;
         }
 
-        @keyframes gradientShift {
-          0% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
+        .spotlight-page::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 60%;
+          background: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(88, 101, 242, 0.08) 0%, transparent 60%);
+          pointer-events: none;
         }
 
         .progress-bar {
@@ -774,10 +790,56 @@ export default function SpotlightPage() {
           top: 0;
           left: 0;
           height: 3px;
-          background: var(--blurple);
+          background: linear-gradient(90deg, var(--blurple), var(--cyan));
           width: 0%;
           z-index: 100;
           transition: width 0.3s ease;
+          box-shadow: 0 0 10px var(--blurple);
+        }
+
+        /* Ambient particles */
+        .ambient-particles {
+          position: fixed;
+          inset: 0;
+          pointer-events: none;
+          overflow: hidden;
+          z-index: 0;
+        }
+
+        .ambient-particles .particle {
+          position: absolute;
+          width: 3px;
+          height: 3px;
+          background: rgba(255, 255, 255, 0.4);
+          border-radius: 50%;
+          animation: floatParticle 20s linear infinite;
+        }
+
+        .p1 { left: 10%; animation-delay: 0s; animation-duration: 25s; }
+        .p2 { left: 20%; animation-delay: -5s; animation-duration: 22s; }
+        .p3 { left: 35%; animation-delay: -10s; animation-duration: 28s; }
+        .p4 { left: 50%; animation-delay: -2s; animation-duration: 24s; }
+        .p5 { left: 65%; animation-delay: -7s; animation-duration: 26s; }
+        .p6 { left: 75%; animation-delay: -12s; animation-duration: 23s; }
+        .p7 { left: 85%; animation-delay: -4s; animation-duration: 27s; }
+        .p8 { left: 95%; animation-delay: -9s; animation-duration: 21s; }
+
+        @keyframes floatParticle {
+          0% {
+            transform: translateY(100vh) scale(0);
+            opacity: 0;
+          }
+          10% {
+            opacity: 0.6;
+            transform: translateY(80vh) scale(1);
+          }
+          90% {
+            opacity: 0.4;
+          }
+          100% {
+            transform: translateY(-10vh) scale(0.5);
+            opacity: 0;
+          }
         }
 
         .scene {
@@ -788,7 +850,7 @@ export default function SpotlightPage() {
           justify-content: center;
           opacity: 0;
           pointer-events: none;
-          transition: opacity 0.3s ease;
+          transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .scene.active {
@@ -799,23 +861,145 @@ export default function SpotlightPage() {
         /* Opening scene */
         .opening {
           flex-direction: column;
-          gap: 1.5rem;
+          gap: 2.5rem;
           text-align: center;
+          position: relative;
+        }
+
+        .spotlight-container {
+          position: absolute;
+          inset: 0;
+          overflow: hidden;
+          pointer-events: none;
+        }
+
+        .spotlight-beam {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: radial-gradient(
+            ellipse 40% 60% at 50% 30%,
+            rgba(255, 255, 255, 0.08) 0%,
+            rgba(255, 255, 255, 0.04) 40%,
+            transparent 70%
+          );
+          opacity: 0;
+          animation: spotlightBreath 6s ease-in-out infinite;
+        }
+
+        .spotlight-glow {
+          position: absolute;
+          top: 20%;
+          left: 50%;
+          width: 600px;
+          height: 400px;
+          background: radial-gradient(
+            ellipse at center,
+            rgba(255, 255, 255, 0.06) 0%,
+            rgba(255, 255, 255, 0.02) 50%,
+            transparent 80%
+          );
+          transform: translateX(-50%);
+          opacity: 0;
+          filter: blur(40px);
+          animation: glowDrift 10s ease-in-out infinite;
+        }
+
+        @keyframes spotlightBreath {
+          0%, 100% {
+            opacity: 0.4;
+            transform: scale(1);
+          }
+          50% {
+            opacity: 0.7;
+            transform: scale(1.1);
+          }
+        }
+
+        @keyframes glowDrift {
+          0%, 100% { 
+            opacity: 0.5; 
+            transform: translateX(-50%) translateY(0); 
+          }
+          50% { 
+            opacity: 0.8; 
+            transform: translateX(-50%) translateY(-20px); 
+          }
+        }
+
+        .logo-wrapper {
+          position: relative;
+          z-index: 2;
         }
 
         .logo-img {
-          max-width: clamp(250px, 50vw, 600px);
+          max-width: clamp(280px, 55vw, 650px);
           height: auto;
           opacity: 0;
           transform: scale(0.8);
+          filter: drop-shadow(0 0 40px rgba(255, 255, 255, 0.15));
         }
 
-        .tagline {
-          font-size: clamp(1rem, 3vw, 2.5rem);
-          font-weight: 600;
-          color: var(--cyan);
+        .logo-shine {
+          position: absolute;
+          top: 0;
+          left: -100%;
+          width: 60%;
+          height: 100%;
+          background: linear-gradient(
+            90deg,
+            transparent,
+            rgba(255, 255, 255, 0.2),
+            transparent
+          );
+          transform: skewX(-20deg);
+          animation: logoShine 4s ease-in-out infinite;
+          animation-delay: 2s;
+        }
+
+        @keyframes logoShine {
+          0% { left: -100%; }
+          50%, 100% { left: 150%; }
+        }
+
+        .tagline-wrapper {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 0.75rem;
           opacity: 0;
           transform: translateY(20px);
+        }
+
+        .tagline-text {
+          font-size: clamp(1rem, 2.5vw, 1.75rem);
+          font-weight: 500;
+          letter-spacing: 0.15em;
+          text-transform: uppercase;
+          background: linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0.95) 0%,
+            rgba(255, 255, 255, 0.7) 50%,
+            rgba(200, 200, 255, 0.9) 100%
+          );
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+
+        .tagline-underline {
+          width: 80px;
+          height: 2px;
+          background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+          animation: underlineExpand 2s ease-out forwards;
+          animation-delay: 2.5s;
+          transform: scaleX(0);
+        }
+
+        @keyframes underlineExpand {
+          to { transform: scaleX(1); width: 200px; }
         }
 
         /* Discord UI */
@@ -825,13 +1009,17 @@ export default function SpotlightPage() {
           max-width: 1400px;
           max-height: 900px;
           background: var(--bg-main);
-          border-radius: 12px;
+          border-radius: 16px;
           display: grid;
           grid-template-columns: 72px 240px 1fr 240px;
           overflow: hidden;
-          box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+          box-shadow: 
+            0 25px 80px rgba(0,0,0,0.6),
+            0 0 0 1px rgba(255,255,255,0.05),
+            inset 0 1px 0 rgba(255,255,255,0.05);
           opacity: 0;
           transform: scale(0.95);
+          backdrop-filter: blur(10px);
         }
 
         @media (max-width: 1200px) {
@@ -1150,9 +1338,13 @@ export default function SpotlightPage() {
           top: 8%;
           left: 50%;
           transform: translateX(-50%);
-          font-size: clamp(1.5rem, 4vw, 3rem);
-          font-weight: 700;
-          color: var(--text-primary);
+          font-size: clamp(1.25rem, 3vw, 2rem);
+          font-weight: 600;
+          letter-spacing: 0.05em;
+          background: linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.7) 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
           text-align: center;
           opacity: 0;
         }
@@ -1171,6 +1363,7 @@ export default function SpotlightPage() {
           position: absolute;
           inset: 0;
           pointer-events: none;
+          filter: drop-shadow(0 0 8px currentColor);
         }
 
         .network-lines line {
@@ -1186,55 +1379,71 @@ export default function SpotlightPage() {
         }
 
         .moderation-title {
-          font-size: clamp(1.5rem, 4vw, 2.5rem);
-          font-weight: 700;
-          color: var(--cyan);
+          font-size: clamp(1.25rem, 3vw, 2rem);
+          font-weight: 600;
+          letter-spacing: 0.05em;
+          background: linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.7) 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
           opacity: 0;
         }
 
         .moderation-card {
-          background: var(--bg-dark);
-          border-radius: 16px;
-          padding: 2rem;
-          max-width: 500px;
+          background: linear-gradient(145deg, var(--bg-dark), var(--bg-darkest));
+          border-radius: 20px;
+          padding: 2.5rem;
+          max-width: 480px;
           width: 90%;
           opacity: 0;
           transform: translateY(20px);
+          box-shadow: 
+            0 20px 50px rgba(0,0,0,0.4),
+            0 0 0 1px rgba(255,255,255,0.05),
+            inset 0 1px 0 rgba(255,255,255,0.05);
         }
 
         .moderation-icon {
-          font-size: 4rem;
-          margin-bottom: 1rem;
+          font-size: 3.5rem;
+          margin-bottom: 1.5rem;
+          filter: drop-shadow(0 4px 20px rgba(0,217,255,0.3));
         }
 
         .scan-bar {
           width: 100%;
-          height: 8px;
-          background: var(--bg-darkest);
-          border-radius: 4px;
+          height: 6px;
+          background: rgba(0,0,0,0.4);
+          border-radius: 3px;
           overflow: hidden;
-          margin: 1rem 0;
+          margin: 1.5rem 0;
+          box-shadow: inset 0 1px 3px rgba(0,0,0,0.3);
         }
 
         .scan-progress {
           height: 100%;
           width: 0%;
           background: linear-gradient(90deg, var(--cyan), var(--green));
-          border-radius: 4px;
+          border-radius: 3px;
+          box-shadow: 0 0 20px var(--cyan);
         }
 
         .confidence {
-          font-size: 1.5rem;
-          font-weight: 700;
-          color: var(--green);
+          font-size: 1.25rem;
+          font-weight: 600;
+          letter-spacing: 0.02em;
+          background: linear-gradient(90deg, var(--cyan), var(--green));
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
           opacity: 0;
         }
 
         .checkmark {
-          font-size: 4rem;
+          font-size: 3.5rem;
           color: var(--green);
           opacity: 0;
           transform: scale(0);
+          filter: drop-shadow(0 0 20px var(--green));
         }
 
         /* Architecture view */
@@ -1246,13 +1455,17 @@ export default function SpotlightPage() {
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          gap: 2rem;
+          gap: 2.5rem;
         }
 
         .arch-title {
-          font-size: clamp(1.5rem, 4vw, 2.5rem);
-          font-weight: 700;
-          color: var(--text-primary);
+          font-size: clamp(1.25rem, 3vw, 2rem);
+          font-weight: 600;
+          letter-spacing: 0.05em;
+          background: linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.7) 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
           opacity: 0;
         }
 
@@ -1260,7 +1473,7 @@ export default function SpotlightPage() {
           display: flex;
           flex-wrap: wrap;
           justify-content: center;
-          gap: 1rem;
+          gap: 1.25rem;
           max-width: 1000px;
         }
 
@@ -1280,75 +1493,128 @@ export default function SpotlightPage() {
           margin-bottom: 2rem;
         }
 
+        .closing-tagline {
+          font-size: clamp(0.875rem, 1.8vw, 1.25rem);
+          font-weight: 500;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+          background: linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0.9) 0%,
+            rgba(255, 255, 255, 0.6) 50%,
+            rgba(200, 200, 255, 0.85) 100%
+          );
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+          opacity: 0;
+        }
+
         .cta-button {
           padding: 1rem 2.5rem;
-          background: var(--blurple);
+          background: linear-gradient(135deg, var(--blurple) 0%, #7289DA 100%);
           border: none;
-          border-radius: 30px;
+          border-radius: 50px;
           color: white;
-          font-size: clamp(1rem, 2vw, 1.25rem);
+          font-size: clamp(0.9rem, 1.8vw, 1.1rem);
           font-weight: 600;
           font-family: inherit;
+          letter-spacing: 0.05em;
           cursor: pointer;
           opacity: 0;
           transform: translateY(20px);
-          transition: background 0.2s ease, transform 0.2s ease;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow: 
+            0 4px 20px rgba(88, 101, 242, 0.4),
+            0 0 0 1px rgba(255,255,255,0.1) inset;
         }
 
         .cta-button:hover {
-          background: var(--blurple-dark);
-          transform: translateY(0) scale(1.05);
+          background: linear-gradient(135deg, #7289DA 0%, var(--blurple) 100%);
+          transform: translateY(-2px) scale(1.02);
+          box-shadow: 
+            0 8px 30px rgba(88, 101, 242, 0.5),
+            0 0 0 1px rgba(255,255,255,0.15) inset;
         }
 
         /* Controls */
         .controls {
           position: fixed;
-          bottom: 20px;
+          bottom: 24px;
           left: 50%;
           transform: translateX(-50%);
           display: flex;
-          gap: 8px;
+          gap: 6px;
           z-index: 100;
+          padding: 8px 12px;
+          background: rgba(0,0,0,0.4);
+          border-radius: 50px;
+          backdrop-filter: blur(20px);
+          border: 1px solid rgba(255,255,255,0.08);
         }
 
         .controls button {
-          padding: 8px 16px;
-          background: var(--bg-dark);
-          border: 1px solid var(--bg-light);
-          border-radius: 8px;
-          color: var(--text-primary);
-          font-size: 0.875rem;
+          padding: 8px 14px;
+          background: transparent;
+          border: none;
+          border-radius: 20px;
+          color: rgba(255,255,255,0.6);
+          font-size: 0.8rem;
           font-family: inherit;
           cursor: pointer;
-          transition: all 0.15s ease;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .controls button:hover {
-          background: var(--bg-light);
+          background: rgba(255,255,255,0.1);
+          color: rgba(255,255,255,0.9);
         }
 
         .controls button.active {
-          background: var(--blurple);
-          border-color: var(--blurple);
+          background: rgba(255,255,255,0.15);
+          color: #fff;
         }
 
         .controls button.next-btn {
-          background: var(--blurple);
-          border-color: var(--blurple);
-          font-weight: 600;
+          background: rgba(88, 101, 242, 0.8);
+          color: #fff;
+          font-weight: 500;
         }
 
         .controls button.next-btn:hover {
-          background: var(--blurple-dark);
+          background: rgba(88, 101, 242, 1);
         }
       `}</style>
 
       <div className="progress-bar" id="progress"></div>
 
+      {/* Ambient particles */}
+      <div className="ambient-particles">
+        <div className="particle p1"></div>
+        <div className="particle p2"></div>
+        <div className="particle p3"></div>
+        <div className="particle p4"></div>
+        <div className="particle p5"></div>
+        <div className="particle p6"></div>
+        <div className="particle p7"></div>
+        <div className="particle p8"></div>
+      </div>
+
       {/* Scene 1: Opening */}
       <div className={`scene opening ${currentScene === 0 ? 'active' : ''}`} id="scene1">
-        <Image src="/spotlight-logo.png" alt="Spotlight" className="logo-img" id="logo" width={600} height={200} priority />
-        <div className="tagline" id="tagline">Post Once, Broadcast Everywhere</div>
+        {/* Spotlight beam effect */}
+        <div className="spotlight-container">
+          <div className="spotlight-beam" id="spotlightBeam"></div>
+          <div className="spotlight-glow"></div>
+        </div>
+        <div className="logo-wrapper" id="logoWrapper">
+          <Image src="/spotlight-logo.png" alt="Spotlight" className="logo-img" id="logo" width={600} height={200} priority />
+          <div className="logo-shine" id="logoShine"></div>
+        </div>
+        <div className="tagline-wrapper" id="tagline">
+          <span className="tagline-text">Post Once, Broadcast Everywhere</span>
+          <div className="tagline-underline"></div>
+        </div>
       </div>
 
       {/* Scene 2: Message Creation */}
@@ -1416,8 +1682,8 @@ export default function SpotlightPage() {
       {/* Scene 3: Broadcast Detection */}
       <div className={`scene ${currentScene === 2 ? 'active' : ''}`} id="scene3">
         <div className="scene-caption" id="scene3Caption" style={{ position: 'absolute', top: '3%', left: '50%', transform: 'translateX(-50%)', textAlign: 'center', zIndex: 10, opacity: 0 }}>
-          <div style={{ fontSize: 'clamp(1rem, 2.5vw, 1.5rem)', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>Step 1: Detection</div>
-          <div style={{ fontSize: 'clamp(0.75rem, 1.5vw, 1rem)', color: 'var(--text-secondary)' }}>Spotlight detects new posts in #creations channels</div>
+          <div style={{ fontSize: 'clamp(0.65rem, 1vw, 0.75rem)', fontWeight: 500, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Step 1</div>
+          <div style={{ fontSize: 'clamp(1rem, 2vw, 1.5rem)', fontWeight: 600, background: 'linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.7) 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Detection</div>
         </div>
         <div className="discord-app" id="discordApp3">
           <div className="server-sidebar">
@@ -1462,8 +1728,8 @@ export default function SpotlightPage() {
       {/* Scene 5: Distribution */}
       <div className={`scene ${currentScene === 4 ? 'active' : ''}`} id="scene5">
         <div className="scene-caption" id="scene5Caption" style={{ position: 'absolute', top: '3%', left: '50%', transform: 'translateX(-50%)', textAlign: 'center', zIndex: 10, opacity: 0 }}>
-          <div style={{ fontSize: 'clamp(1rem, 2.5vw, 1.5rem)', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>Step 2: Distribution</div>
-          <div style={{ fontSize: 'clamp(0.75rem, 1.5vw, 1rem)', color: 'var(--text-secondary)' }}>Your message is copied to all connected servers instantly</div>
+          <div style={{ fontSize: 'clamp(0.65rem, 1vw, 0.75rem)', fontWeight: 500, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Step 2</div>
+          <div style={{ fontSize: 'clamp(1rem, 2vw, 1.5rem)', fontWeight: 600, background: 'linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.7) 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Distribution</div>
         </div>
         <div className="discord-app" id="discordApp5">
           <div className="server-sidebar">
@@ -1517,8 +1783,8 @@ export default function SpotlightPage() {
       {/* Scene 6: Reactions */}
       <div className={`scene ${currentScene === 5 ? 'active' : ''}`} id="scene6">
         <div className="scene-caption" id="scene6Caption" style={{ position: 'absolute', top: '3%', left: '50%', transform: 'translateX(-50%)', textAlign: 'center', zIndex: 10, opacity: 0 }}>
-          <div style={{ fontSize: 'clamp(1rem, 2.5vw, 1.5rem)', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>Step 3: Reaction Sync</div>
-          <div style={{ fontSize: 'clamp(0.75rem, 1.5vw, 1rem)', color: 'var(--text-secondary)' }}>Reactions from all servers are aggregated in real-time</div>
+          <div style={{ fontSize: 'clamp(0.65rem, 1vw, 0.75rem)', fontWeight: 500, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Step 3</div>
+          <div style={{ fontSize: 'clamp(1rem, 2vw, 1.5rem)', fontWeight: 600, background: 'linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.7) 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Reaction Sync</div>
         </div>
         <div className="discord-app" id="discordApp6">
           <div className="server-sidebar">
@@ -1651,8 +1917,8 @@ export default function SpotlightPage() {
       {/* Scene 10: Closing */}
       <div className={`scene closing ${currentScene === 9 ? 'active' : ''}`} id="scene10">
         <div className="features-grid" id="featuresGrid"></div>
-        <Image src="/spotlight-logo.png" alt="Spotlight" className="logo-img" id="closingLogo" width={500} height={167} style={{ maxWidth: 'clamp(200px, 40vw, 500px)', height: 'auto', opacity: 0 }} />
-        <div className="tagline" id="closingTagline" style={{ fontSize: 'clamp(0.875rem, 2vw, 1.5rem)', opacity: 0 }}>Post Once, Broadcast Everywhere</div>
+        <Image src="/spotlight-logo.png" alt="Spotlight" className="logo-img" id="closingLogo" width={500} height={167} style={{ maxWidth: 'clamp(200px, 40vw, 500px)', height: 'auto', opacity: 0, filter: 'drop-shadow(0 0 30px rgba(255, 255, 255, 0.15))' }} />
+        <div className="closing-tagline" id="closingTagline">Post Once, Broadcast Everywhere</div>
         <button className="cta-button" id="ctaButton">Get Started</button>
       </div>
 
