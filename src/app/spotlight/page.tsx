@@ -22,6 +22,7 @@ const TOTAL_SCENES = 10;
 
 export default function SpotlightPage() {
   const [currentScene, setCurrentScene] = useState(0);
+  const [isAutoPlay, setIsAutoPlay] = useState(true);
   const autoPlayTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const hasInitializedRef = useRef(false);
 
@@ -545,21 +546,23 @@ export default function SpotlightPage() {
       const card = document.createElement('div');
       card.className = 'arch-card';
       card.style.cssText = `
-        width: clamp(120px, 15vw, 180px);
+        width: clamp(110px, 14vw, 160px);
         aspect-ratio: 1;
-        border-radius: 16px;
+        border-radius: 20px;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 0.5rem;
+        gap: 0.75rem;
         opacity: 0;
         transform: scale(0.8);
-        background: ${c.color};
+        background: rgba(10, 10, 15, 0.8);
+        border: 2px solid ${c.color};
+        box-shadow: 0 0 25px ${c.color}33, inset 0 0 40px ${c.color}11;
       `;
       card.innerHTML = `
-        <span style="font-size: clamp(2rem, 4vw, 3rem);">${c.icon}</span>
-        <span style="font-size: clamp(0.75rem, 1.5vw, 1rem); font-weight: 600; text-align: center; color: white;">${c.label}</span>
+        <span style="font-size: clamp(2rem, 4vw, 3rem); filter: drop-shadow(0 0 12px ${c.color});">${c.icon}</span>
+        <span style="font-size: clamp(0.7rem, 1.2vw, 0.9rem); font-weight: 500; text-align: center; color: ${c.color}; letter-spacing: 0.03em;">${c.label}</span>
       `;
       grid.appendChild(card);
     });
@@ -600,19 +603,21 @@ export default function SpotlightPage() {
       card.style.cssText = `
         width: clamp(100px, 12vw, 150px);
         aspect-ratio: 1;
-        border-radius: 16px;
+        border-radius: 20px;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 0.5rem;
+        gap: 0.75rem;
         opacity: 0;
         transform: scale(0);
-        background: ${f.color};
+        background: rgba(10, 10, 15, 0.8);
+        border: 2px solid ${f.color};
+        box-shadow: 0 0 20px ${f.color}33, inset 0 0 30px ${f.color}11;
       `;
       card.innerHTML = `
-        <span style="font-size: clamp(2rem, 4vw, 3rem);">${f.icon}</span>
-        <span style="font-size: clamp(0.625rem, 1vw, 0.875rem); font-weight: 600; text-align: center; color: white; line-height: 1.2;">${f.label}</span>
+        <span style="font-size: clamp(2rem, 4vw, 3rem); filter: drop-shadow(0 0 10px ${f.color});">${f.icon}</span>
+        <span style="font-size: clamp(0.65rem, 1vw, 0.85rem); font-weight: 500; text-align: center; color: ${f.color}; letter-spacing: 0.05em;">${f.label}</span>
       `;
       grid.appendChild(card);
     });
@@ -675,12 +680,18 @@ export default function SpotlightPage() {
     playSceneAnimation(sceneIndex);
     stopAutoPlay();
 
-    autoPlayTimeoutRef.current = setTimeout(() => {
-      if (sceneIndex < TOTAL_SCENES - 1) {
-        setCurrentScene(sceneIndex + 1);
-      }
-    }, SCENE_DURATIONS[sceneIndex]);
-  }, [playSceneAnimation, stopAutoPlay]);
+    if (isAutoPlay) {
+      autoPlayTimeoutRef.current = setTimeout(() => {
+        if (sceneIndex < TOTAL_SCENES - 1) {
+          setCurrentScene(sceneIndex + 1);
+        }
+      }, SCENE_DURATIONS[sceneIndex]);
+    }
+  }, [playSceneAnimation, stopAutoPlay, isAutoPlay]);
+
+  const toggleAutoPlay = useCallback(() => {
+    setIsAutoPlay(prev => !prev);
+  }, []);
 
   const goToScene = useCallback((index: number) => {
     stopAutoPlay();
@@ -1584,6 +1595,15 @@ export default function SpotlightPage() {
         .controls button.next-btn:hover {
           background: rgba(88, 101, 242, 1);
         }
+
+        .controls button.auto-btn {
+          font-size: 0.7rem;
+          padding: 8px 12px;
+        }
+
+        .controls button.auto-btn.playing {
+          color: var(--cyan);
+        }
       `}</style>
 
       <div className="progress-bar" id="progress"></div>
@@ -1924,7 +1944,10 @@ export default function SpotlightPage() {
 
       {/* Controls */}
       <div className="controls">
-        <button onClick={prevScene} id="prevBtn">← Prev</button>
+        <button onClick={toggleAutoPlay} className={`auto-btn ${isAutoPlay ? 'playing' : ''}`} title={isAutoPlay ? 'Pause autoplay' : 'Start autoplay'}>
+          {isAutoPlay ? '⏸' : '▶'}
+        </button>
+        <button onClick={prevScene} id="prevBtn">←</button>
         {Array.from({ length: TOTAL_SCENES }, (_, i) => (
           <button
             key={i}
@@ -1934,7 +1957,7 @@ export default function SpotlightPage() {
             {i + 1}
           </button>
         ))}
-        <button onClick={nextScene} className="next-btn">Next →</button>
+        <button onClick={nextScene} className="next-btn">→</button>
       </div>
     </div>
   );
