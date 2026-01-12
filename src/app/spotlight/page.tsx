@@ -3,6 +3,8 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import anime from 'animejs';
 import Image from 'next/image';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 // Scene durations in ms
 const SCENE_DURATIONS = [
@@ -23,8 +25,17 @@ const TOTAL_SCENES = 10;
 export default function SpotlightPage() {
   const [currentScene, setCurrentScene] = useState(0);
   const [isAutoPlay, setIsAutoPlay] = useState(true);
+  const [showHero, setShowHero] = useState(true);
+  const [showControls, setShowControls] = useState(false);
   const autoPlayTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const hasInitializedRef = useRef(false);
+  const slideshowRef = useRef<HTMLDivElement>(null);
+  const pathname = usePathname();
+
+  const scrollToSlideshow = useCallback(() => {
+    slideshowRef.current?.scrollIntoView({ behavior: 'smooth' });
+    setShowHero(false);
+  }, []);
 
   // Update progress bar
   const updateProgress = useCallback((sceneIndex: number) => {
@@ -719,18 +730,51 @@ export default function SpotlightPage() {
     }
   }, [currentScene, updateProgress, autoPlay]);
 
-  // Initial load
+  // Initialize slideshow when scrolled into view
   useEffect(() => {
-    const timer = setTimeout(() => {
-      hasInitializedRef.current = true;
-      autoPlay(0);
-    }, 500);
+    if (!showHero && !hasInitializedRef.current) {
+      const timer = setTimeout(() => {
+        hasInitializedRef.current = true;
+        autoPlay(0);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [showHero, autoPlay]);
+
+  // Observer to detect when slideshow is in view
+  useEffect(() => {
+    let timer: NodeJS.Timeout | null = null;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setShowHero(false);
+            setShowControls(true);
+            if (!hasInitializedRef.current) {
+              timer = setTimeout(() => {
+                hasInitializedRef.current = true;
+                autoPlay(0);
+              }, 500);
+            }
+          } else {
+            setShowControls(false);
+          }
+        });
+      },
+      { threshold: 0.3 }
+    );
+
+    if (slideshowRef.current) {
+      observer.observe(slideshowRef.current);
+    }
 
     return () => {
-      clearTimeout(timer);
-      stopAutoPlay();
+      if (timer) clearTimeout(timer);
+      if (slideshowRef.current) {
+        observer.unobserve(slideshowRef.current);
+      }
     };
-  }, [autoPlay, stopAutoPlay]);
+  }, [autoPlay]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -748,6 +792,21 @@ export default function SpotlightPage() {
 
   return (
     <div className="spotlight-page">
+      {/* Glass Navigation */}
+      <nav className="glass-nav fixed top-0 left-0 right-0 z-50 flex items-center justify-center py-4">
+        <div className="glass-nav-container">
+          <Link href="/" className={`glass-nav-link ${pathname === '/' ? 'active' : ''}`}>
+            Home
+          </Link>
+          <Link href="/spotlight" className={`glass-nav-link ${pathname === '/spotlight' ? 'active' : ''}`}>
+            Spotlight
+          </Link>
+          <Link href="/admin" className={`glass-nav-link ${pathname === '/admin' ? 'active' : ''}`}>
+            Admin
+          </Link>
+        </div>
+      </nav>
+
       <style jsx global>{`
         .spotlight-page {
           --blurple: #5865F2;
@@ -775,16 +834,12 @@ export default function SpotlightPage() {
           background: radial-gradient(ellipse at 50% 0%, #12121a 0%, #0a0a0f 50%, #050508 100%);
           font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
           color: var(--text-primary);
-          overflow: hidden;
           min-height: 100vh;
           width: 100vw;
-          height: 100vh;
           position: relative;
-          display: flex;
-          align-items: center;
-          justify-content: center;
+          scroll-behavior: smooth;
         }
-
+        
         .spotlight-page::before {
           content: '';
           position: absolute;
@@ -1562,6 +1617,14 @@ export default function SpotlightPage() {
           border-radius: 50px;
           backdrop-filter: blur(20px);
           border: 1px solid rgba(255,255,255,0.08);
+          opacity: 0;
+          pointer-events: none;
+          transition: opacity 0.3s ease;
+        }
+
+        .controls.visible {
+          opacity: 1;
+          pointer-events: auto;
         }
 
         .controls button {
@@ -1604,23 +1667,301 @@ export default function SpotlightPage() {
         .controls button.auto-btn.playing {
           color: var(--cyan);
         }
+
+        /* Glass Navigation */
+        .glass-nav {
+          padding-top: 1rem;
+          padding-bottom: 1rem;
+        }
+
+        .glass-nav-container {
+          display: flex;
+          gap: 0.5rem;
+          padding: 0.5rem;
+          background: rgba(255, 255, 255, 0.08);
+          backdrop-filter: blur(20px) saturate(180%);
+          -webkit-backdrop-filter: blur(20px) saturate(180%);
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          border-radius: 50px;
+          box-shadow: 
+            0 8px 32px rgba(0, 0, 0, 0.2),
+            inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .glass-nav-link {
+          position: relative;
+          padding: 0.625rem 1.5rem;
+          color: rgba(255, 255, 255, 0.8);
+          text-decoration: none;
+          font-size: 0.9rem;
+          font-weight: 500;
+          border-radius: 50px;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          white-space: nowrap;
+          overflow: hidden;
+        }
+
+        .glass-nav-link::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(255, 255, 255, 0.1);
+          opacity: 0;
+          transition: opacity 0.3s ease;
+          border-radius: 50px;
+        }
+
+        .glass-nav-link:hover {
+          color: rgba(255, 255, 255, 1);
+          transform: translateY(-1px);
+        }
+
+        .glass-nav-link:hover::before {
+          opacity: 1;
+        }
+
+        .glass-nav-link.active {
+          color: rgba(255, 255, 255, 1);
+          background: rgba(255, 255, 255, 0.15);
+          box-shadow: 
+            0 4px 16px rgba(0, 0, 0, 0.15),
+            inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        }
+
+        .glass-nav-link.active::before {
+          opacity: 0;
+        }
+
+        @media (max-width: 640px) {
+          .glass-nav-container {
+            gap: 0.25rem;
+            padding: 0.375rem;
+          }
+          
+          .glass-nav-link {
+            padding: 0.5rem 1rem;
+            font-size: 0.8rem;
+          }
+        }
+
+        /* Hero Section */
+        .spotlight-hero-section {
+          min-height: 100vh;
+          width: 100%;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          position: relative;
+          padding: 7rem 2rem 4rem;
+        }
+
+        .hero-content {
+          max-width: 900px;
+          width: 100%;
+          text-align: center;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 2rem;
+          z-index: 10;
+        }
+
+        .hero-logo {
+          max-width: clamp(300px, 50vw, 600px);
+          height: auto;
+          filter: drop-shadow(0 0 40px rgba(255, 255, 255, 0.2));
+          animation: heroFadeIn 1s ease-out;
+        }
+
+        .hero-title {
+          font-size: clamp(1.5rem, 4vw, 3rem);
+          font-weight: 600;
+          letter-spacing: 0.05em;
+          background: linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.8) 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+          animation: heroFadeIn 1s ease-out 0.2s backwards;
+        }
+
+        .hero-description {
+          font-size: clamp(1rem, 1.5vw, 1.25rem);
+          line-height: 1.8;
+          color: rgba(255, 255, 255, 0.8);
+          max-width: 700px;
+          animation: heroFadeIn 1s ease-out 0.4s backwards;
+        }
+
+        .hero-features {
+          display: flex;
+          flex-wrap: wrap;
+          justify-content: center;
+          gap: 2rem;
+          margin: 1rem 0;
+          animation: heroFadeIn 1s ease-out 0.6s backwards;
+        }
+
+        .hero-feature {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 1rem;
+          background: rgba(255, 255, 255, 0.05);
+          backdrop-filter: blur(10px);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 16px;
+          min-width: 140px;
+          transition: all 0.3s ease;
+        }
+
+        .hero-feature:hover {
+          background: rgba(255, 255, 255, 0.1);
+          border-color: rgba(255, 255, 255, 0.2);
+          transform: translateY(-4px);
+        }
+
+        .feature-icon {
+          font-size: 2.5rem;
+          filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.3));
+        }
+
+        .hero-feature span:last-child {
+          font-size: 0.9rem;
+          font-weight: 500;
+          color: rgba(255, 255, 255, 0.9);
+        }
+
+        .hero-cta {
+          padding: 1rem 2.5rem;
+          background: linear-gradient(135deg, var(--blurple) 0%, #7289DA 100%);
+          border: none;
+          border-radius: 50px;
+          color: white;
+          font-size: 1.1rem;
+          font-weight: 600;
+          font-family: inherit;
+          letter-spacing: 0.05em;
+          cursor: pointer;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow: 
+            0 4px 20px rgba(88, 101, 242, 0.4),
+            0 0 0 1px rgba(255,255,255,0.1) inset;
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+          animation: heroFadeIn 1s ease-out 0.8s backwards, ctaBounce 2s ease-in-out 2s infinite;
+        }
+
+        .hero-cta:hover {
+          background: linear-gradient(135deg, #7289DA 0%, var(--blurple) 100%);
+          transform: translateY(-2px) scale(1.02);
+          box-shadow: 
+            0 8px 30px rgba(88, 101, 242, 0.5),
+            0 0 0 1px rgba(255,255,255,0.15) inset;
+        }
+
+        .cta-arrow {
+          font-size: 1.5rem;
+          display: inline-block;
+          animation: arrowBounce 1.5s ease-in-out infinite;
+        }
+
+        @keyframes heroFadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(30px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        @keyframes ctaBounce {
+          0%, 100% {
+            transform: translateY(0);
+          }
+          50% {
+            transform: translateY(-5px);
+          }
+        }
+
+        @keyframes arrowBounce {
+          0%, 100% {
+            transform: translateY(0);
+          }
+          50% {
+            transform: translateY(5px);
+          }
+        }
+
+        .spotlight-slideshow-section {
+          min-height: 100vh;
+          width: 100%;
+          position: relative;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
       `}</style>
 
-      <div className="progress-bar" id="progress"></div>
+      {/* Hero Section */}
+      <section className="spotlight-hero-section">
+        <div className="hero-content">
+          <Image src="/spotlight-logo.png" alt="Spotlight" className="hero-logo" width={500} height={167} priority />
+          <h1 className="hero-title">Post Once, Broadcast Everywhere</h1>
+          <p className="hero-description">
+            Spotlight connects your Discord server network, automatically broadcasting 
+            messages from #creations channels to global showcase channels across all 
+            connected servers. Share your content once and reach communities everywhere.
+          </p>
+          <div className="hero-features">
+            <div className="hero-feature">
+              <span className="feature-icon">📡</span>
+              <span>Automatic Detection</span>
+            </div>
+            <div className="hero-feature">
+              <span className="feature-icon">🌐</span>
+              <span>Network Sync</span>
+            </div>
+            <div className="hero-feature">
+              <span className="feature-icon">❤️</span>
+              <span>Reaction Aggregation</span>
+            </div>
+            <div className="hero-feature">
+              <span className="feature-icon">🛡️</span>
+              <span>AI Moderation</span>
+            </div>
+          </div>
+          <button type="button" className="hero-cta" onClick={scrollToSlideshow}>
+            See How It Works
+            <span className="cta-arrow">↓</span>
+          </button>
+        </div>
+      </section>
 
-      {/* Ambient particles */}
-      <div className="ambient-particles">
-        <div className="particle p1"></div>
-        <div className="particle p2"></div>
-        <div className="particle p3"></div>
-        <div className="particle p4"></div>
-        <div className="particle p5"></div>
-        <div className="particle p6"></div>
-        <div className="particle p7"></div>
-        <div className="particle p8"></div>
-      </div>
+      {/* Slideshow Section */}
+      <section className="spotlight-slideshow-section" ref={slideshowRef}>
+        <div className="progress-bar" id="progress"></div>
 
-      {/* Scene 1: Opening */}
+        {/* Ambient particles */}
+        <div className="ambient-particles">
+          <div className="particle p1"></div>
+          <div className="particle p2"></div>
+          <div className="particle p3"></div>
+          <div className="particle p4"></div>
+          <div className="particle p5"></div>
+          <div className="particle p6"></div>
+          <div className="particle p7"></div>
+          <div className="particle p8"></div>
+        </div>
+
+        {/* Scene 1: Opening */}
       <div className={`scene opening ${currentScene === 0 ? 'active' : ''}`} id="scene1">
         {/* Spotlight beam effect */}
         <div className="spotlight-container">
@@ -1943,22 +2284,24 @@ export default function SpotlightPage() {
       </div>
 
       {/* Controls */}
-      <div className="controls">
-        <button onClick={toggleAutoPlay} className={`auto-btn ${isAutoPlay ? 'playing' : ''}`} title={isAutoPlay ? 'Pause autoplay' : 'Start autoplay'}>
+      <div className={`controls ${showControls ? 'visible' : ''}`}>
+        <button type="button" onClick={toggleAutoPlay} className={`auto-btn ${isAutoPlay ? 'playing' : ''}`} title={isAutoPlay ? 'Pause autoplay' : 'Start autoplay'}>
           {isAutoPlay ? '⏸' : '▶'}
         </button>
-        <button onClick={prevScene} id="prevBtn">←</button>
+        <button type="button" onClick={prevScene} id="prevBtn">←</button>
         {Array.from({ length: TOTAL_SCENES }, (_, i) => (
           <button
-            key={i}
+            key={`scene-${i}`}
+            type="button"
             className={`scene-btn ${currentScene === i ? 'active' : ''}`}
             onClick={() => goToScene(i)}
           >
             {i + 1}
           </button>
         ))}
-        <button onClick={nextScene} className="next-btn">→</button>
+        <button type="button" onClick={nextScene} className="next-btn">→</button>
       </div>
+      </section>
     </div>
   );
 }
