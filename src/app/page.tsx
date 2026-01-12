@@ -1,13 +1,14 @@
 "use client";
 
 import React from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 
 export default function Home() {
 	const [showText, setShowText] = useState(false);
+	const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+	const mainRef = useRef<HTMLElement>(null);
 
 	useEffect(() => {
-		// Start the text animation after 2s (assuming this is the duration of the image fade-in)
 		const timer = setTimeout(() => {
 			setShowText(true);
 		}, 2000);
@@ -15,8 +16,29 @@ export default function Home() {
 		return () => clearTimeout(timer);
 	}, []);
 
+	useEffect(() => {
+		const handleMouseMove = (e: MouseEvent) => {
+			setMousePos({ x: e.clientX, y: e.clientY });
+		};
+
+		window.addEventListener('mousemove', handleMouseMove);
+		return () => window.removeEventListener('mousemove', handleMouseMove);
+	}, []);
+
 	return (
-		<main className="relative flex min-h-screen flex-col items-center justify-center p-4 sm:p-8 md:p-16 lg:p-24 bg-custom-gradient overflow-hidden">
+		<main 
+			ref={mainRef}
+			className="relative flex min-h-screen flex-col items-center justify-center p-4 sm:p-8 md:p-16 lg:p-24 bg-custom-gradient overflow-hidden"
+		>
+			{/* Magical cursor follower */}
+			<div 
+				className="magic-cursor"
+				style={{
+					left: `${mousePos.x}px`,
+					top: `${mousePos.y}px`,
+				}}
+			></div>
+
 			{/* Floating orbs background */}
 			<div className="absolute inset-0 overflow-hidden pointer-events-none">
 				{/* Large slow orbs */}
@@ -25,6 +47,7 @@ export default function Home() {
 				<div className="orb orb-3"></div>
 				<div className="orb orb-4"></div>
 				<div className="orb orb-5"></div>
+				<div className="orb orb-6"></div>
 				{/* Small fast particles */}
 				<div className="particle particle-1"></div>
 				<div className="particle particle-2"></div>
@@ -34,6 +57,8 @@ export default function Home() {
 				<div className="particle particle-6"></div>
 				<div className="particle particle-7"></div>
 				<div className="particle particle-8"></div>
+				<div className="particle particle-9"></div>
+				<div className="particle particle-10"></div>
 				{/* Sparkles */}
 				<div className="sparkle sparkle-1"></div>
 				<div className="sparkle sparkle-2"></div>
@@ -41,9 +66,21 @@ export default function Home() {
 				<div className="sparkle sparkle-4"></div>
 				<div className="sparkle sparkle-5"></div>
 				<div className="sparkle sparkle-6"></div>
+				<div className="sparkle sparkle-7"></div>
+				<div className="sparkle sparkle-8"></div>
+				<div className="sparkle sparkle-9"></div>
+				<div className="sparkle sparkle-10"></div>
+				{/* Magical trails */}
+				<div className="magic-trail trail-1"></div>
+				<div className="magic-trail trail-2"></div>
+				<div className="magic-trail trail-3"></div>
 			</div>
 
+			{/* Logo with magical aura */}
 			<div className="svg-container svg-pathfill w-full max-w-[90vw] sm:max-w-[80vw] md:max-w-[70vw] lg:max-w-[60vw] relative z-10">
+				{/* Magical glow aura */}
+				<div className="logo-aura"></div>
+				<div className="logo-aura-secondary"></div>
 				{/* SVG goes here */}
 
 				<svg
@@ -66,7 +103,7 @@ export default function Home() {
 
 			{/* Temporarily render the text without the conditional */}
 			<div className="typewriter relative z-10">
-				<h1 className="text-resize mt-2">Turning Whims Into Wonders</h1>
+				<h1 className="text-resize mt-2 magical-text">Turning Whims Into Wonders</h1>
 			</div>
 		</main>
 	);

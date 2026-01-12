@@ -79,21 +79,44 @@ body {
 }
 
 .svg-container path {
-	stroke: white; /* Choose the color for your drawing */
-	stroke-width: 5; /* Adjust the stroke width as needed */
-	stroke-dasharray: 1350; /* Large enough to cover the entire length of the path */
+	stroke: white;
+	stroke-width: 5;
+	stroke-dasharray: 1350;
 	stroke-dashoffset: 1350;
-	animation: draw 5s ease-in-out forwards; /* Adjust duration as needed */
+	animation: draw 5s ease-in-out forwards, pathGlow 3s ease-in-out 5s infinite;
+	filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.8))
+	        drop-shadow(0 0 16px rgba(255, 134, 255, 0.5));
+}
+
+@keyframes pathGlow {
+	0%, 100% {
+		filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.8))
+		        drop-shadow(0 0 16px rgba(255, 134, 255, 0.5));
+	}
+	50% {
+		filter: drop-shadow(0 0 12px rgba(255, 255, 255, 1))
+		        drop-shadow(0 0 24px rgba(255, 134, 255, 0.7))
+		        drop-shadow(0 0 32px rgba(0, 255, 255, 0.4));
+	}
 }
 
 .svg-pathfill {
 	fill: transparent;
-	animation: pathfill 2.5s ease-in-out 2.5s forwards;
+	animation: pathfill 2.5s ease-in-out 2.5s forwards, fillShimmer 4s ease-in-out 5s infinite;
 }
 
 @keyframes pathfill {
 	to {
 		fill: rgba(255, 255, 255, 1);
+	}
+}
+
+@keyframes fillShimmer {
+	0%, 100% {
+		filter: brightness(1);
+	}
+	50% {
+		filter: brightness(1.2) drop-shadow(0 0 20px rgba(255, 255, 255, 0.6));
 	}
 }
 
@@ -274,6 +297,20 @@ body {
 	);
 	background-size: 200% 200%;
 	animation: gradientShift 15s ease infinite;
+	position: relative;
+}
+
+.bg-custom-gradient::before {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background: radial-gradient(
+		circle at 30% 50%,
+		rgba(255, 255, 255, 0.1) 0%,
+		transparent 50%
+	);
+	animation: magicalPulse 8s ease-in-out infinite;
+	pointer-events: none;
 }
 
 @keyframes gradientShift {
@@ -285,5 +322,248 @@ body {
 	}
 	100% {
 		background-position: 0% 50%;
+	}
+}
+
+@keyframes magicalPulse {
+	0%, 100% {
+		opacity: 0.3;
+		transform: scale(1);
+	}
+	50% {
+		opacity: 0.6;
+		transform: scale(1.2);
+	}
+}
+
+/* ========== Magical Effects ========== */
+
+/* Magic cursor follower */
+.magic-cursor {
+	position: fixed;
+	width: 300px;
+	height: 300px;
+	border-radius: 50%;
+	background: radial-gradient(
+		circle,
+		rgba(255, 255, 255, 0.15) 0%,
+		rgba(255, 134, 255, 0.1) 30%,
+		rgba(0, 255, 255, 0.05) 60%,
+		transparent 100%
+	);
+	transform: translate(-50%, -50%);
+	pointer-events: none;
+	z-index: 1;
+	filter: blur(40px);
+	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+	opacity: 0;
+	animation: cursorFade 0.5s ease forwards;
+}
+
+@keyframes cursorFade {
+	to { opacity: 1; }
+}
+
+/* Logo magical aura */
+.logo-aura {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	width: 120%;
+	height: 120%;
+	background: radial-gradient(
+		ellipse at center,
+		rgba(255, 255, 255, 0.2) 0%,
+		rgba(255, 134, 255, 0.15) 30%,
+		rgba(0, 255, 255, 0.1) 60%,
+		transparent 100%
+	);
+	border-radius: 50%;
+	filter: blur(60px);
+	animation: auraPulse 4s ease-in-out infinite;
+	pointer-events: none;
+	z-index: -1;
+}
+
+.logo-aura-secondary {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	width: 140%;
+	height: 140%;
+	background: radial-gradient(
+		ellipse at center,
+		rgba(132, 134, 240, 0.15) 0%,
+		rgba(255, 134, 255, 0.1) 40%,
+		transparent 70%
+	);
+	border-radius: 50%;
+	filter: blur(80px);
+	animation: auraPulse 6s ease-in-out infinite reverse;
+	pointer-events: none;
+	z-index: -2;
+}
+
+@keyframes auraPulse {
+	0%, 100% {
+		opacity: 0.5;
+		transform: translate(-50%, -50%) scale(1);
+	}
+	50% {
+		opacity: 0.8;
+		transform: translate(-50%, -50%) scale(1.1);
+	}
+}
+
+/* Enhanced SVG logo effects */
+.svg-container svg {
+	filter: drop-shadow(0 0 30px rgba(255, 255, 255, 0.3)) 
+	        drop-shadow(0 0 60px rgba(255, 134, 255, 0.2))
+	        drop-shadow(0 0 90px rgba(0, 255, 255, 0.15));
+	animation: logoGlow 3s ease-in-out infinite;
+}
+
+@keyframes logoGlow {
+	0%, 100% {
+		filter: drop-shadow(0 0 30px rgba(255, 255, 255, 0.3)) 
+		        drop-shadow(0 0 60px rgba(255, 134, 255, 0.2))
+		        drop-shadow(0 0 90px rgba(0, 255, 255, 0.15));
+	}
+	50% {
+		filter: drop-shadow(0 0 40px rgba(255, 255, 255, 0.4)) 
+		        drop-shadow(0 0 80px rgba(255, 134, 255, 0.3))
+		        drop-shadow(0 0 120px rgba(0, 255, 255, 0.25));
+	}
+}
+
+/* Magical text shimmer */
+.magical-text {
+	background: linear-gradient(
+		90deg,
+		#ffffff 0%,
+		#ffffff 25%,
+		rgba(255, 134, 255, 0.8) 50%,
+		rgba(0, 255, 255, 0.8) 75%,
+		#ffffff 100%
+	);
+	background-size: 200% 100%;
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent;
+	background-clip: text;
+	animation: shimmer 4s linear infinite;
+	filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.5))
+	        drop-shadow(0 0 40px rgba(255, 134, 255, 0.3));
+}
+
+@keyframes shimmer {
+	0% {
+		background-position: -200% 0;
+	}
+	100% {
+		background-position: 200% 0;
+	}
+}
+
+/* Enhanced orbs */
+.orb-6 {
+	width: 320px;
+	height: 320px;
+	background: radial-gradient(circle, rgba(255, 134, 255, 0.2) 0%, transparent 70%);
+	top: 50%;
+	right: 10%;
+	animation-duration: 24s;
+	animation-delay: -7s;
+}
+
+/* Enhanced particles with trails */
+.particle-9 { top: 15%; left: 50%; animation-duration: 18s; animation-delay: -7s; }
+.particle-10 { top: 80%; left: 30%; animation-duration: 20s; animation-delay: -9s; }
+
+.particle {
+	box-shadow: 0 0 10px rgba(255, 255, 255, 0.8),
+	            0 0 20px rgba(255, 134, 255, 0.6);
+}
+
+/* Enhanced sparkles */
+.sparkle-7 { top: 10%; left: 50%; animation-delay: 3s; }
+.sparkle-8 { top: 50%; left: 20%; animation-delay: 3.5s; }
+.sparkle-9 { top: 80%; left: 70%; animation-delay: 4s; }
+.sparkle-10 { top: 30%; left: 90%; animation-delay: 4.5s; }
+
+.sparkle {
+	box-shadow: 
+		0 0 10px 2px rgba(255, 255, 255, 0.9),
+		0 0 20px 4px rgba(255, 134, 255, 0.6),
+		0 0 30px 6px rgba(0, 255, 255, 0.4);
+	animation: twinkle 3s ease-in-out infinite, sparkleFloat 8s ease-in-out infinite;
+}
+
+@keyframes sparkleFloat {
+	0%, 100% {
+		transform: translate(0, 0) scale(1);
+	}
+	25% {
+		transform: translate(20px, -30px) scale(1.2);
+	}
+	50% {
+		transform: translate(-15px, -50px) scale(0.8);
+	}
+	75% {
+		transform: translate(30px, -20px) scale(1.1);
+	}
+}
+
+/* Magical trails */
+.magic-trail {
+	position: absolute;
+	width: 2px;
+	height: 100px;
+	background: linear-gradient(
+		180deg,
+		transparent 0%,
+		rgba(255, 255, 255, 0.6) 50%,
+		transparent 100%
+	);
+	pointer-events: none;
+	animation: trailFloat 12s ease-in-out infinite;
+}
+
+.trail-1 {
+	left: 15%;
+	top: -10%;
+	animation-delay: 0s;
+	transform: rotate(15deg);
+}
+
+.trail-2 {
+	left: 60%;
+	top: -10%;
+	animation-delay: -4s;
+	transform: rotate(-20deg);
+}
+
+.trail-3 {
+	left: 85%;
+	top: -10%;
+	animation-delay: -8s;
+	transform: rotate(10deg);
+}
+
+@keyframes trailFloat {
+	0% {
+		opacity: 0;
+		transform: translateY(0) rotate(var(--rotation, 0deg));
+	}
+	10% {
+		opacity: 1;
+	}
+	90% {
+		opacity: 1;
+	}
+	100% {
+		opacity: 0;
+		transform: translateY(110vh) rotate(var(--rotation, 0deg));
 	}
 }
