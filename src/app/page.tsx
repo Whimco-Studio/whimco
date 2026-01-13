@@ -2,12 +2,10 @@
 
 import React from "react";
 import { useEffect, useState } from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import GlassNav from "./components/GlassNav";
 
 export default function Home() {
 	const [showText, setShowText] = useState(false);
-	const pathname = usePathname();
 
 	useEffect(() => {
 		// Start the text animation after 2s (assuming this is the duration of the image fade-in)
@@ -21,19 +19,7 @@ export default function Home() {
 	return (
 		<main className="relative flex min-h-screen flex-col items-center justify-center p-4 sm:p-8 md:p-16 lg:p-24 bg-custom-gradient overflow-hidden">
 			{/* Glass Navigation */}
-			<nav className="glass-nav fixed top-0 left-0 right-0 z-50 flex items-center justify-center py-4">
-				<div className="glass-nav-container">
-					<Link href="/" className={`glass-nav-link ${pathname === '/' ? 'active' : ''}`}>
-						Home
-					</Link>
-					<Link href="/spotlight" className={`glass-nav-link ${pathname === '/spotlight' ? 'active' : ''}`}>
-						Spotlight
-					</Link>
-					<Link href="/admin" className={`glass-nav-link ${pathname === '/admin' ? 'active' : ''}`}>
-						Admin
-					</Link>
-				</div>
-			</nav>
+			<GlassNav />
 			{/* Floating orbs background */}
 			<div className="absolute inset-0 overflow-hidden pointer-events-none">
 				{/* Large slow orbs */}

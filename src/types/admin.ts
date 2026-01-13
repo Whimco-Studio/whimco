@@ -114,6 +114,40 @@ export interface AnalyticsSummary {
   topPerformingServer: string;
 }
 
+// Project Types
+export type ProjectScope = "quirkyverse" | "standalone";
+export type ProjectStatus = "active" | "development" | "paused" | "archived";
+export type ProjectType = "game" | "experience" | "item" | "asset";
+
+export interface ProjectCharacter {
+  id: string;
+  name: string;
+  avatarUrl: string;
+  description: string;
+}
+
+export interface Project {
+  id: string;
+  name: string;
+  description: string;
+  scope: ProjectScope;
+  status: ProjectStatus;
+  type: ProjectType;
+  thumbnailUrl: string;
+  robloxGameId?: string;
+  robloxUniverseId?: string;
+  createdAt: string;
+  updatedAt: string;
+  // Stats
+  visits?: number;
+  favorites?: number;
+  likes?: number;
+  activePlayers?: number;
+  // Quirkyverse specific
+  characters?: ProjectCharacter[];
+  relatedProjects?: string[]; // IDs of related projects in the Quirkyverse
+}
+
 // Navigation Types
 export interface NavItem {
   name: string;

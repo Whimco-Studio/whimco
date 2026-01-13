@@ -17,6 +17,9 @@ import {
   Cog6ToothIcon,
   Bars3Icon,
   XMarkIcon,
+  RocketLaunchIcon,
+  SparklesIcon,
+  CubeIcon,
 } from "@heroicons/react/24/outline";
 
 interface NavItem {
@@ -40,6 +43,30 @@ const navigation: NavSection[] = [
         name: "Dashboard",
         href: "/admin",
         icon: <HomeIcon className="w-5 h-5" />,
+      },
+    ],
+  },
+  {
+    title: "Projects",
+    adminOnly: true,
+    items: [
+      {
+        name: "All Projects",
+        href: "/admin/projects",
+        icon: <RocketLaunchIcon className="w-5 h-5" />,
+        adminOnly: true,
+      },
+      {
+        name: "Quirkyverse",
+        href: "/admin/projects/quirkyverse",
+        icon: <SparklesIcon className="w-5 h-5" />,
+        adminOnly: true,
+      },
+      {
+        name: "Standalone",
+        href: "/admin/projects/standalone",
+        icon: <CubeIcon className="w-5 h-5" />,
+        adminOnly: true,
       },
     ],
   },

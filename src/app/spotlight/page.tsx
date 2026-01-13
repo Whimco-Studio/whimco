@@ -3,8 +3,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import anime from 'animejs';
 import Image from 'next/image';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import GlassNav from '../components/GlassNav';
 
 // Scene durations in ms
 const SCENE_DURATIONS = [
@@ -30,7 +29,6 @@ export default function SpotlightPage() {
   const autoPlayTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const hasInitializedRef = useRef(false);
   const slideshowRef = useRef<HTMLDivElement>(null);
-  const pathname = usePathname();
 
   const scrollToSlideshow = useCallback(() => {
     slideshowRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -793,19 +791,7 @@ export default function SpotlightPage() {
   return (
     <div className="spotlight-page">
       {/* Glass Navigation */}
-      <nav className="glass-nav fixed top-0 left-0 right-0 z-50 flex items-center justify-center py-4">
-        <div className="glass-nav-container">
-          <Link href="/" className={`glass-nav-link ${pathname === '/' ? 'active' : ''}`}>
-            Home
-          </Link>
-          <Link href="/spotlight" className={`glass-nav-link ${pathname === '/spotlight' ? 'active' : ''}`}>
-            Spotlight
-          </Link>
-          <Link href="/admin" className={`glass-nav-link ${pathname === '/admin' ? 'active' : ''}`}>
-            Admin
-          </Link>
-        </div>
-      </nav>
+      <GlassNav />
 
       <style jsx global>{`
         .spotlight-page {
