@@ -8,7 +8,6 @@ import {
   CubeIcon,
   PlayIcon,
   HeartIcon,
-  UserGroupIcon,
   ArrowRightIcon,
   ChevronDownIcon,
 } from "@heroicons/react/24/outline";
@@ -43,7 +42,7 @@ const verses: Verse[] = [
     tagline: "Where Characters Cross Worlds",
     description:
       "A connected universe where beloved characters appear across multiple games. Follow Dove, Pip, Luna, and more as their stories interweave through different experiences.",
-    color: "from-purple-500 via-pink-500 to-rose-500",
+    color: "from-purple-600/80 via-purple-500/70 to-indigo-600/80",
     projects: [
       {
         id: "qv-quirkmals",
@@ -114,21 +113,14 @@ export default function ExperiencesPage() {
   const [expandedVerse, setExpandedVerse] = useState<string | null>("quirkyverse");
 
   return (
-    <main className="min-h-screen bg-custom-gradient">
+    <main className="min-h-screen bg-[#0d0a1a]">
       <GlassNav />
 
-      {/* Floating background effects */}
+      {/* Subtle gradient overlay */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="orb orb-1"></div>
-        <div className="orb orb-2"></div>
-        <div className="orb orb-3"></div>
-        <div className="particle particle-1"></div>
-        <div className="particle particle-2"></div>
-        <div className="particle particle-3"></div>
-        <div className="particle particle-4"></div>
-        <div className="sparkle sparkle-1"></div>
-        <div className="sparkle sparkle-2"></div>
-        <div className="sparkle sparkle-3"></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-purple-950/30 via-transparent to-purple-950/20" />
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-indigo-600/10 rounded-full blur-3xl" />
       </div>
 
       {/* Content */}
@@ -159,10 +151,11 @@ export default function ExperiencesPage() {
             {verses.map((verse) => (
               <div
                 key={verse.id}
-                className="rounded-3xl overflow-hidden backdrop-blur-xl bg-white/10 border border-white/20"
+                className="rounded-3xl overflow-hidden backdrop-blur-xl bg-white/[0.06] border border-white/15 shadow-2xl"
               >
                 {/* Verse Header */}
                 <button
+                  type="button"
                   onClick={() =>
                     setExpandedVerse(expandedVerse === verse.id ? null : verse.id)
                   }
@@ -209,7 +202,7 @@ export default function ExperiencesPage() {
         {/* Standalone Section */}
         <section>
           <div className="flex items-center gap-3 mb-8">
-            <CubeIcon className="w-8 h-8 text-cyan-400" />
+            <CubeIcon className="w-8 h-8 text-indigo-400" />
             <h2 className="text-2xl sm:text-3xl font-bold text-white">Standalone Games</h2>
           </div>
           <p className="text-white/60 mb-8 max-w-xl">
@@ -226,7 +219,7 @@ export default function ExperiencesPage() {
 
         {/* CTA Section */}
         <section className="mt-20 text-center">
-          <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl p-8 sm:p-12">
+          <div className="backdrop-blur-xl bg-white/[0.06] border border-white/15 rounded-3xl p-8 sm:p-12 shadow-2xl">
             <h2 className="text-2xl sm:text-3xl font-bold text-white mb-4">
               Stay Updated
             </h2>
@@ -238,14 +231,14 @@ export default function ExperiencesPage() {
                 href="https://www.roblox.com/groups/YOUR_GROUP_ID"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-white text-gray-900 font-semibold hover:bg-white/90 transition-colors"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-white text-gray-900 font-semibold hover:bg-gray-100 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg shadow-white/20"
               >
                 <PlayIcon className="w-5 h-5" />
                 Join Our Roblox Group
               </a>
               <Link
                 href="/spotlight"
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-white/10 text-white font-semibold hover:bg-white/20 transition-colors border border-white/20"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-white/10 text-white font-semibold hover:bg-white/20 hover:scale-[1.02] active:scale-[0.98] transition-all border border-white/20"
               >
                 View Spotlight
                 <ArrowRightIcon className="w-5 h-5" />
@@ -270,18 +263,18 @@ function ProjectCard({
 
   return (
     <div
-      className={`group relative rounded-2xl overflow-hidden backdrop-blur-lg transition-all hover:scale-[1.02] ${
+      className={`group relative rounded-2xl overflow-hidden backdrop-blur-lg transition-all hover:scale-[1.02] shadow-xl ${
         isLive
-          ? "bg-white/10 border border-white/20 hover:border-white/40"
-          : "bg-white/5 border border-white/10"
+          ? "bg-white/[0.08] border border-white/20 hover:border-purple-400/50 hover:shadow-purple-500/10"
+          : "bg-white/[0.04] border border-white/10"
       }`}
     >
       {/* Thumbnail placeholder */}
       <div
         className={`h-32 ${
           verseColor
-            ? `bg-gradient-to-br ${verseColor} opacity-30`
-            : "bg-gradient-to-br from-cyan-500/30 to-blue-500/30"
+            ? `bg-gradient-to-br ${verseColor} opacity-40`
+            : "bg-gradient-to-br from-indigo-500/30 to-purple-500/30"
         }`}
       >
         {isComingSoon && (
@@ -332,7 +325,7 @@ function ProjectCard({
             href={`https://www.roblox.com/games/${project.robloxGameId}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 w-full justify-center px-4 py-2.5 rounded-xl bg-white/10 text-white font-medium hover:bg-white/20 transition-colors border border-white/10"
+            className="inline-flex items-center gap-2 w-full justify-center px-4 py-3 rounded-xl bg-white text-gray-900 font-semibold hover:bg-gray-100 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg shadow-white/20"
           >
             <PlayIcon className="w-5 h-5" />
             Play Now
