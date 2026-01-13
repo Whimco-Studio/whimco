@@ -46,8 +46,8 @@ const verses: Verse[] = [
     color: "from-purple-500 via-pink-500 to-rose-500",
     projects: [
       {
-        id: "qv-origins",
-        name: "Quirkyverse: Origins",
+        id: "qv-quirkmals",
+        name: "Quirkmals",
         description:
           "The flagship adventure where you first meet Dove and discover the mysterious Quirkyverse.",
         robloxGameId: "123456789",
@@ -57,8 +57,8 @@ const verses: Verse[] = [
         status: "live",
       },
       {
-        id: "qv-workshop",
-        name: "Pip's Workshop",
+        id: "qv-quirkyroads",
+        name: "Quirky Roads",
         description:
           "A crafting and building simulator where you help Pip create amazing inventions.",
         robloxGameId: "234567890",
@@ -68,11 +68,11 @@ const verses: Verse[] = [
         status: "live",
       },
       {
-        id: "qv-dreamscape",
-        name: "Luna's Dreamscape",
+        id: "qv-tied-together",
+        name: "Tied Together",
         description:
-          "A surreal puzzle adventure through Luna's dreams with mind-bending mechanics.",
-        status: "coming-soon",
+          "An obby where and friends have to complete the level while being tied together.",
+        status: "live",
       },
     ],
   },
