@@ -41,36 +41,40 @@ const verses: Verse[] = [
     name: "The Quirkyverse",
     tagline: "Where Characters Cross Worlds",
     description:
-      "A connected universe where beloved characters appear across multiple games. Follow Dove, Pip, Luna, and more as their stories interweave through different experiences.",
+      "A connected universe where beloved characters appear across multiple games. Follow the Quirkymals through different experiences.",
     color: "from-purple-600/80 via-purple-500/70 to-indigo-600/80",
     projects: [
       {
-        id: "qv-quirkmals",
-        name: "Quirkmals",
+        id: "qv-quirkymals",
+        name: "Quirkymals",
         description:
-          "The flagship adventure where you first meet Dove and discover the mysterious Quirkyverse.",
+          "The flagship adventure where you first meet the Quirkymals and discover the Quirkyverse.",
         robloxGameId: "123456789",
         visits: 1250000,
         favorites: 45000,
         activePlayers: 1250,
+        status: "coming-soon",
+      },
+      {
+        id: "qv-tied-together",
+        name: "Tied Together",
+        description:
+          "An obby where you and your friends have to complete the level while being tied together.",
+        robloxGameId: "108003034980758",
+        visits: 3100000,
+        favorites: 16860,
+        activePlayers: 30,
         status: "live",
       },
       {
         id: "qv-quirkyroads",
         name: "Quirky Roads",
         description:
-          "A crafting and building simulator where you help Pip create amazing inventions.",
-        robloxGameId: "234567890",
-        visits: 820000,
-        favorites: 28000,
-        activePlayers: 890,
-        status: "live",
-      },
-      {
-        id: "qv-tied-together",
-        name: "Tied Together",
-        description:
-          "An obby where and friends have to complete the level while being tied together.",
+          "Cross the road safely while avoiding obstacles and cars.",
+        robloxGameId: "12126572599",
+        visits: 8879,
+        favorites: 155,
+        activePlayers: 0,
         status: "live",
       },
     ],
