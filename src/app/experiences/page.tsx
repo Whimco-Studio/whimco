@@ -232,7 +232,7 @@ export default function ExperiencesPage() {
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <a
-                href="https://www.roblox.com/groups/YOUR_GROUP_ID"
+                href="https://www.roblox.com/groups/10169730"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-white text-gray-900 font-semibold hover:bg-gray-100 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg shadow-white/20"
