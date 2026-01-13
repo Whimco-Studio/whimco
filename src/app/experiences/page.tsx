@@ -52,7 +52,7 @@ const verses: Verse[] = [
         robloxGameId: "123456789",
         visits: 1250000,
         favorites: 45000,
-        activePlayers: 1250,
+        activePlayers: 0,
         status: "coming-soon",
       },
       {
@@ -82,35 +82,35 @@ const verses: Verse[] = [
 ];
 
 const standaloneProjects: PublicProject[] = [
-  {
-    id: "tower-defense",
-    name: "Tower Defense Titans",
-    description:
-      "Strategic tower defense with unique hero mechanics. Build, defend, and conquer!",
-    robloxGameId: "345678901",
-    visits: 2100000,
-    favorites: 72000,
-    activePlayers: 3200,
-    status: "live",
-  },
-  {
-    id: "speed-racers",
-    name: "Speed Racers Ultimate",
-    description:
-      "High-octane racing with customizable vehicles. Compete and climb the leaderboards!",
-    robloxGameId: "456789012",
-    visits: 1800000,
-    favorites: 58000,
-    activePlayers: 2800,
-    status: "live",
-  },
-  {
-    id: "cozy-cafe",
-    name: "Cozy Cafe Simulator",
-    description:
-      "A relaxing cafe management game. Design your cafe, serve customers, unlock recipes.",
-    status: "coming-soon",
-  },
+  // {
+  //   id: "tower-defense",
+  //   name: "Tower Defense Titans",
+  //   description:
+  //     "Strategic tower defense with unique hero mechanics. Build, defend, and conquer!",
+  //   robloxGameId: "345678901",
+  //   visits: 2100000,
+  //   favorites: 72000,
+  //   activePlayers: 3200,
+  //   status: "live",
+  // },
+  // {
+  //   id: "speed-racers",
+  //   name: "Speed Racers Ultimate",
+  //   description:
+  //     "High-octane racing with customizable vehicles. Compete and climb the leaderboards!",
+  //   robloxGameId: "456789012",
+  //   visits: 1800000,
+  //   favorites: 58000,
+  //   activePlayers: 2800,
+  //   status: "live",
+  // },
+  // {
+  //   id: "cozy-cafe",
+  //   name: "Cozy Cafe Simulator",
+  //   description:
+  //     "A relaxing cafe management game. Design your cafe, serve customers, unlock recipes.",
+  //   status: "coming-soon",
+  // },
 ];
 
 export default function ExperiencesPage() {
