@@ -7,7 +7,7 @@ const navLinks = [
   { href: "/", label: "Home" },
   { href: "/experiences", label: "Experiences" },
   { href: "/spotlight", label: "Spotlight" },
-  { href: "/admin", label: "Admin" },
+  // { href: "/admin", label: "Admin" },
 ];
 
 export default function GlassNav() {
