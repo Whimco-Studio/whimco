@@ -46,11 +46,11 @@ const values: Value[] = [
 ];
 
 const milestones = [
-  { year: "2020", event: "Whimco founded with a dream to create joyful games" },
-  { year: "2021", event: "Launched our first game on Roblox" },
-  { year: "2023", event: "The Quirkyverse concept was born" },
-  { year: "2024", event: "Tied Together reaches millions of players" },
-  { year: "2025", event: "Expanding our universe with new experiences" },
+  { year: "2021", event: "Whimco founded with a dream to create joyful games" },
+  { year: "2021", event: "The Quirkyverse concept was born" },
+  { year: "2023", event: "Launched our first game on Roblox" },
+  { year: "2025", event: "Tied Together reaches millions of players" },
+  { year: "2026", event: "Woodlands Released" },
 ];
 
 export default function AboutPage() {
