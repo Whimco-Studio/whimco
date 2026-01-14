@@ -118,13 +118,13 @@ export default function AboutPage() {
               </p>
               <p className="text-fuchsia-100/60 leading-relaxed">
                 What started as a passion project has grown into something
-                bigger. Today, we're building connected universes filled with
+                bigger. Today, we&apos;re building connected universes filled with
                 charming characters, engaging gameplay, and stories that stay
                 with you.
               </p>
               <p className="text-fuchsia-100/60 leading-relaxed">
                 Our games have been played by millions of players around the
-                world, but we're just getting started. The best is yet to come.
+                world, but we&apos;re just getting started. The best is yet to come.
               </p>
             </div>
 
