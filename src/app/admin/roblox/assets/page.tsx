@@ -58,18 +58,25 @@ export default function AssetsPage() {
     status: statusFilter !== "all" ? statusFilter : undefined,
   });
 
-  // Get unique owners/groups for filter dropdown
-  const uniqueOwners = useMemo(() => {
-    const owners = new Map<string, string>();
+  // Get unique destinations (groups/users) for filter dropdown
+  const uniqueDestinations = useMemo(() => {
+    const destinations = new Map<string, { name: string; type: "group" | "user" }>();
     assets.forEach((asset) => {
       const key = asset.destination_type === "group"
         ? `group:${asset.roblox_group_id}`
         : `user:${asset.roblox_user_id}`;
-      if (!owners.has(key)) {
-        owners.set(key, asset.destination_display);
+      if (!destinations.has(key) && asset.destination_display) {
+        destinations.set(key, {
+          name: asset.destination_display,
+          type: asset.destination_type as "group" | "user",
+        });
       }
     });
-    return Array.from(owners.entries()).map(([key, name]) => ({ key, name }));
+    return Array.from(destinations.entries()).map(([key, { name, type }]) => ({
+      key,
+      name,
+      type,
+    }));
   }, [assets]);
 
   // Filter assets based on local filters (for mock data that doesn't filter server-side)
@@ -137,11 +144,6 @@ export default function AssetsPage() {
       alert("Please select assets with Roblox IDs to export");
       return;
     }
-
-    const tsEntries = selected.map((asset) => {
-      const key = asset.name.replace(/[^a-zA-Z0-9_]/g, "_");
-      return `\t["${key}"]: "${asset.roblox_asset_id}"`;
-    });
 
     const tsCode = `export const Assets = new Map<string, string>([\n${selected.map((asset) => {
       const key = asset.name.replace(/[^a-zA-Z0-9_]/g, "_");
@@ -448,7 +450,7 @@ export default function AssetsPage() {
             <option value="pending">Pending</option>
           </select>
 
-          {/* Owner/Group Filter */}
+          {/* Destination/Group Filter */}
           <div className="relative">
             <UserGroupIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <select
@@ -456,10 +458,10 @@ export default function AssetsPage() {
               onChange={(e) => setOwnerFilter(e.target.value)}
               className="pl-9 pr-8 py-2.5 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all appearance-none bg-white text-slate-700"
             >
-              <option value="all">All Owners</option>
-              {uniqueOwners.map(({ key, name }) => (
+              <option value="all">All Destinations</option>
+              {uniqueDestinations.map(({ key, name, type }) => (
                 <option key={key} value={key}>
-                  {name}
+                  {type === "group" ? `🏢 ${name}` : `👤 ${name}`}
                 </option>
               ))}
             </select>
