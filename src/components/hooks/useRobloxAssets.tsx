@@ -77,7 +77,11 @@ export function useRobloxAssets(
           robloxAssetsApi.stats(),
         ]);
 
-        setAssets(assetsResponse.results);
+        // API now returns direct array (no pagination)
+        const assets = Array.isArray(assetsResponse)
+          ? assetsResponse
+          : assetsResponse.results || [];
+        setAssets(assets);
         setStats(statsResponse);
       }
     } catch (err) {
