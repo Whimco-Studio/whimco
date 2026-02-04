@@ -48,7 +48,8 @@ export function useQuirkyverse(
         quirkyverseApi.stats(),
       ]);
 
-      setCharacters(charactersRes.results);
+      // API returns direct array (no pagination)
+      setCharacters(charactersRes);
       setStats(statsRes);
     } catch (err) {
       console.error("Failed to fetch Quirkyverse data:", err);

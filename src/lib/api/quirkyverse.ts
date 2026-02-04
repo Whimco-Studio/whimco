@@ -61,13 +61,12 @@ async function fetchWithAuth(url: string, options: RequestInit = {}) {
 export const quirkyverseApi = {
   /**
    * List all characters with optional filters.
+   * Returns all characters (no pagination).
    */
   async list(
     params?: QuirkyverseSearchParams
-  ): Promise<PaginatedResponse<QuirkyverseCharacter>> {
+  ): Promise<QuirkyverseCharacter[]> {
     const searchParams = new URLSearchParams();
-    // Request all results by default (no pagination)
-    searchParams.set("page_size", "1000");
 
     if (params?.isPublished !== undefined) {
       searchParams.set("isPublished", String(params.isPublished));
@@ -83,7 +82,7 @@ export const quirkyverseApi = {
     }
 
     const queryString = searchParams.toString();
-    const url = `${API_BASE_URL}/quirkyverse-characters/?${queryString}`;
+    const url = `${API_BASE_URL}/quirkyverse-characters/${queryString ? `?${queryString}` : ""}`;
     return fetchWithAuth(url);
   },
 
