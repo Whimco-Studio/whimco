@@ -245,7 +245,7 @@ function NewPayoutModal({ members, saving, onClose, onSubmit }: NewPayoutModalPr
   const [status, setStatus] = useState<"pending" | "completed">("pending");
   const [success, setSuccess] = useState(false);
 
-  const selectedMember = members.find((m) => m.id === selectedMemberId);
+  const selectedMember = members.find((m) => String(m.id) === selectedMemberId);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
