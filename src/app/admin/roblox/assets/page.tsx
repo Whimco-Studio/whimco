@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   MagnifyingGlassIcon,
   FunnelIcon,
@@ -14,6 +14,9 @@ import {
   TrashIcon,
   ArrowPathRoundedSquareIcon,
   PlusIcon,
+  ArrowDownTrayIcon,
+  CodeBracketIcon,
+  UserGroupIcon,
 } from "@heroicons/react/24/outline";
 import {
   PhotoIcon as PhotoIconSolid,
@@ -33,8 +36,11 @@ export default function AssetsPage() {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<AssetType | "all">("all");
   const [statusFilter, setStatusFilter] = useState<AssetStatus | "all">("all");
+  const [ownerFilter, setOwnerFilter] = useState<string>("all");
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [selectedAssets, setSelectedAssets] = useState<Set<string>>(new Set());
+  const [showExportMenu, setShowExportMenu] = useState(false);
 
   const {
     assets,
@@ -52,6 +58,20 @@ export default function AssetsPage() {
     status: statusFilter !== "all" ? statusFilter : undefined,
   });
 
+  // Get unique owners/groups for filter dropdown
+  const uniqueOwners = useMemo(() => {
+    const owners = new Map<string, string>();
+    assets.forEach((asset) => {
+      const key = asset.destination_type === "group"
+        ? `group:${asset.roblox_group_id}`
+        : `user:${asset.roblox_user_id}`;
+      if (!owners.has(key)) {
+        owners.set(key, asset.destination_display);
+      }
+    });
+    return Array.from(owners.entries()).map(([key, name]) => ({ key, name }));
+  }, [assets]);
+
   // Filter assets based on local filters (for mock data that doesn't filter server-side)
   const filteredAssets = assets.filter((asset) => {
     const matchesSearch =
@@ -62,8 +82,76 @@ export default function AssetsPage() {
     const matchesType = typeFilter === "all" || asset.asset_type === typeFilter;
     const matchesStatus =
       statusFilter === "all" || asset.status === statusFilter;
-    return matchesSearch && matchesType && matchesStatus;
+    const matchesOwner = ownerFilter === "all" ||
+      (ownerFilter.startsWith("group:") && asset.roblox_group_id === ownerFilter.replace("group:", "")) ||
+      (ownerFilter.startsWith("user:") && asset.roblox_user_id === ownerFilter.replace("user:", ""));
+    return matchesSearch && matchesType && matchesStatus && matchesOwner;
   });
+
+  // Selection handlers
+  const toggleSelectAll = () => {
+    if (selectedAssets.size === filteredAssets.length) {
+      setSelectedAssets(new Set());
+    } else {
+      setSelectedAssets(new Set(filteredAssets.map((a) => a.id)));
+    }
+  };
+
+  const toggleSelect = (assetId: string) => {
+    const newSelected = new Set(selectedAssets);
+    if (newSelected.has(assetId)) {
+      newSelected.delete(assetId);
+    } else {
+      newSelected.add(assetId);
+    }
+    setSelectedAssets(newSelected);
+  };
+
+  // Export functions
+  const getSelectedAssets = () => {
+    return filteredAssets.filter((a) => selectedAssets.has(a.id) && a.roblox_asset_id);
+  };
+
+  const exportAsLua = () => {
+    const selected = getSelectedAssets();
+    if (selected.length === 0) {
+      alert("Please select assets with Roblox IDs to export");
+      return;
+    }
+
+    const luaEntries = selected.map((asset) => {
+      const key = asset.name.replace(/[^a-zA-Z0-9_]/g, "_");
+      return `\t["${key}"] = ${asset.roblox_asset_id}`;
+    });
+
+    const luaCode = `local Assets = {\n${luaEntries.join(",\n")}\n}\n\nreturn Assets`;
+
+    navigator.clipboard.writeText(luaCode);
+    setShowExportMenu(false);
+    alert(`Copied ${selected.length} assets as Lua dictionary to clipboard!`);
+  };
+
+  const exportAsTypeScript = () => {
+    const selected = getSelectedAssets();
+    if (selected.length === 0) {
+      alert("Please select assets with Roblox IDs to export");
+      return;
+    }
+
+    const tsEntries = selected.map((asset) => {
+      const key = asset.name.replace(/[^a-zA-Z0-9_]/g, "_");
+      return `\t["${key}"]: "${asset.roblox_asset_id}"`;
+    });
+
+    const tsCode = `export const Assets = new Map<string, string>([\n${selected.map((asset) => {
+      const key = asset.name.replace(/[^a-zA-Z0-9_]/g, "_");
+      return `\t["${key}", "${asset.roblox_asset_id}"]`;
+    }).join(",\n")}\n]);`;
+
+    navigator.clipboard.writeText(tsCode);
+    setShowExportMenu(false);
+    alert(`Copied ${selected.length} assets as TypeScript Map to clipboard!`);
+  };
 
   const copyToClipboard = async (assetId: string, robloxId: string) => {
     try {
@@ -121,6 +209,29 @@ export default function AssetsPage() {
   };
 
   const columns = [
+    {
+      key: "select",
+      header: (
+        <input
+          type="checkbox"
+          checked={filteredAssets.length > 0 && selectedAssets.size === filteredAssets.length}
+          onChange={toggleSelectAll}
+          className="w-4 h-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500"
+        />
+      ),
+      render: (asset: RobloxAsset) => (
+        <input
+          type="checkbox"
+          checked={selectedAssets.has(asset.id)}
+          onChange={(e) => {
+            e.stopPropagation();
+            toggleSelect(asset.id);
+          }}
+          onClick={(e) => e.stopPropagation()}
+          className="w-4 h-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500"
+        />
+      ),
+    },
     {
       key: "asset",
       header: "Asset",
@@ -337,6 +448,23 @@ export default function AssetsPage() {
             <option value="pending">Pending</option>
           </select>
 
+          {/* Owner/Group Filter */}
+          <div className="relative">
+            <UserGroupIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <select
+              value={ownerFilter}
+              onChange={(e) => setOwnerFilter(e.target.value)}
+              className="pl-9 pr-8 py-2.5 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all appearance-none bg-white text-slate-700"
+            >
+              <option value="all">All Owners</option>
+              {uniqueOwners.map(({ key, name }) => (
+                <option key={key} value={key}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <button
             onClick={refetch}
             className="p-2.5 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors"
@@ -344,6 +472,37 @@ export default function AssetsPage() {
           >
             <ArrowPathIcon className="w-5 h-5 text-gray-500" />
           </button>
+
+          {/* Export Button */}
+          <div className="relative">
+            <button
+              onClick={() => setShowExportMenu(!showExportMenu)}
+              disabled={selectedAssets.size === 0}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title={selectedAssets.size === 0 ? "Select assets to export" : `Export ${selectedAssets.size} selected`}
+            >
+              <ArrowDownTrayIcon className="w-5 h-5 text-gray-500" />
+              <span className="text-slate-600">Export{selectedAssets.size > 0 && ` (${selectedAssets.size})`}</span>
+            </button>
+            {showExportMenu && (
+              <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-xl shadow-lg border border-gray-200 py-1 z-10">
+                <button
+                  onClick={exportAsLua}
+                  className="w-full flex items-center gap-2 px-4 py-2 text-left text-slate-700 hover:bg-gray-50"
+                >
+                  <CodeBracketIcon className="w-4 h-4" />
+                  Lua Dictionary
+                </button>
+                <button
+                  onClick={exportAsTypeScript}
+                  className="w-full flex items-center gap-2 px-4 py-2 text-left text-slate-700 hover:bg-gray-50"
+                >
+                  <CodeBracketIcon className="w-4 h-4" />
+                  TypeScript Map
+                </button>
+              </div>
+            )}
+          </div>
 
           <button
             onClick={() => setShowUploadModal(true)}

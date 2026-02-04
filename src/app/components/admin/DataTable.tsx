@@ -11,7 +11,7 @@ import EmptyState from "./EmptyState";
 
 interface Column<T> {
   key: string;
-  header: string;
+  header: string | React.ReactNode;
   render?: (item: T, index: number) => React.ReactNode;
   sortable?: boolean;
   className?: string;
