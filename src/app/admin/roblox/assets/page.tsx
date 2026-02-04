@@ -297,6 +297,24 @@ export default function AssetsPage() {
       ),
     },
     {
+      key: "destination",
+      header: "Destination",
+      sortable: true,
+      render: (asset: RobloxAsset) => (
+        <div className="flex items-center gap-2">
+          <span className="text-sm">
+            {asset.destination_type === "group" ? "🏢" : "👤"}
+          </span>
+          <span className="text-slate-600">
+            {asset.destination_display ||
+              (asset.destination_type === "group"
+                ? `Group ${asset.roblox_group_id}`
+                : `User ${asset.roblox_user_id}`)}
+          </span>
+        </div>
+      ),
+    },
+    {
       key: "tags",
       header: "Tags",
       render: (asset: RobloxAsset) => (
