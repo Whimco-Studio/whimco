@@ -12,16 +12,22 @@ import {
   FilmIcon,
   PhotoIcon,
   ArrowUpTrayIcon,
+  PlayIcon,
+  PencilIcon,
 } from "@heroicons/react/24/outline";
 import AdminHeader from "../../../../components/admin/AdminHeader";
 import StatCard from "../../../../components/admin/StatCard";
 import { useQuirkyverse } from "@/components/hooks/useQuirkyverse";
 import {
   QuirkyverseCharacter,
+  QuirkyverseIcons,
   ANIMATION_NAMES,
   ICON_VARIANTS,
   RARITY_CONFIG,
 } from "@/types/quirkyverse";
+import RobloxAssetImage from "@/components/RobloxAssetImage";
+import FBXPreviewModal from "./components/FBXPreviewModal";
+import IconEditModal from "./components/IconEditModal";
 
 export default function QuirkyverseCharactersPage() {
   const {
@@ -31,6 +37,7 @@ export default function QuirkyverseCharactersPage() {
     error,
     refresh,
     bulkImport,
+    updateCharacter,
   } = useQuirkyverse();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -39,6 +46,8 @@ export default function QuirkyverseCharactersPage() {
     useState<QuirkyverseCharacter | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showFBXPreview, setShowFBXPreview] = useState(false);
+  const [showIconEdit, setShowIconEdit] = useState(false);
 
   // Filter characters
   const filteredCharacters = useMemo(() => {
@@ -232,6 +241,8 @@ export default function QuirkyverseCharactersPage() {
               character={selectedCharacter}
               onCopy={copyToClipboard}
               copiedId={copiedId}
+              onPreviewAnimation={() => setShowFBXPreview(true)}
+              onEditIcons={() => setShowIconEdit(true)}
             />
           ) : (
             <div className="text-center py-12 text-slate-400">
@@ -250,6 +261,30 @@ export default function QuirkyverseCharactersPage() {
             await bulkImport(data);
             setShowImportModal(false);
             refresh();
+          }}
+        />
+      )}
+
+      {/* FBX Preview Modal */}
+      {showFBXPreview && selectedCharacter && (
+        <FBXPreviewModal
+          characterName={selectedCharacter.displayName || selectedCharacter.name}
+          onClose={() => setShowFBXPreview(false)}
+        />
+      )}
+
+      {/* Icon Edit Modal */}
+      {showIconEdit && selectedCharacter && (
+        <IconEditModal
+          characterName={selectedCharacter.displayName || selectedCharacter.name}
+          characterId={selectedCharacter.id}
+          currentIcons={selectedCharacter.icons}
+          onClose={() => setShowIconEdit(false)}
+          onSave={async (icons: QuirkyverseIcons) => {
+            await updateCharacter(selectedCharacter.id, { icons });
+            setSelectedCharacter((prev) =>
+              prev ? { ...prev, icons } : null
+            );
           }}
         />
       )}
@@ -311,10 +346,14 @@ function CharacterDetail({
   character,
   onCopy,
   copiedId,
+  onPreviewAnimation,
+  onEditIcons,
 }: {
   character: QuirkyverseCharacter;
   onCopy: (text: string, id: string) => void;
   copiedId: string | null;
+  onPreviewAnimation: () => void;
+  onEditIcons: () => void;
 }) {
   const [activeTab, setActiveTab] = useState<"animations" | "icons">(
     "animations"
@@ -387,6 +426,28 @@ function CharacterDetail({
         </button>
       </div>
 
+      {/* Action buttons */}
+      <div className="flex gap-2 mb-4">
+        {activeTab === "animations" && (
+          <button
+            onClick={onPreviewAnimation}
+            className="flex items-center gap-2 px-3 py-2 text-sm bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors"
+          >
+            <PlayIcon className="w-4 h-4" />
+            Preview Animation
+          </button>
+        )}
+        {activeTab === "icons" && (
+          <button
+            onClick={onEditIcons}
+            className="flex items-center gap-2 px-3 py-2 text-sm bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors"
+          >
+            <PencilIcon className="w-4 h-4" />
+            Edit Icons
+          </button>
+        )}
+      </div>
+
       {/* Content */}
       <div className="max-h-[400px] overflow-y-auto">
         {activeTab === "animations" ? (
@@ -425,7 +486,7 @@ function CharacterDetail({
             })}
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {ICON_VARIANTS.map((iconName) => {
               const assetId = character.icons[iconName];
               const aspectRatio = character.icons[`${iconName}AspectRatio`];
@@ -433,16 +494,32 @@ function CharacterDetail({
               return (
                 <div
                   key={iconName}
-                  className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50"
+                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 border border-gray-100"
                 >
-                  <div>
-                    <span className="text-sm text-slate-600">{iconName}</span>
+                  {/* Icon preview */}
+                  {assetId ? (
+                    <RobloxAssetImage
+                      assetId={assetId}
+                      size={150}
+                      className="w-12 h-12 flex-shrink-0"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 flex-shrink-0 bg-gray-100 rounded-lg flex items-center justify-center">
+                      <PhotoIcon className="w-6 h-6 text-gray-300" />
+                    </div>
+                  )}
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm font-medium text-slate-600">{iconName}</span>
                     {aspectRatio && (
-                      <span className="text-xs text-slate-400 ml-2">
-                        ({Number(aspectRatio).toFixed(2)})
-                      </span>
+                      <p className="text-xs text-slate-400">
+                        Aspect Ratio: {Number(aspectRatio).toFixed(2)}
+                      </p>
                     )}
                   </div>
+
+                  {/* Copy button */}
                   {assetId ? (
                     <button
                       onClick={() => onCopy(String(assetId), copyKey)}

@@ -22,6 +22,8 @@ import {
   CubeIcon,
   ArchiveBoxIcon,
   ArrowRightOnRectangleIcon,
+  WrenchScrewdriverIcon,
+  CubeTransparentIcon,
 } from "@heroicons/react/24/outline";
 
 interface NavItem {
@@ -104,6 +106,18 @@ const navigation: NavSection[] = [
         name: "Payouts",
         href: "/admin/roblox/payouts",
         icon: <CurrencyDollarIcon className="w-5 h-5" />,
+        adminOnly: true,
+      },
+    ],
+  },
+  {
+    title: "Tools",
+    adminOnly: true,
+    items: [
+      {
+        name: "3D Viewer",
+        href: "/admin/tools/3d-viewer",
+        icon: <CubeTransparentIcon className="w-5 h-5" />,
         adminOnly: true,
       },
     ],
