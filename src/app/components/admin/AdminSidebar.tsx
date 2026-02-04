@@ -24,6 +24,7 @@ import {
   ArrowRightOnRectangleIcon,
   WrenchScrewdriverIcon,
   CubeTransparentIcon,
+  CameraIcon,
 } from "@heroicons/react/24/outline";
 
 interface NavItem {
@@ -118,6 +119,12 @@ const navigation: NavSection[] = [
         name: "3D Viewer",
         href: "/admin/tools/3d-viewer",
         icon: <CubeTransparentIcon className="w-5 h-5" />,
+        adminOnly: true,
+      },
+      {
+        name: "Icon Generator",
+        href: "/admin/tools/icon-generator",
+        icon: <CameraIcon className="w-5 h-5" />,
         adminOnly: true,
       },
     ],

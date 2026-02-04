@@ -15,6 +15,7 @@ import {
   PlayIcon,
   PencilIcon,
   CameraIcon,
+  DocumentArrowUpIcon,
 } from "@heroicons/react/24/outline";
 import AdminHeader from "../../../../components/admin/AdminHeader";
 import StatCard from "../../../../components/admin/StatCard";
@@ -30,6 +31,7 @@ import RobloxAssetImage from "@/components/RobloxAssetImage";
 import FBXPreviewModal from "./components/FBXPreviewModal";
 import IconEditModal from "./components/IconEditModal";
 import IconGeneratorModal from "./components/IconGeneratorModal";
+import AnimationExtractorModal from "./components/AnimationExtractorModal";
 
 export default function QuirkyverseCharactersPage() {
   const {
@@ -51,6 +53,7 @@ export default function QuirkyverseCharactersPage() {
   const [showFBXPreview, setShowFBXPreview] = useState(false);
   const [showIconEdit, setShowIconEdit] = useState(false);
   const [showIconGenerator, setShowIconGenerator] = useState(false);
+  const [showAnimationExtractor, setShowAnimationExtractor] = useState(false);
 
   // Filter characters
   const filteredCharacters = useMemo(() => {
@@ -247,6 +250,7 @@ export default function QuirkyverseCharactersPage() {
               onPreviewAnimation={() => setShowFBXPreview(true)}
               onEditIcons={() => setShowIconEdit(true)}
               onGenerateIcons={() => setShowIconGenerator(true)}
+              onExtractAnimations={() => setShowAnimationExtractor(true)}
             />
           ) : (
             <div className="text-center py-12 text-slate-400">
@@ -303,6 +307,21 @@ export default function QuirkyverseCharactersPage() {
             await updateCharacter(selectedCharacter.id, { icons: updatedIcons });
             setSelectedCharacter((prev) =>
               prev ? { ...prev, icons: updatedIcons } : null
+            );
+          }}
+        />
+      )}
+
+      {/* Animation Extractor Modal */}
+      {showAnimationExtractor && selectedCharacter && (
+        <AnimationExtractorModal
+          characterName={selectedCharacter.displayName || selectedCharacter.name}
+          currentAnimations={selectedCharacter.animations}
+          onClose={() => setShowAnimationExtractor(false)}
+          onSave={async (animations) => {
+            await updateCharacter(selectedCharacter.id, { animations });
+            setSelectedCharacter((prev) =>
+              prev ? { ...prev, animations } : null
             );
           }}
         />
@@ -368,6 +387,7 @@ function CharacterDetail({
   onPreviewAnimation,
   onEditIcons,
   onGenerateIcons,
+  onExtractAnimations,
 }: {
   character: QuirkyverseCharacter;
   onCopy: (text: string, id: string) => void;
@@ -375,6 +395,7 @@ function CharacterDetail({
   onPreviewAnimation: () => void;
   onEditIcons: () => void;
   onGenerateIcons: () => void;
+  onExtractAnimations: () => void;
 }) {
   const [activeTab, setActiveTab] = useState<"animations" | "icons">(
     "animations"
@@ -450,13 +471,22 @@ function CharacterDetail({
       {/* Action buttons */}
       <div className="flex gap-2 mb-4">
         {activeTab === "animations" && (
-          <button
-            onClick={onPreviewAnimation}
-            className="flex items-center gap-2 px-3 py-2 text-sm bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors"
-          >
-            <PlayIcon className="w-4 h-4" />
-            Preview Animation
-          </button>
+          <>
+            <button
+              onClick={onExtractAnimations}
+              className="flex items-center gap-2 px-3 py-2 text-sm bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-colors"
+            >
+              <DocumentArrowUpIcon className="w-4 h-4" />
+              Extract from FBX
+            </button>
+            <button
+              onClick={onPreviewAnimation}
+              className="flex items-center gap-2 px-3 py-2 text-sm bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors"
+            >
+              <PlayIcon className="w-4 h-4" />
+              Preview
+            </button>
+          </>
         )}
         {activeTab === "icons" && (
           <>
