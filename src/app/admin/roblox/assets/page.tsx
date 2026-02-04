@@ -304,7 +304,7 @@ export default function AssetsPage() {
             placeholder="Search assets by name, description, or Roblox ID..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all text-slate-700 bg-white"
           />
         </div>
 
@@ -314,7 +314,7 @@ export default function AssetsPage() {
             <select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value as AssetType | "all")}
-              className="pl-9 pr-8 py-2.5 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all appearance-none bg-white"
+              className="pl-9 pr-8 py-2.5 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all appearance-none bg-white text-slate-700"
             >
               <option value="all">All Types</option>
               <option value="image">Images</option>
@@ -328,7 +328,7 @@ export default function AssetsPage() {
             onChange={(e) =>
               setStatusFilter(e.target.value as AssetStatus | "all")
             }
-            className="px-4 py-2.5 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all appearance-none bg-white"
+            className="px-4 py-2.5 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all appearance-none bg-white text-slate-700"
           >
             <option value="all">All Status</option>
             <option value="completed">Completed</option>

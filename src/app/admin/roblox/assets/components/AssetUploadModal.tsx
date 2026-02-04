@@ -443,7 +443,7 @@ export default function AssetUploadModal({
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Enter asset name"
                 maxLength={50}
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all text-slate-700 bg-white"
                 required
               />
               <p className="text-xs text-slate-400 mt-1">
@@ -466,7 +466,7 @@ export default function AssetUploadModal({
                 placeholder="Enter a description (optional)"
                 rows={2}
                 maxLength={1000}
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all resize-none"
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all resize-none text-slate-700 bg-white"
               />
             </div>
 
@@ -484,7 +484,7 @@ export default function AssetUploadModal({
                 value={tagsInput}
                 onChange={(e) => setTagsInput(e.target.value)}
                 placeholder="character, icon, quirkyverse"
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all text-slate-700 bg-white"
               />
               <p className="text-xs text-slate-400 mt-1">
                 Comma-separated tags for searching
