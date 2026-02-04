@@ -417,7 +417,7 @@ export default function BatchUploadModal({
                             onChange={(e) =>
                               updateFileName(fileItem.id, e.target.value)
                             }
-                            className="w-full px-2 py-1 text-sm border border-gray-200 rounded focus:outline-none focus:border-blue-500"
+                            className="w-full px-2 py-1 text-sm text-slate-700 bg-white border border-gray-200 rounded focus:outline-none focus:border-blue-500"
                             placeholder="Asset name"
                           />
                         ) : (
