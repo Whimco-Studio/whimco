@@ -14,6 +14,7 @@ import {
   ArrowUpTrayIcon,
   PlayIcon,
   PencilIcon,
+  CameraIcon,
 } from "@heroicons/react/24/outline";
 import AdminHeader from "../../../../components/admin/AdminHeader";
 import StatCard from "../../../../components/admin/StatCard";
@@ -28,6 +29,7 @@ import {
 import RobloxAssetImage from "@/components/RobloxAssetImage";
 import FBXPreviewModal from "./components/FBXPreviewModal";
 import IconEditModal from "./components/IconEditModal";
+import IconGeneratorModal from "./components/IconGeneratorModal";
 
 export default function QuirkyverseCharactersPage() {
   const {
@@ -48,6 +50,7 @@ export default function QuirkyverseCharactersPage() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [showFBXPreview, setShowFBXPreview] = useState(false);
   const [showIconEdit, setShowIconEdit] = useState(false);
+  const [showIconGenerator, setShowIconGenerator] = useState(false);
 
   // Filter characters
   const filteredCharacters = useMemo(() => {
@@ -243,6 +246,7 @@ export default function QuirkyverseCharactersPage() {
               copiedId={copiedId}
               onPreviewAnimation={() => setShowFBXPreview(true)}
               onEditIcons={() => setShowIconEdit(true)}
+              onGenerateIcons={() => setShowIconGenerator(true)}
             />
           ) : (
             <div className="text-center py-12 text-slate-400">
@@ -284,6 +288,21 @@ export default function QuirkyverseCharactersPage() {
             await updateCharacter(selectedCharacter.id, { icons });
             setSelectedCharacter((prev) =>
               prev ? { ...prev, icons } : null
+            );
+          }}
+        />
+      )}
+
+      {/* Icon Generator Modal */}
+      {showIconGenerator && selectedCharacter && (
+        <IconGeneratorModal
+          characterName={selectedCharacter.displayName || selectedCharacter.name}
+          onClose={() => setShowIconGenerator(false)}
+          onSave={async (icons) => {
+            const updatedIcons = { ...selectedCharacter.icons, ...icons };
+            await updateCharacter(selectedCharacter.id, { icons: updatedIcons });
+            setSelectedCharacter((prev) =>
+              prev ? { ...prev, icons: updatedIcons } : null
             );
           }}
         />
@@ -348,12 +367,14 @@ function CharacterDetail({
   copiedId,
   onPreviewAnimation,
   onEditIcons,
+  onGenerateIcons,
 }: {
   character: QuirkyverseCharacter;
   onCopy: (text: string, id: string) => void;
   copiedId: string | null;
   onPreviewAnimation: () => void;
   onEditIcons: () => void;
+  onGenerateIcons: () => void;
 }) {
   const [activeTab, setActiveTab] = useState<"animations" | "icons">(
     "animations"
@@ -438,13 +459,22 @@ function CharacterDetail({
           </button>
         )}
         {activeTab === "icons" && (
-          <button
-            onClick={onEditIcons}
-            className="flex items-center gap-2 px-3 py-2 text-sm bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors"
-          >
-            <PencilIcon className="w-4 h-4" />
-            Edit Icons
-          </button>
+          <>
+            <button
+              onClick={onGenerateIcons}
+              className="flex items-center gap-2 px-3 py-2 text-sm bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-colors"
+            >
+              <CameraIcon className="w-4 h-4" />
+              Generate Icons
+            </button>
+            <button
+              onClick={onEditIcons}
+              className="flex items-center gap-2 px-3 py-2 text-sm bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors"
+            >
+              <PencilIcon className="w-4 h-4" />
+              Edit Icons
+            </button>
+          </>
         )}
       </div>
 
