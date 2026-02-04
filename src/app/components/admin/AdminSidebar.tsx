@@ -20,6 +20,7 @@ import {
   RocketLaunchIcon,
   SparklesIcon,
   CubeIcon,
+  ArchiveBoxIcon,
 } from "@heroicons/react/24/outline";
 
 interface NavItem {
@@ -74,6 +75,12 @@ const navigation: NavSection[] = [
     title: "Roblox Management",
     adminOnly: true,
     items: [
+      {
+        name: "Assets",
+        href: "/admin/roblox/assets",
+        icon: <ArchiveBoxIcon className="w-5 h-5" />,
+        adminOnly: true,
+      },
       {
         name: "Group Roles",
         href: "/admin/roblox/roles",

@@ -7,10 +7,18 @@ import {
   BellIcon,
   ShieldCheckIcon,
   PaintBrushIcon,
+  CubeIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+  PlusIcon,
+  TrashIcon,
+  ArrowPathIcon,
+  ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
 import AdminHeader from "../../components/admin/AdminHeader";
 import StatusBadge from "../../components/admin/StatusBadge";
 import { useAdmin } from "@/components/context/AdminContext";
+import { useRobloxConfig } from "@/components/hooks/useRobloxConfig";
 
 export default function SettingsPage() {
   const { user, isAdmin } = useAdmin();
@@ -23,6 +31,11 @@ export default function SettingsPage() {
   ];
 
   if (isAdmin) {
+    tabs.push({
+      id: "roblox",
+      label: "Roblox",
+      icon: <CubeIcon className="w-5 h-5" />,
+    });
     tabs.push({
       id: "security",
       label: "Security",
@@ -252,6 +265,8 @@ export default function SettingsPage() {
             </div>
           )}
 
+          {activeTab === "roblox" && isAdmin && <RobloxConfigSection />}
+
           {activeTab === "security" && isAdmin && (
             <div className="bg-white rounded-2xl shadow-xl p-6">
               <h2 className="text-lg font-bold text-slate-700 mb-6">
@@ -299,5 +314,395 @@ export default function SettingsPage() {
         </div>
       </div>
     </>
+  );
+}
+
+function RobloxConfigSection() {
+  const {
+    config,
+    loading,
+    error,
+    saving,
+    updateConfig,
+    testApiKey,
+    testGroup,
+    addGroup,
+    removeGroup,
+  } = useRobloxConfig();
+
+  const [apiKey, setApiKey] = useState("");
+  const [userId, setUserId] = useState("");
+  const [username, setUsername] = useState("");
+  const [newGroupId, setNewGroupId] = useState("");
+  const [newGroupName, setNewGroupName] = useState("");
+  const [testingKey, setTestingKey] = useState(false);
+  const [testingGroup, setTestingGroup] = useState(false);
+  const [keyTestResult, setKeyTestResult] = useState<{ valid?: boolean; message?: string; error?: string } | null>(null);
+  const [groupTestResult, setGroupTestResult] = useState<{ accessible?: boolean; name?: string; error?: string } | null>(null);
+
+  const handleTestApiKey = async () => {
+    setTestingKey(true);
+    setKeyTestResult(null);
+    try {
+      const result = await testApiKey(apiKey || undefined);
+      setKeyTestResult(result);
+    } catch (err) {
+      setKeyTestResult({ valid: false, error: "Test failed" });
+    } finally {
+      setTestingKey(false);
+    }
+  };
+
+  const handleSaveApiKey = async () => {
+    try {
+      await updateConfig({
+        api_key: apiKey,
+        roblox_user_id: userId,
+        roblox_username: username,
+      });
+      setApiKey("");
+    } catch (err) {
+      // Error handled by hook
+    }
+  };
+
+  const handleTestGroup = async () => {
+    if (!newGroupId) return;
+    setTestingGroup(true);
+    setGroupTestResult(null);
+    try {
+      const result = await testGroup(newGroupId);
+      setGroupTestResult(result);
+      if (result.accessible && result.name) {
+        setNewGroupName(result.name);
+      }
+    } catch (err) {
+      setGroupTestResult({ accessible: false, error: "Test failed" });
+    } finally {
+      setTestingGroup(false);
+    }
+  };
+
+  const handleAddGroup = async () => {
+    if (!newGroupId) return;
+    try {
+      await addGroup(newGroupId, newGroupName || undefined);
+      setNewGroupId("");
+      setNewGroupName("");
+      setGroupTestResult(null);
+    } catch (err) {
+      // Error handled by hook
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-2xl shadow-xl p-6">
+        <div className="animate-pulse space-y-4">
+          <div className="h-6 bg-gray-200 rounded w-1/3"></div>
+          <div className="h-10 bg-gray-200 rounded"></div>
+          <div className="h-10 bg-gray-200 rounded"></div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* API Key Configuration */}
+      <div className="bg-white rounded-2xl shadow-xl p-6">
+        <h2 className="text-lg font-bold text-slate-700 mb-2">
+          Roblox Open Cloud API
+        </h2>
+        <p className="text-sm text-slate-500 mb-6">
+          Configure your Roblox Open Cloud API key to enable asset uploads.
+          Create an API key at{" "}
+          <a
+            href="https://create.roblox.com/dashboard/credentials"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-500 hover:underline"
+          >
+            Creator Hub
+          </a>
+          .
+        </p>
+
+        {error && (
+          <div className="mb-4 p-4 bg-red-50 border border-red-100 rounded-xl flex items-center gap-2 text-red-700">
+            <XCircleIcon className="w-5 h-5" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        {/* Current Status */}
+        <div className="mb-6 p-4 rounded-xl bg-gray-50">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-slate-600">Status</p>
+              <div className="flex items-center gap-2 mt-1">
+                {config?.is_configured ? (
+                  <>
+                    <CheckCircleIcon className="w-5 h-5 text-green-500" />
+                    <span className="text-green-700">API key configured</span>
+                  </>
+                ) : (
+                  <>
+                    <ExclamationTriangleIcon className="w-5 h-5 text-yellow-500" />
+                    <span className="text-yellow-700">Not configured</span>
+                  </>
+                )}
+              </div>
+            </div>
+            {config?.api_key_preview && (
+              <div className="text-right">
+                <p className="text-sm font-medium text-slate-600">Current Key</p>
+                <code className="text-sm text-slate-500 font-mono">
+                  {config.api_key_preview}
+                </code>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* API Key Input */}
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-600 mb-1">
+              {config?.is_configured ? "Update API Key" : "API Key"}
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="password"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                placeholder="Enter your Roblox Open Cloud API key"
+                className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none font-mono text-sm"
+              />
+              <button
+                onClick={handleTestApiKey}
+                disabled={!apiKey || testingKey}
+                className="px-4 py-2.5 rounded-xl border border-gray-200 text-slate-600 font-medium hover:bg-gray-50 disabled:opacity-50 flex items-center gap-2"
+              >
+                {testingKey ? (
+                  <ArrowPathIcon className="w-4 h-4 animate-spin" />
+                ) : (
+                  "Test"
+                )}
+              </button>
+            </div>
+            {keyTestResult && (
+              <div className={`mt-2 text-sm flex items-center gap-1 ${keyTestResult.valid ? "text-green-600" : "text-red-600"}`}>
+                {keyTestResult.valid ? (
+                  <CheckCircleIcon className="w-4 h-4" />
+                ) : (
+                  <XCircleIcon className="w-4 h-4" />
+                )}
+                <span>{keyTestResult.message || keyTestResult.error}</span>
+              </div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-600 mb-1">
+                Roblox User ID
+              </label>
+              <input
+                type="text"
+                value={userId || config?.roblox_user_id || ""}
+                onChange={(e) => setUserId(e.target.value)}
+                placeholder="Your Roblox user ID"
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-600 mb-1">
+                Roblox Username
+              </label>
+              <input
+                type="text"
+                value={username || config?.roblox_username || ""}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Your Roblox username"
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none"
+              />
+            </div>
+          </div>
+
+          <div className="pt-2">
+            <button
+              onClick={handleSaveApiKey}
+              disabled={saving || (!apiKey && !userId && !username)}
+              className="px-6 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-violet-500 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center gap-2"
+            >
+              {saving && <ArrowPathIcon className="w-4 h-4 animate-spin" />}
+              Save Configuration
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Groups Management */}
+      <div className="bg-white rounded-2xl shadow-xl p-6">
+        <h2 className="text-lg font-bold text-slate-700 mb-2">
+          Roblox Groups
+        </h2>
+        <p className="text-sm text-slate-500 mb-6">
+          Add groups that your API key has permission to upload assets to.
+          Make sure to grant asset upload permissions in Creator Hub.
+        </p>
+
+        {/* Saved Groups */}
+        {config?.groups && config.groups.length > 0 && (
+          <div className="mb-6 space-y-2">
+            <p className="text-sm font-medium text-slate-600 mb-2">Saved Groups</p>
+            {config.groups.map((group) => (
+              <div
+                key={group.id}
+                className="flex items-center justify-between p-3 rounded-xl bg-gray-50"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-blue-500 to-violet-500 flex items-center justify-center text-white text-sm font-bold">
+                    G
+                  </div>
+                  <div>
+                    <p className="font-medium text-slate-700">{group.name}</p>
+                    <p className="text-xs text-slate-400">ID: {group.id}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => removeGroup(group.id)}
+                  className="p-2 hover:bg-red-50 rounded-lg transition-colors"
+                  title="Remove group"
+                >
+                  <TrashIcon className="w-4 h-4 text-red-500" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Add Group */}
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-600 mb-1">
+              Add Group
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newGroupId}
+                onChange={(e) => setNewGroupId(e.target.value)}
+                placeholder="Group ID"
+                className="w-32 px-4 py-2.5 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none"
+              />
+              <input
+                type="text"
+                value={newGroupName}
+                onChange={(e) => setNewGroupName(e.target.value)}
+                placeholder="Group name (optional)"
+                className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none"
+              />
+              <button
+                onClick={handleTestGroup}
+                disabled={!newGroupId || testingGroup}
+                className="px-4 py-2.5 rounded-xl border border-gray-200 text-slate-600 font-medium hover:bg-gray-50 disabled:opacity-50 flex items-center gap-2"
+              >
+                {testingGroup ? (
+                  <ArrowPathIcon className="w-4 h-4 animate-spin" />
+                ) : (
+                  "Test"
+                )}
+              </button>
+              <button
+                onClick={handleAddGroup}
+                disabled={!newGroupId || saving}
+                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-violet-500 text-white font-medium hover:opacity-90 disabled:opacity-50 flex items-center gap-2"
+              >
+                <PlusIcon className="w-4 h-4" />
+                Add
+              </button>
+            </div>
+            {groupTestResult && (
+              <div className={`mt-2 text-sm flex items-center gap-1 ${groupTestResult.accessible ? "text-green-600" : "text-red-600"}`}>
+                {groupTestResult.accessible ? (
+                  <>
+                    <CheckCircleIcon className="w-4 h-4" />
+                    <span>Access confirmed: {groupTestResult.name}</span>
+                  </>
+                ) : (
+                  <>
+                    <XCircleIcon className="w-4 h-4" />
+                    <span>{groupTestResult.error}</span>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Default Destination */}
+      <div className="bg-white rounded-2xl shadow-xl p-6">
+        <h2 className="text-lg font-bold text-slate-700 mb-2">
+          Default Upload Destination
+        </h2>
+        <p className="text-sm text-slate-500 mb-6">
+          Choose where assets should be uploaded by default.
+        </p>
+
+        <div className="grid grid-cols-2 gap-4">
+          <button
+            onClick={() => updateConfig({ default_destination_type: "user" })}
+            className={`p-4 rounded-xl border-2 transition-all ${
+              config?.default_destination_type === "user"
+                ? "border-blue-500 bg-blue-50"
+                : "border-gray-200 hover:border-gray-300"
+            }`}
+          >
+            <UserCircleIcon className={`w-8 h-8 mx-auto mb-2 ${
+              config?.default_destination_type === "user" ? "text-blue-500" : "text-gray-400"
+            }`} />
+            <p className="font-medium text-slate-700">Personal Account</p>
+            <p className="text-xs text-slate-400 mt-1">Upload to your own inventory</p>
+          </button>
+          <button
+            onClick={() => updateConfig({ default_destination_type: "group" })}
+            className={`p-4 rounded-xl border-2 transition-all ${
+              config?.default_destination_type === "group"
+                ? "border-blue-500 bg-blue-50"
+                : "border-gray-200 hover:border-gray-300"
+            }`}
+          >
+            <CubeIcon className={`w-8 h-8 mx-auto mb-2 ${
+              config?.default_destination_type === "group" ? "text-blue-500" : "text-gray-400"
+            }`} />
+            <p className="font-medium text-slate-700">Group</p>
+            <p className="text-xs text-slate-400 mt-1">Upload to a group inventory</p>
+          </button>
+        </div>
+
+        {config?.default_destination_type === "group" && config.groups.length > 0 && (
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-slate-600 mb-1">
+              Default Group
+            </label>
+            <select
+              value={config.default_group_id || ""}
+              onChange={(e) => updateConfig({ default_group_id: e.target.value })}
+              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none appearance-none bg-white"
+            >
+              <option value="">Select a group...</option>
+              {config.groups.map((group) => (
+                <option key={group.id} value={group.id}>
+                  {group.name} ({group.id})
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
