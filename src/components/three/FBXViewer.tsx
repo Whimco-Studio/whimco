@@ -55,6 +55,14 @@ export default function FBXViewer({
   });
   const clockRef = useRef(new THREE.Clock());
   const frameIdRef = useRef<number>(0);
+  const isInitializedRef = useRef(false);
+  const loadedSourceRef = useRef<File | string | null>(null);
+
+  // Use refs for callbacks to avoid re-triggering effects
+  const onLoadRef = useRef(onLoad);
+  const onErrorRef = useRef(onError);
+  onLoadRef.current = onLoad;
+  onErrorRef.current = onError;
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -64,8 +72,8 @@ export default function FBXViewer({
   const [stats, setStats] = useState<ModelStats | null>(null);
 
   // Initialize Three.js scene
-  const initScene = useCallback(() => {
-    if (!containerRef.current) return;
+  useEffect(() => {
+    if (!containerRef.current || isInitializedRef.current) return;
 
     const container = containerRef.current;
     const width = container.clientWidth;
@@ -144,142 +152,143 @@ export default function FBXViewer({
     };
     window.addEventListener("resize", handleResize);
 
+    isInitializedRef.current = true;
+
     return () => {
       window.removeEventListener("resize", handleResize);
       cancelAnimationFrame(frameIdRef.current);
       controls.dispose();
       renderer.dispose();
-      container.removeChild(renderer.domElement);
+      if (container.contains(renderer.domElement)) {
+        container.removeChild(renderer.domElement);
+      }
+      isInitializedRef.current = false;
     };
   }, []);
 
   // Load FBX model
-  const loadModel = useCallback(
-    async (source: File | string) => {
-      if (!sceneRef.current) return;
+  const loadModel = useCallback(async (source: File | string) => {
+    if (!sceneRef.current) return;
 
-      setIsLoading(true);
-      setError(null);
+    // Check if we already loaded this source
+    if (loadedSourceRef.current === source) return;
+    loadedSourceRef.current = source;
 
-      // Remove existing model
-      if (modelRef.current) {
-        sceneRef.current.remove(modelRef.current);
-        animationRef.current.mixer?.stopAllAction();
-        animationRef.current.mixer = null;
-        animationRef.current.actions.clear();
-        animationRef.current.currentAction = null;
+    setIsLoading(true);
+    setError(null);
+
+    // Remove existing model
+    if (modelRef.current) {
+      sceneRef.current.remove(modelRef.current);
+      animationRef.current.mixer?.stopAllAction();
+      animationRef.current.mixer = null;
+      animationRef.current.actions.clear();
+      animationRef.current.currentAction = null;
+    }
+
+    const loader = new FBXLoader();
+
+    try {
+      let object: THREE.Group;
+
+      if (source instanceof File) {
+        const arrayBuffer = await source.arrayBuffer();
+        object = loader.parse(arrayBuffer, "");
+      } else {
+        object = await new Promise((resolve, reject) => {
+          loader.load(source, resolve, undefined, reject);
+        });
       }
 
-      const loader = new FBXLoader();
+      // Calculate model stats
+      let vertexCount = 0;
+      let triangleCount = 0;
 
-      try {
-        let object: THREE.Group;
-
-        if (source instanceof File) {
-          const arrayBuffer = await source.arrayBuffer();
-          object = loader.parse(arrayBuffer, "");
-        } else {
-          object = await new Promise((resolve, reject) => {
-            loader.load(source, resolve, undefined, reject);
-          });
-        }
-
-        // Calculate model stats
-        let vertexCount = 0;
-        let triangleCount = 0;
-
-        object.traverse((child) => {
-          if (child instanceof THREE.Mesh) {
-            const geometry = child.geometry as THREE.BufferGeometry;
-            if (geometry.attributes.position) {
-              vertexCount += geometry.attributes.position.count;
-            }
-            if (geometry.index) {
-              triangleCount += geometry.index.count / 3;
-            } else if (geometry.attributes.position) {
-              triangleCount += geometry.attributes.position.count / 3;
-            }
-
-            // Enable shadows
-            child.castShadow = true;
-            child.receiveShadow = true;
+      object.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          const geometry = child.geometry as THREE.BufferGeometry;
+          if (geometry.attributes.position) {
+            vertexCount += geometry.attributes.position.count;
           }
+          if (geometry.index) {
+            triangleCount += geometry.index.count / 3;
+          } else if (geometry.attributes.position) {
+            triangleCount += geometry.attributes.position.count / 3;
+          }
+
+          // Enable shadows
+          child.castShadow = true;
+          child.receiveShadow = true;
+        }
+      });
+
+      // Center and scale model
+      const box = new THREE.Box3().setFromObject(object);
+      const center = box.getCenter(new THREE.Vector3());
+      const size = box.getSize(new THREE.Vector3());
+      const maxDim = Math.max(size.x, size.y, size.z);
+      const scale = 100 / maxDim;
+
+      object.scale.multiplyScalar(scale);
+      object.position.sub(center.multiplyScalar(scale));
+      object.position.y = 0;
+
+      sceneRef.current.add(object);
+      modelRef.current = object;
+
+      // Setup animations
+      const animationNames: string[] = [];
+      if (object.animations && object.animations.length > 0) {
+        const mixer = new THREE.AnimationMixer(object);
+        animationRef.current.mixer = mixer;
+
+        object.animations.forEach((clip) => {
+          const action = mixer.clipAction(clip);
+          animationRef.current.actions.set(clip.name, action);
+          animationNames.push(clip.name);
         });
 
-        // Center and scale model
-        const box = new THREE.Box3().setFromObject(object);
-        const center = box.getCenter(new THREE.Vector3());
-        const size = box.getSize(new THREE.Vector3());
-        const maxDim = Math.max(size.x, size.y, size.z);
-        const scale = 100 / maxDim;
-
-        object.scale.multiplyScalar(scale);
-        object.position.sub(center.multiplyScalar(scale));
-        object.position.y = 0;
-
-        sceneRef.current.add(object);
-        modelRef.current = object;
-
-        // Setup animations
-        const animationNames: string[] = [];
-        if (object.animations && object.animations.length > 0) {
-          const mixer = new THREE.AnimationMixer(object);
-          animationRef.current.mixer = mixer;
-
-          object.animations.forEach((clip) => {
-            const action = mixer.clipAction(clip);
-            animationRef.current.actions.set(clip.name, action);
-            animationNames.push(clip.name);
-          });
-
-          // Play first animation by default
-          if (animationNames.length > 0) {
-            const firstAction = animationRef.current.actions.get(
-              animationNames[0]
-            );
-            if (firstAction) {
-              firstAction.play();
-              animationRef.current.currentAction = firstAction;
-              animationRef.current.isPlaying = true;
-            }
+        // Play first animation by default
+        if (animationNames.length > 0) {
+          const firstAction = animationRef.current.actions.get(
+            animationNames[0]
+          );
+          if (firstAction) {
+            firstAction.play();
+            animationRef.current.currentAction = firstAction;
+            animationRef.current.isPlaying = true;
           }
         }
-
-        setAnimations(animationNames);
-        setSelectedAnimation(animationNames[0] || "");
-        setIsPlaying(true);
-
-        const modelStats: ModelStats = {
-          vertices: vertexCount,
-          triangles: Math.round(triangleCount),
-          animations: animationNames,
-        };
-        setStats(modelStats);
-        onLoad?.(modelStats);
-
-        // Reset camera position
-        if (cameraRef.current && controlsRef.current) {
-          cameraRef.current.position.set(0, 80, 150);
-          controlsRef.current.target.set(0, 40, 0);
-          controlsRef.current.update();
-        }
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : "Failed to load model";
-        setError(errorMessage);
-        onError?.(errorMessage);
-      } finally {
-        setIsLoading(false);
       }
-    },
-    [onLoad, onError]
-  );
 
-  // Initialize scene on mount
-  useEffect(() => {
-    const cleanup = initScene();
-    return cleanup;
-  }, [initScene]);
+      setAnimations(animationNames);
+      setSelectedAnimation(animationNames[0] || "");
+      setIsPlaying(true);
+
+      const modelStats: ModelStats = {
+        vertices: vertexCount,
+        triangles: Math.round(triangleCount),
+        animations: animationNames,
+      };
+      setStats(modelStats);
+      onLoadRef.current?.(modelStats);
+
+      // Reset camera position
+      if (cameraRef.current && controlsRef.current) {
+        cameraRef.current.position.set(0, 80, 150);
+        controlsRef.current.target.set(0, 40, 0);
+        controlsRef.current.update();
+      }
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to load model";
+      setError(errorMessage);
+      onErrorRef.current?.(errorMessage);
+      loadedSourceRef.current = null; // Reset so user can retry
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   // Load model when file or URL changes
   useEffect(() => {
