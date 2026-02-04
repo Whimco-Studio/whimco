@@ -19,4 +19,4 @@ export const mockRegularUser: User = {
 };
 
 // Change this to mockRegularUser to test user role view
-export const mockCurrentUser: User = mockRegularUser;
+export const mockCurrentUser: User = mockAdminUser;
