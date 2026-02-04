@@ -102,6 +102,17 @@ export const robloxAssetsApi = {
       formData.append("tags", JSON.stringify(payload.tags));
     }
 
+    // Destination fields
+    if (payload.destination_type) {
+      formData.append("destination_type", payload.destination_type);
+    }
+    if (payload.roblox_user_id) {
+      formData.append("roblox_user_id", payload.roblox_user_id);
+    }
+    if (payload.roblox_group_id) {
+      formData.append("roblox_group_id", payload.roblox_group_id);
+    }
+
     return apiRequest<RobloxAsset>("/roblox-assets/", {
       method: "POST",
       body: formData,
