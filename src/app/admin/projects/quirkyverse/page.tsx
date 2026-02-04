@@ -89,9 +89,18 @@ export default function QuirkyversePage() {
 
       {/* Characters showcase */}
       <div className="bg-white rounded-2xl shadow-xl p-6 mb-8">
-        <h2 className="text-lg font-bold text-slate-700 mb-4">Quirkyverse Characters</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold text-slate-700">Quirkyverse Characters</h2>
+          <Link
+            href="/admin/projects/quirkyverse/characters"
+            className="text-sm text-purple-500 hover:text-purple-600 flex items-center gap-1"
+          >
+            Manage Characters
+            <ArrowRightIcon className="w-4 h-4" />
+          </Link>
+        </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-          {characters.map((char) => (
+          {characters.slice(0, 10).map((char) => (
             <div
               key={char.id}
               className="flex flex-col items-center p-4 rounded-xl bg-gradient-to-br from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 transition-colors"
@@ -106,6 +115,16 @@ export default function QuirkyversePage() {
             </div>
           ))}
         </div>
+        {characters.length > 10 && (
+          <div className="mt-4 text-center">
+            <Link
+              href="/admin/projects/quirkyverse/characters"
+              className="text-sm text-purple-500 hover:text-purple-600"
+            >
+              View all {characters.length} characters
+            </Link>
+          </div>
+        )}
       </div>
 
       {/* Projects */}
