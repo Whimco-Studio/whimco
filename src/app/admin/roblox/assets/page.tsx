@@ -17,6 +17,7 @@ import {
   ArrowDownTrayIcon,
   CodeBracketIcon,
   UserGroupIcon,
+  CloudArrowUpIcon,
 } from "@heroicons/react/24/outline";
 import {
   PhotoIcon as PhotoIconSolid,
@@ -31,6 +32,7 @@ import StatusBadge from "../../../components/admin/StatusBadge";
 import { useRobloxAssets } from "@/components/hooks/useRobloxAssets";
 import { RobloxAsset, AssetType, AssetStatus } from "@/types/roblox-assets";
 import AssetUploadModal from "./components/AssetUploadModal";
+import BatchUploadModal from "./components/BatchUploadModal";
 
 export default function AssetsPage() {
   const [search, setSearch] = useState("");
@@ -38,6 +40,7 @@ export default function AssetsPage() {
   const [statusFilter, setStatusFilter] = useState<AssetStatus | "all">("all");
   const [ownerFilter, setOwnerFilter] = useState<string>("all");
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showBatchUploadModal, setShowBatchUploadModal] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [selectedAssets, setSelectedAssets] = useState<Set<string>>(new Set());
   const [showExportMenu, setShowExportMenu] = useState(false);
@@ -525,6 +528,14 @@ export default function AssetsPage() {
           </div>
 
           <button
+            onClick={() => setShowBatchUploadModal(true)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-blue-500 text-blue-600 font-medium hover:bg-blue-50 transition-all"
+          >
+            <CloudArrowUpIcon className="w-5 h-5" />
+            <span>Batch</span>
+          </button>
+
+          <button
             onClick={() => setShowUploadModal(true)}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-violet-500 text-white font-medium hover:from-blue-600 hover:to-violet-600 transition-all shadow-md"
           >
@@ -565,6 +576,16 @@ export default function AssetsPage() {
         onClose={() => setShowUploadModal(false)}
         onUpload={uploadAsset}
         uploading={uploading}
+      />
+
+      {/* Batch Upload Modal */}
+      <BatchUploadModal
+        isOpen={showBatchUploadModal}
+        onClose={() => {
+          setShowBatchUploadModal(false);
+          refetch(); // Refresh the list after batch upload
+        }}
+        onUpload={uploadAsset}
       />
     </>
   );
