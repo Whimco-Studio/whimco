@@ -455,9 +455,9 @@ function RobloxConfigSection() {
               </div>
             </div>
             {config?.api_key_preview && (
-              <div className="text-right">
+              <div className="text-right min-w-0 flex-1">
                 <p className="text-sm font-medium text-slate-600">Current Key</p>
-                <code className="text-sm text-slate-500 font-mono">
+                <code className="text-sm text-slate-500 font-mono block truncate max-w-[200px] ml-auto">
                   {config.api_key_preview}
                 </code>
               </div>
