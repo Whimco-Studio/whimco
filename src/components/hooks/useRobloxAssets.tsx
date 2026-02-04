@@ -15,7 +15,7 @@ import {
 } from "@/lib/mock-data/roblox-assets";
 
 // Set to true to use mock data, false to use real API
-const USE_MOCK_DATA = true;
+const USE_MOCK_DATA = false;
 
 interface UseRobloxAssetsOptions {
   type?: AssetType;
