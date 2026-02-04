@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import {
   UserCircleIcon,
   BellIcon,
@@ -79,48 +78,31 @@ export default function SettingsPage() {
               {/* Avatar */}
               <div className="flex items-center gap-4 mb-6">
                 <div className="relative w-20 h-20 rounded-full overflow-hidden bg-gradient-to-r from-blue-500 to-violet-500 flex items-center justify-center text-white text-2xl font-bold">
-                  {user?.avatar ? (
-                    <Image
-                      src={user.avatar}
-                      alt={user.name}
-                      fill
-                      className="object-cover"
-                    />
-                  ) : (
-                    user?.name?.[0] || "U"
-                  )}
+                  {user?.username?.[0]?.toUpperCase() || "U"}
                 </div>
                 <div>
-                  <button className="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-violet-500 rounded-lg hover:opacity-90 transition-opacity">
-                    Change Avatar
-                  </button>
-                  <p className="text-xs text-slate-400 mt-1">
-                    JPG, PNG or GIF. Max 2MB.
+                  <p className="text-lg font-semibold text-slate-700">
+                    {user?.username || "User"}
                   </p>
+                  <StatusBadge
+                    status={isAdmin ? "success" : "info"}
+                    label={isAdmin ? "Administrator" : "User"}
+                    size="sm"
+                  />
                 </div>
               </div>
 
-              {/* Form */}
+              {/* Info */}
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-600 mb-1">
-                    Display Name
+                    Username
                   </label>
                   <input
                     type="text"
-                    defaultValue={user?.name}
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none text-slate-700 bg-white"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-600 mb-1">
-                    Email
-                  </label>
-                  <input
-                    type="email"
-                    defaultValue={user?.email}
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none text-slate-700 bg-white"
+                    value={user?.username || ""}
+                    disabled
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-slate-500"
                   />
                 </div>
 
@@ -140,12 +122,6 @@ export default function SettingsPage() {
                         : "Access to analytics only"}
                     </span>
                   </div>
-                </div>
-
-                <div className="pt-4">
-                  <button className="px-6 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-violet-500 rounded-xl hover:opacity-90 transition-opacity">
-                    Save Changes
-                  </button>
                 </div>
               </div>
             </div>

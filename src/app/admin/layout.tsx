@@ -1,15 +1,43 @@
 "use client";
 
-import { AdminProvider } from "@/components/context/AdminContext";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { AdminProvider, useAdmin } from "@/components/context/AdminContext";
 import AdminSidebar from "../components/admin/AdminSidebar";
 
-export default function AdminLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+function AuthGuard({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
+  const { isAuthenticated, isLoading } = useAdmin();
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.push("/login");
+    }
+  }, [isAuthenticated, isLoading, router]);
+
+  // Show loading spinner while checking auth
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-100 via-gray-50 to-slate-100 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-slate-600 font-medium">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render admin content if not authenticated
+  if (!isAuthenticated) {
+    return null;
+  }
+
+  return <>{children}</>;
+}
+
+function AdminContent({ children }: { children: React.ReactNode }) {
   return (
-    <AdminProvider>
+    <AuthGuard>
       <div className="min-h-screen bg-gradient-to-br from-slate-100 via-gray-50 to-slate-100">
         {/* Animated gradient blobs for depth */}
         <div className="fixed inset-0 overflow-hidden pointer-events-none">
@@ -32,6 +60,18 @@ export default function AdminLayout({
           <div className="px-4 pt-6 pb-8 xl:px-8">{children}</div>
         </main>
       </div>
+    </AuthGuard>
+  );
+}
+
+export default function AdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <AdminProvider>
+      <AdminContent>{children}</AdminContent>
     </AdminProvider>
   );
 }

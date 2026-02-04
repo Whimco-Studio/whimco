@@ -116,10 +116,10 @@ export default function AdminHeader({ title, subtitle }: AdminHeaderProps) {
             className="flex items-center gap-2 text-white/80 hover:text-white transition-colors"
           >
             <span className="text-sm font-medium hidden sm:inline">
-              {user?.name || "User"}
+              {user?.username || "User"}
             </span>
             <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-sm font-bold">
-              {user?.name?.[0] || "U"}
+              {user?.username?.[0] || "U"}
             </div>
           </Link>
         </div>
