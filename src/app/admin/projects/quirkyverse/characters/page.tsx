@@ -413,7 +413,7 @@ function CharacterDetail({
                       ) : (
                         <>
                           <ClipboardDocumentIcon className="w-3 h-3 text-gray-400" />
-                          <span>{assetId}</span>
+                          <span className="text-slate-700">{assetId}</span>
                         </>
                       )}
                     </button>
@@ -456,7 +456,7 @@ function CharacterDetail({
                       ) : (
                         <>
                           <ClipboardDocumentIcon className="w-3 h-3 text-gray-400" />
-                          <span>{assetId}</span>
+                          <span className="text-slate-700">{assetId}</span>
                         </>
                       )}
                     </button>
