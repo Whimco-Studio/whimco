@@ -9,7 +9,7 @@ import {
 import { mockRobloxConfig, mockRobloxGroups } from "@/lib/mock-data/roblox-assets";
 
 // Set to true to use mock data, false to use real API
-const USE_MOCK_DATA = false;
+const USE_MOCK_DATA = true;
 
 interface UseRobloxConfigReturn {
   config: RobloxConfig | null;
