@@ -66,6 +66,9 @@ export const quirkyverseApi = {
     params?: QuirkyverseSearchParams
   ): Promise<PaginatedResponse<QuirkyverseCharacter>> {
     const searchParams = new URLSearchParams();
+    // Request all results by default (no pagination)
+    searchParams.set("page_size", "1000");
+
     if (params?.isPublished !== undefined) {
       searchParams.set("isPublished", String(params.isPublished));
     }
@@ -80,7 +83,7 @@ export const quirkyverseApi = {
     }
 
     const queryString = searchParams.toString();
-    const url = `${API_BASE_URL}/quirkyverse-characters/${queryString ? `?${queryString}` : ""}`;
+    const url = `${API_BASE_URL}/quirkyverse-characters/?${queryString}`;
     return fetchWithAuth(url);
   },
 
