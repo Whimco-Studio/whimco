@@ -233,6 +233,21 @@ export const robloxConfigApi = {
       body: JSON.stringify({ group_id: groupId }),
     });
   },
+
+  /**
+   * Fetch all groups the user is a member of
+   */
+  async fetchUserGroups(userId?: string): Promise<{
+    groups: Array<{ id: string; name: string; role: string; rank: number; memberCount: number }>;
+    user_id: string;
+    count: number;
+  }> {
+    return apiRequest("/roblox-config/fetch-groups/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(userId ? { user_id: userId } : {}),
+    });
+  },
 };
 
 export default robloxAssetsApi;

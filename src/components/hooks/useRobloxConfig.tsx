@@ -11,6 +11,14 @@ import { mockRobloxConfig, mockRobloxGroups } from "@/lib/mock-data/roblox-asset
 // Set to true to use mock data, false to use real API
 const USE_MOCK_DATA = false;
 
+interface FetchedGroup {
+  id: string;
+  name: string;
+  role: string;
+  rank: number;
+  memberCount: number;
+}
+
 interface UseRobloxConfigReturn {
   config: RobloxConfig | null;
   loading: boolean;
@@ -23,6 +31,7 @@ interface UseRobloxConfigReturn {
   testUser: (userId: string) => Promise<{ accessible: boolean; name?: string; error?: string }>;
   addGroup: (groupId: string, groupName?: string) => Promise<void>;
   removeGroup: (groupId: string) => Promise<void>;
+  fetchMyGroups: () => Promise<FetchedGroup[]>;
 }
 
 export function useRobloxConfig(): UseRobloxConfigReturn {
@@ -191,6 +200,30 @@ export function useRobloxConfig(): UseRobloxConfigReturn {
     }
   }, []);
 
+  const fetchMyGroups = useCallback(async (): Promise<FetchedGroup[]> => {
+    setError(null);
+
+    try {
+      if (USE_MOCK_DATA) {
+        await new Promise((resolve) => setTimeout(resolve, 800));
+        return mockRobloxGroups.map((g) => ({
+          id: g.id,
+          name: g.name,
+          role: "Owner",
+          rank: 255,
+          memberCount: 100,
+        }));
+      } else {
+        const { robloxConfigApi } = await import("@/lib/api/roblox-assets");
+        const result = await robloxConfigApi.fetchUserGroups();
+        return result.groups;
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to fetch groups");
+      throw err;
+    }
+  }, []);
+
   return {
     config,
     loading,
@@ -203,6 +236,7 @@ export function useRobloxConfig(): UseRobloxConfigReturn {
     testUser,
     addGroup,
     removeGroup,
+    fetchMyGroups,
   };
 }
 

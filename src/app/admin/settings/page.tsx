@@ -317,6 +317,14 @@ export default function SettingsPage() {
   );
 }
 
+interface FetchedGroup {
+  id: string;
+  name: string;
+  role: string;
+  rank: number;
+  memberCount: number;
+}
+
 function RobloxConfigSection() {
   const {
     config,
@@ -328,6 +336,7 @@ function RobloxConfigSection() {
     testGroup,
     addGroup,
     removeGroup,
+    fetchMyGroups,
   } = useRobloxConfig();
 
   const [apiKey, setApiKey] = useState("");
@@ -339,6 +348,8 @@ function RobloxConfigSection() {
   const [testingGroup, setTestingGroup] = useState(false);
   const [keyTestResult, setKeyTestResult] = useState<{ valid?: boolean; message?: string; error?: string } | null>(null);
   const [groupTestResult, setGroupTestResult] = useState<{ accessible?: boolean; name?: string; error?: string } | null>(null);
+  const [fetchingGroups, setFetchingGroups] = useState(false);
+  const [availableGroups, setAvailableGroups] = useState<FetchedGroup[]>([]);
 
   const handleTestApiKey = async () => {
     setTestingKey(true);
@@ -390,6 +401,29 @@ function RobloxConfigSection() {
       setNewGroupId("");
       setNewGroupName("");
       setGroupTestResult(null);
+    } catch (err) {
+      // Error handled by hook
+    }
+  };
+
+  const handleFetchMyGroups = async () => {
+    setFetchingGroups(true);
+    setAvailableGroups([]);
+    try {
+      const groups = await fetchMyGroups();
+      setAvailableGroups(groups);
+    } catch (err) {
+      // Error handled by hook
+    } finally {
+      setFetchingGroups(false);
+    }
+  };
+
+  const handleAddFromList = async (group: FetchedGroup) => {
+    try {
+      await addGroup(group.id, group.name);
+      // Remove from available list
+      setAvailableGroups((prev) => prev.filter((g) => g.id !== group.id));
     } catch (err) {
       // Error handled by hook
     }
@@ -636,6 +670,62 @@ function RobloxConfigSection() {
                     <XCircleIcon className="w-4 h-4" />
                     <span>{groupTestResult.error}</span>
                   </>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Fetch My Groups */}
+          <div className="pt-4 border-t border-gray-100">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <p className="text-sm font-medium text-slate-600">Auto-detect Groups</p>
+                <p className="text-xs text-slate-400">Fetch all groups you&apos;re a member of based on your User ID</p>
+              </div>
+              <button
+                onClick={handleFetchMyGroups}
+                disabled={fetchingGroups || !config?.roblox_user_id}
+                className="px-4 py-2 rounded-xl border border-gray-200 text-slate-600 font-medium hover:bg-gray-50 disabled:opacity-50 flex items-center gap-2"
+              >
+                {fetchingGroups ? (
+                  <ArrowPathIcon className="w-4 h-4 animate-spin" />
+                ) : (
+                  <ArrowPathIcon className="w-4 h-4" />
+                )}
+                Fetch My Groups
+              </button>
+            </div>
+            {!config?.roblox_user_id && (
+              <p className="text-xs text-amber-600 mb-2">Set your Roblox User ID above to enable this feature</p>
+            )}
+            {availableGroups.length > 0 && (
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                <p className="text-xs text-slate-500 mb-2">Click to add a group:</p>
+                {availableGroups
+                  .filter((g) => !config?.groups.some((sg) => sg.id === g.id))
+                  .map((group) => (
+                    <button
+                      key={group.id}
+                      onClick={() => handleAddFromList(group)}
+                      disabled={saving}
+                      className="w-full flex items-center justify-between p-3 rounded-xl bg-gray-50 hover:bg-blue-50 transition-colors text-left disabled:opacity-50"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 flex items-center justify-center text-white text-sm font-bold">
+                          G
+                        </div>
+                        <div>
+                          <p className="font-medium text-slate-700">{group.name}</p>
+                          <p className="text-xs text-slate-400">
+                            ID: {group.id} • {group.role} • {group.memberCount.toLocaleString()} members
+                          </p>
+                        </div>
+                      </div>
+                      <PlusIcon className="w-5 h-5 text-blue-500" />
+                    </button>
+                  ))}
+                {availableGroups.filter((g) => !config?.groups.some((sg) => sg.id === g.id)).length === 0 && (
+                  <p className="text-sm text-slate-500 text-center py-2">All your groups have been added!</p>
                 )}
               </div>
             )}
