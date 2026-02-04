@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   mockRoles,
   mockMembers,
@@ -60,6 +60,7 @@ export function useRobloxData(): RobloxData {
 export function useRoles() {
   const [roles, setRoles] = useState<RobloxRole[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -70,7 +71,35 @@ export function useRoles() {
     fetchData();
   }, []);
 
-  return { roles, loading };
+  const addRole = useCallback(async (role: Omit<RobloxRole, "id">) => {
+    setSaving(true);
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    const newRole: RobloxRole = {
+      ...role,
+      id: `role-${Date.now()}`,
+    };
+    setRoles((prev) => [...prev, newRole]);
+    setSaving(false);
+    return newRole;
+  }, []);
+
+  const updateRole = useCallback(async (id: string, updates: Partial<RobloxRole>) => {
+    setSaving(true);
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    setRoles((prev) =>
+      prev.map((role) => (role.id === id ? { ...role, ...updates } : role))
+    );
+    setSaving(false);
+  }, []);
+
+  const deleteRole = useCallback(async (id: string) => {
+    setSaving(true);
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    setRoles((prev) => prev.filter((role) => role.id !== id));
+    setSaving(false);
+  }, []);
+
+  return { roles, loading, saving, addRole, updateRole, deleteRole };
 }
 
 export function useMembers() {
@@ -86,7 +115,14 @@ export function useMembers() {
     fetchData();
   }, []);
 
-  return { members, loading };
+  const refetch = useCallback(async () => {
+    setLoading(true);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    setMembers(mockMembers);
+    setLoading(false);
+  }, []);
+
+  return { members, loading, refetch };
 }
 
 export function useWallPosts() {
@@ -102,12 +138,43 @@ export function useWallPosts() {
     fetchData();
   }, []);
 
-  return { posts, loading };
+  const pinPost = useCallback(async (id: string) => {
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    setPosts((prev) =>
+      prev.map((post) =>
+        post.id === id ? { ...post, isPinned: !post.isPinned } : post
+      )
+    );
+  }, []);
+
+  const hidePost = useCallback(async (id: string) => {
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    setPosts((prev) =>
+      prev.map((post) =>
+        post.id === id ? { ...post, isHidden: !post.isHidden } : post
+      )
+    );
+  }, []);
+
+  const deletePost = useCallback(async (id: string) => {
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    setPosts((prev) => prev.filter((post) => post.id !== id));
+  }, []);
+
+  const refetch = useCallback(async () => {
+    setLoading(true);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    setPosts(mockWallPosts);
+    setLoading(false);
+  }, []);
+
+  return { posts, loading, pinPost, hidePost, deletePost, refetch };
 }
 
 export function usePayouts() {
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -118,5 +185,33 @@ export function usePayouts() {
     fetchData();
   }, []);
 
-  return { payouts, loading };
+  const addPayout = useCallback(async (payout: Omit<Payout, "id">) => {
+    setSaving(true);
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    const newPayout: Payout = {
+      ...payout,
+      id: `payout-${Date.now()}`,
+    };
+    setPayouts((prev) => [newPayout, ...prev]);
+    setSaving(false);
+    return newPayout;
+  }, []);
+
+  const updatePayout = useCallback(async (id: string, updates: Partial<Payout>) => {
+    setSaving(true);
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    setPayouts((prev) =>
+      prev.map((payout) => (payout.id === id ? { ...payout, ...updates } : payout))
+    );
+    setSaving(false);
+  }, []);
+
+  const refetch = useCallback(async () => {
+    setLoading(true);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    setPayouts(mockPayouts);
+    setLoading(false);
+  }, []);
+
+  return { payouts, loading, saving, addPayout, updatePayout, refetch };
 }

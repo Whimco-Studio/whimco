@@ -50,7 +50,7 @@ export default function SettingsPage() {
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Sidebar Tabs */}
         <div className="lg:w-64 flex-shrink-0">
-          <nav className="bg-white rounded-2xl shadow-xl p-2">
+          <nav className="backdrop-blur-xl bg-white/70 border border-white/20 rounded-2xl shadow-xl p-2">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
@@ -71,7 +71,7 @@ export default function SettingsPage() {
         {/* Content */}
         <div className="flex-1">
           {activeTab === "profile" && (
-            <div className="bg-white rounded-2xl shadow-xl p-6">
+            <div className="backdrop-blur-xl bg-white/70 border border-white/20 rounded-2xl shadow-xl p-6">
               <h2 className="text-lg font-bold text-slate-700 mb-6">
                 Profile Settings
               </h2>
@@ -152,7 +152,7 @@ export default function SettingsPage() {
           )}
 
           {activeTab === "notifications" && (
-            <div className="bg-white rounded-2xl shadow-xl p-6">
+            <div className="backdrop-blur-xl bg-white/70 border border-white/20 rounded-2xl shadow-xl p-6">
               <h2 className="text-lg font-bold text-slate-700 mb-6">
                 Notification Preferences
               </h2>
@@ -203,7 +203,7 @@ export default function SettingsPage() {
           )}
 
           {activeTab === "appearance" && (
-            <div className="bg-white rounded-2xl shadow-xl p-6">
+            <div className="backdrop-blur-xl bg-white/70 border border-white/20 rounded-2xl shadow-xl p-6">
               <h2 className="text-lg font-bold text-slate-700 mb-6">
                 Appearance Settings
               </h2>
@@ -268,7 +268,7 @@ export default function SettingsPage() {
           {activeTab === "roblox" && isAdmin && <RobloxConfigSection />}
 
           {activeTab === "security" && isAdmin && (
-            <div className="bg-white rounded-2xl shadow-xl p-6">
+            <div className="backdrop-blur-xl bg-white/70 border border-white/20 rounded-2xl shadow-xl p-6">
               <h2 className="text-lg font-bold text-slate-700 mb-6">
                 Security Settings
               </h2>
@@ -431,7 +431,7 @@ function RobloxConfigSection() {
 
   if (loading) {
     return (
-      <div className="bg-white rounded-2xl shadow-xl p-6">
+      <div className="backdrop-blur-xl bg-white/70 border border-white/20 rounded-2xl shadow-xl p-6">
         <div className="animate-pulse space-y-4">
           <div className="h-6 bg-gray-200 rounded w-1/3"></div>
           <div className="h-10 bg-gray-200 rounded"></div>
@@ -444,7 +444,7 @@ function RobloxConfigSection() {
   return (
     <div className="space-y-6">
       {/* API Key Configuration */}
-      <div className="bg-white rounded-2xl shadow-xl p-6">
+      <div className="backdrop-blur-xl bg-white/70 border border-white/20 rounded-2xl shadow-xl p-6">
         <h2 className="text-lg font-bold text-slate-700 mb-2">
           Roblox Open Cloud API
         </h2>
@@ -578,7 +578,7 @@ function RobloxConfigSection() {
       </div>
 
       {/* Groups Management */}
-      <div className="bg-white rounded-2xl shadow-xl p-6">
+      <div className="backdrop-blur-xl bg-white/70 border border-white/20 rounded-2xl shadow-xl p-6">
         <h2 className="text-lg font-bold text-slate-700 mb-2">
           Roblox Groups
         </h2>
@@ -734,7 +734,7 @@ function RobloxConfigSection() {
       </div>
 
       {/* Default Destination */}
-      <div className="bg-white rounded-2xl shadow-xl p-6">
+      <div className="backdrop-blur-xl bg-white/70 border border-white/20 rounded-2xl shadow-xl p-6">
         <h2 className="text-lg font-bold text-slate-700 mb-2">
           Default Upload Destination
         </h2>

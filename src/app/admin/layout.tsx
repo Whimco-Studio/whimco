@@ -10,9 +10,19 @@ export default function AdminLayout({
 }) {
   return (
     <AdminProvider>
-      <div className="min-h-screen bg-gray-50">
-        {/* Background gradient */}
-        <div className="absolute w-full bg-gradient-to-bl from-black to-gray-700 min-h-72" />
+      <div className="min-h-screen bg-gradient-to-br from-slate-100 via-gray-50 to-slate-100">
+        {/* Animated gradient blobs for depth */}
+        <div className="fixed inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-violet-400/20 rounded-full blur-3xl" />
+          <div className="absolute top-1/2 -left-20 w-60 h-60 bg-gradient-to-br from-cyan-400/15 to-blue-400/15 rounded-full blur-3xl" />
+          <div className="absolute -bottom-20 right-1/3 w-72 h-72 bg-gradient-to-br from-violet-400/15 to-pink-400/15 rounded-full blur-3xl" />
+        </div>
+
+        {/* Top gradient bar */}
+        <div className="absolute top-0 left-0 right-0 h-64 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 via-violet-600/10 to-blue-600/10" />
+          <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-5" />
+        </div>
 
         {/* Sidebar */}
         <AdminSidebar />

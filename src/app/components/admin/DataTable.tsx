@@ -84,15 +84,15 @@ export default function DataTable<T>({
 
   if (loading) {
     return (
-      <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+      <div className="backdrop-blur-xl bg-white/70 border border-white/20 rounded-2xl shadow-xl overflow-hidden">
         <div className="animate-pulse">
-          <div className="h-12 bg-gray-100" />
+          <div className="h-12 bg-gradient-to-r from-gray-100/50 to-gray-50/50" />
           {[...Array(5)].map((_, i) => (
-            <div key={i} className="h-16 border-t border-gray-100">
+            <div key={i} className="h-16 border-t border-white/10">
               <div className="flex items-center h-full px-6 gap-4">
-                <div className="h-4 bg-gray-100 rounded w-1/4" />
-                <div className="h-4 bg-gray-100 rounded w-1/3" />
-                <div className="h-4 bg-gray-100 rounded w-1/6" />
+                <div className="h-4 bg-gray-200/50 rounded w-1/4" />
+                <div className="h-4 bg-gray-200/50 rounded w-1/3" />
+                <div className="h-4 bg-gray-200/50 rounded w-1/6" />
               </div>
             </div>
           ))}
@@ -103,23 +103,23 @@ export default function DataTable<T>({
 
   if (data.length === 0) {
     return (
-      <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+      <div className="backdrop-blur-xl bg-white/70 border border-white/20 rounded-2xl shadow-xl overflow-hidden">
         <EmptyState title={emptyTitle} description={emptyDescription} />
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+    <div className="backdrop-blur-xl bg-white/70 border border-white/20 rounded-2xl shadow-xl overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className="bg-gray-50 border-b border-gray-100">
+            <tr className="bg-gradient-to-r from-gray-50/80 to-gray-100/50 border-b border-white/20">
               {columns.map((column) => (
                 <th
                   key={column.key}
                   className={`px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 ${
-                    column.sortable ? "cursor-pointer hover:bg-gray-100" : ""
+                    column.sortable ? "cursor-pointer hover:bg-white/30" : ""
                   } ${column.className || ""}`}
                   onClick={() => column.sortable && handleSort(column.key)}
                 >
@@ -137,13 +137,13 @@ export default function DataTable<T>({
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="divide-y divide-white/10">
             {paginatedData.map((item, index) => (
               <tr
                 key={getKey(item, startIndex + index)}
                 className={`${
                   onRowClick
-                    ? "cursor-pointer hover:bg-gray-50 transition-colors"
+                    ? "cursor-pointer hover:bg-white/40 transition-colors"
                     : ""
                 }`}
                 onClick={() => onRowClick?.(item)}
@@ -170,7 +170,7 @@ export default function DataTable<T>({
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between px-6 py-3 border-t border-gray-100">
+        <div className="flex items-center justify-between px-6 py-3 border-t border-white/10 bg-white/30">
           <p className="text-sm text-gray-500">
             Showing {startIndex + 1} to{" "}
             {Math.min(startIndex + pageSize, data.length)} of {data.length}{" "}
@@ -178,29 +178,32 @@ export default function DataTable<T>({
           </p>
           <div className="flex items-center gap-2">
             <button
+              type="button"
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="p-1 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-1 rounded-lg hover:bg-white/50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <ChevronLeftIcon className="w-5 h-5 text-gray-600" />
             </button>
             {[...Array(totalPages)].map((_, i) => (
               <button
                 key={i + 1}
+                type="button"
                 onClick={() => setCurrentPage(i + 1)}
-                className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${
+                className={`w-8 h-8 rounded-lg text-sm font-medium transition-all ${
                   currentPage === i + 1
-                    ? "bg-gradient-to-r from-blue-500 to-violet-500 text-white"
-                    : "text-gray-600 hover:bg-gray-100"
+                    ? "bg-gradient-to-r from-blue-500 to-violet-500 text-white shadow-lg"
+                    : "text-gray-600 hover:bg-white/50"
                 }`}
               >
                 {i + 1}
               </button>
             ))}
             <button
+              type="button"
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              className="p-1 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-1 rounded-lg hover:bg-white/50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <ChevronRightIcon className="w-5 h-5 text-gray-600" />
             </button>
