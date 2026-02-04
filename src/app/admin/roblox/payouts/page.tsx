@@ -254,6 +254,7 @@ function NewPayoutModal({ members, saving, onClose, onSubmit }: NewPayoutModalPr
 
     await onSubmit({
       recipient: {
+        id: selectedMember.id,
         displayName: selectedMember.displayName,
         username: selectedMember.username,
         avatarUrl: selectedMember.avatarUrl,
@@ -262,7 +263,7 @@ function NewPayoutModal({ members, saving, onClose, onSubmit }: NewPayoutModalPr
       percentage: percentage ? parseFloat(percentage) : 0,
       date: new Date().toISOString(),
       status,
-      note: note || undefined,
+      note: note || "",
     });
 
     setSuccess(true);
@@ -327,7 +328,7 @@ function NewPayoutModal({ members, saving, onClose, onSubmit }: NewPayoutModalPr
                   </div>
                   <div>
                     <p className="font-medium text-slate-700">{selectedMember.displayName}</p>
-                    <p className="text-xs text-slate-400">{selectedMember.role}</p>
+                    <p className="text-xs text-slate-400">{selectedMember.role.name}</p>
                   </div>
                 </div>
               )}

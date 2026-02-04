@@ -76,7 +76,7 @@ export function useRoles() {
     await new Promise((resolve) => setTimeout(resolve, 500));
     const newRole: RobloxRole = {
       ...role,
-      id: `role-${Date.now()}`,
+      id: Date.now(),
     };
     setRoles((prev) => [...prev, newRole]);
     setSaving(false);
@@ -86,8 +86,9 @@ export function useRoles() {
   const updateRole = useCallback(async (id: string, updates: Partial<RobloxRole>) => {
     setSaving(true);
     await new Promise((resolve) => setTimeout(resolve, 500));
+    const numId = Number(id);
     setRoles((prev) =>
-      prev.map((role) => (role.id === id ? { ...role, ...updates } : role))
+      prev.map((role) => (role.id === numId ? { ...role, ...updates } : role))
     );
     setSaving(false);
   }, []);
@@ -95,7 +96,8 @@ export function useRoles() {
   const deleteRole = useCallback(async (id: string) => {
     setSaving(true);
     await new Promise((resolve) => setTimeout(resolve, 500));
-    setRoles((prev) => prev.filter((role) => role.id !== id));
+    const numId = Number(id);
+    setRoles((prev) => prev.filter((role) => role.id !== numId));
     setSaving(false);
   }, []);
 
@@ -140,25 +142,28 @@ export function useWallPosts() {
 
   const pinPost = useCallback(async (id: string) => {
     await new Promise((resolve) => setTimeout(resolve, 200));
+    const numId = Number(id);
     setPosts((prev) =>
       prev.map((post) =>
-        post.id === id ? { ...post, isPinned: !post.isPinned } : post
+        post.id === numId ? { ...post, isPinned: !post.isPinned } : post
       )
     );
   }, []);
 
   const hidePost = useCallback(async (id: string) => {
     await new Promise((resolve) => setTimeout(resolve, 200));
+    const numId = Number(id);
     setPosts((prev) =>
       prev.map((post) =>
-        post.id === id ? { ...post, isHidden: !post.isHidden } : post
+        post.id === numId ? { ...post, isHidden: !post.isHidden } : post
       )
     );
   }, []);
 
   const deletePost = useCallback(async (id: string) => {
     await new Promise((resolve) => setTimeout(resolve, 200));
-    setPosts((prev) => prev.filter((post) => post.id !== id));
+    const numId = Number(id);
+    setPosts((prev) => prev.filter((post) => post.id !== numId));
   }, []);
 
   const refetch = useCallback(async () => {
@@ -190,7 +195,7 @@ export function usePayouts() {
     await new Promise((resolve) => setTimeout(resolve, 500));
     const newPayout: Payout = {
       ...payout,
-      id: `payout-${Date.now()}`,
+      id: Date.now(),
     };
     setPayouts((prev) => [newPayout, ...prev]);
     setSaving(false);
@@ -200,8 +205,9 @@ export function usePayouts() {
   const updatePayout = useCallback(async (id: string, updates: Partial<Payout>) => {
     setSaving(true);
     await new Promise((resolve) => setTimeout(resolve, 500));
+    const numId = Number(id);
     setPayouts((prev) =>
-      prev.map((payout) => (payout.id === id ? { ...payout, ...updates } : payout))
+      prev.map((payout) => (payout.id === numId ? { ...payout, ...updates } : payout))
     );
     setSaving(false);
   }, []);

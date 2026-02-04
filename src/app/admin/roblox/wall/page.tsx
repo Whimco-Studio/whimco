@@ -163,10 +163,10 @@ export default function WallPostsPage() {
               key={post.id}
               post={post}
               formatDate={formatDate}
-              onPin={() => handlePin(post.id)}
-              onHide={() => handleHide(post.id)}
-              onDelete={() => handleDelete(post.id, post.author.displayName)}
-              isLoading={actionLoading === post.id}
+              onPin={() => handlePin(String(post.id))}
+              onHide={() => handleHide(String(post.id))}
+              onDelete={() => handleDelete(String(post.id), post.author.displayName)}
+              isLoading={actionLoading === String(post.id)}
             />
           ))}
         </div>

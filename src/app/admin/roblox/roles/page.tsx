@@ -48,7 +48,7 @@ export default function RolesPage() {
   const handleDeleteRole = async (role: RobloxRole) => {
     if (role.rank === 255) return; // Can't delete owner role
     if (confirm(`Are you sure you want to delete the "${role.name}" role?`)) {
-      await deleteRole(role.id);
+      await deleteRole(String(role.id));
     }
   };
 
@@ -211,7 +211,7 @@ export default function RolesPage() {
           saving={saving}
           onClose={() => setEditingRole(null)}
           onSubmit={async (updates) => {
-            await updateRole(editingRole.id, updates);
+            await updateRole(String(editingRole.id), updates);
             setEditingRole(null);
           }}
         />
