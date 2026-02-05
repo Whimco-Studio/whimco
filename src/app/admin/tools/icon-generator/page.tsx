@@ -525,16 +525,18 @@ export default function IconGeneratorPage() {
     model.visible = true;
     renderer.render(scene, camera);
 
-    // Get base image from renderer
-    const baseCanvas = renderer.domElement;
-    const baseCtx = document.createElement("canvas").getContext("2d")!;
-    baseCtx.canvas.width = baseCanvas.width;
-    baseCtx.canvas.height = baseCanvas.height;
-    baseCtx.drawImage(baseCanvas, 0, 0);
+    // Copy renderer output to a static canvas
+    const rendererCanvas = renderer.domElement;
+    const baseCanvas = document.createElement("canvas");
+    baseCanvas.width = rendererCanvas.width;
+    baseCanvas.height = rendererCanvas.height;
+    const baseCtx = baseCanvas.getContext("2d");
+    if (!baseCtx) return;
+    baseCtx.drawImage(rendererCanvas, 0, 0);
 
-    // Get trim bounds with padding for stroke
+    // Get trim bounds with padding for stroke (increased padding to prevent clipping)
     const baseImageData = baseCtx.getImageData(0, 0, baseCanvas.width, baseCanvas.height);
-    const bounds = getTrimBounds(baseImageData, strokeWidth + 2);
+    const bounds = getTrimBounds(baseImageData, strokeWidth + 10);
 
     // Get trimmed source data for stroke calculation
     const trimmedSourceData = baseCtx.getImageData(bounds.minX, bounds.minY, bounds.width, bounds.height);
@@ -544,7 +546,8 @@ export default function IconGeneratorPage() {
       const workCanvas = document.createElement("canvas");
       workCanvas.width = bounds.width;
       workCanvas.height = bounds.height;
-      const workCtx = workCanvas.getContext("2d")!;
+      const workCtx = workCanvas.getContext("2d");
+      if (!workCtx) continue;
 
       // Apply stroke if needed (draw stroke FIRST, then model on top)
       if (config.outlineColor) {
@@ -759,10 +762,24 @@ export default function IconGeneratorPage() {
       }
     }
 
-    // Position camera
+    // Position camera to fit model bounds
     if (cameraRef.current && controlsRef.current) {
-      cameraRef.current.position.set(100, 80, 100);
-      controlsRef.current.target.set(0, 40, 0);
+      const boundingBox = new THREE.Box3().setFromObject(object);
+      const boxCenter = boundingBox.getCenter(new THREE.Vector3());
+      const boxSize = boundingBox.getSize(new THREE.Vector3());
+      const maxDimension = Math.max(boxSize.x, boxSize.y, boxSize.z);
+
+      // Calculate camera distance to fit the model with some margin
+      const fov = cameraRef.current.fov * (Math.PI / 180);
+      const cameraDistance = (maxDimension / 2) / Math.tan(fov / 2) * 1.5;
+
+      // Position camera at 3/4 view angle
+      cameraRef.current.position.set(
+        boxCenter.x + cameraDistance * 0.7,
+        boxCenter.y + cameraDistance * 0.5,
+        boxCenter.z + cameraDistance * 0.7
+      );
+      controlsRef.current.target.copy(boxCenter);
       controlsRef.current.update();
     }
 
@@ -777,21 +794,26 @@ export default function IconGeneratorPage() {
     object.visible = true;
     renderer.render(scene, camera);
 
-    const baseCanvas = renderer.domElement;
-    const baseCtx = document.createElement("canvas").getContext("2d")!;
-    baseCtx.canvas.width = baseCanvas.width;
-    baseCtx.canvas.height = baseCanvas.height;
-    baseCtx.drawImage(baseCanvas, 0, 0);
+    // Copy renderer output to a static canvas (renderer may change during async processing)
+    const rendererCanvas = renderer.domElement;
+    const baseCanvas = document.createElement("canvas");
+    baseCanvas.width = rendererCanvas.width;
+    baseCanvas.height = rendererCanvas.height;
+    const baseCtx = baseCanvas.getContext("2d");
+    if (!baseCtx) throw new Error("Failed to get canvas context");
+    baseCtx.drawImage(rendererCanvas, 0, 0);
 
     const baseImageData = baseCtx.getImageData(0, 0, baseCanvas.width, baseCanvas.height);
-    const bounds = getTrimBounds(baseImageData, strokeWidth + 2);
+    // Increase padding to prevent clipping
+    const bounds = getTrimBounds(baseImageData, strokeWidth + 10);
     const trimmedSourceData = baseCtx.getImageData(bounds.minX, bounds.minY, bounds.width, bounds.height);
 
     for (const config of VARIANT_CONFIG) {
       const workCanvas = document.createElement("canvas");
       workCanvas.width = bounds.width;
       workCanvas.height = bounds.height;
-      const workCtx = workCanvas.getContext("2d")!;
+      const workCtx = workCanvas.getContext("2d");
+      if (!workCtx) continue;
 
       if (config.outlineColor) {
         const strokeLayer = createStrokeLayer(
@@ -805,6 +827,7 @@ export default function IconGeneratorPage() {
       }
 
       if (config.showModel) {
+        // Use the copied baseCanvas, not the live renderer
         workCtx.drawImage(
           baseCanvas,
           bounds.minX, bounds.minY, bounds.width, bounds.height,
