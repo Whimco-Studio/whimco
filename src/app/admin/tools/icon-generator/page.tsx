@@ -418,19 +418,17 @@ export default function IconGeneratorPage() {
     return { minX, minY, maxX, maxY, width: maxX - minX + 1, height: maxY - minY + 1 };
   };
 
-  // Helper: Apply stroke to image
-  const applyStroke = (
-    ctx: CanvasRenderingContext2D,
+  // Helper: Create stroke layer (returns ImageData with just the stroke)
+  const createStrokeLayer = (
+    sourceData: ImageData,
     width: number,
     height: number,
     strokeColor: string,
-    strokeWidth: number
-  ) => {
-    const imageData = ctx.getImageData(0, 0, width, height);
-    const { data } = imageData;
-
-    // Create a copy for reading (we'll write to original)
-    const originalData = new Uint8ClampedArray(data);
+    strokeWidthPx: number
+  ): ImageData => {
+    const strokeData = new ImageData(width, height);
+    const src = sourceData.data;
+    const dst = strokeData.data;
 
     // Parse stroke color
     const color = new THREE.Color(strokeColor);
@@ -438,31 +436,31 @@ export default function IconGeneratorPage() {
     const g = Math.round(color.g * 255);
     const b = Math.round(color.b * 255);
 
-    // For each transparent pixel, check if any neighbor within strokeWidth is opaque
+    // For each pixel, check if it should be part of the stroke
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const idx = (y * width + x) * 4;
-        const alpha = originalData[idx + 3];
+        const alpha = src[idx + 3];
 
-        // Only process transparent/semi-transparent pixels
-        if (alpha < 128) {
+        // Only create stroke on transparent pixels (alpha < 10)
+        if (alpha < 10) {
           let hasOpaqueNeighbor = false;
+          let minDist = strokeWidthPx + 1;
 
           // Check neighbors within stroke width
-          for (let dy = -strokeWidth; dy <= strokeWidth && !hasOpaqueNeighbor; dy++) {
-            for (let dx = -strokeWidth; dx <= strokeWidth && !hasOpaqueNeighbor; dx++) {
-              if (dx === 0 && dy === 0) continue;
-
+          for (let dy = -strokeWidthPx; dy <= strokeWidthPx && !hasOpaqueNeighbor; dy++) {
+            for (let dx = -strokeWidthPx; dx <= strokeWidthPx; dx++) {
               const nx = x + dx;
               const ny = y + dy;
 
               if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
-                // Check distance for circular stroke
                 const dist = Math.sqrt(dx * dx + dy * dy);
-                if (dist <= strokeWidth) {
+                if (dist <= strokeWidthPx) {
                   const nIdx = (ny * width + nx) * 4;
-                  if (originalData[nIdx + 3] >= 128) {
+                  // Check if neighbor has any significant alpha
+                  if (src[nIdx + 3] > 128) {
                     hasOpaqueNeighbor = true;
+                    minDist = Math.min(minDist, dist);
                   }
                 }
               }
@@ -470,16 +468,16 @@ export default function IconGeneratorPage() {
           }
 
           if (hasOpaqueNeighbor) {
-            data[idx] = r;
-            data[idx + 1] = g;
-            data[idx + 2] = b;
-            data[idx + 3] = 255;
+            dst[idx] = r;
+            dst[idx + 1] = g;
+            dst[idx + 2] = b;
+            dst[idx + 3] = 255;
           }
         }
       }
     }
 
-    ctx.putImageData(imageData, 0, 0);
+    return strokeData;
   };
 
   // Capture current view and generate variants
@@ -524,6 +522,9 @@ export default function IconGeneratorPage() {
     const baseImageData = baseCtx.getImageData(0, 0, baseCanvas.width, baseCanvas.height);
     const bounds = getTrimBounds(baseImageData, strokeWidth + 2);
 
+    // Get trimmed source data for stroke calculation
+    const trimmedSourceData = baseCtx.getImageData(bounds.minX, bounds.minY, bounds.width, bounds.height);
+
     for (const config of VARIANT_CONFIG) {
       // Create working canvas at trimmed size
       const workCanvas = document.createElement("canvas");
@@ -531,41 +532,26 @@ export default function IconGeneratorPage() {
       workCanvas.height = bounds.height;
       const workCtx = workCanvas.getContext("2d")!;
 
+      // Apply stroke if needed (draw stroke FIRST, then model on top)
+      if (config.outlineColor) {
+        // Create stroke layer
+        const strokeLayer = createStrokeLayer(
+          trimmedSourceData,
+          bounds.width,
+          bounds.height,
+          config.outlineColor,
+          strokeWidth
+        );
+        workCtx.putImageData(strokeLayer, 0, 0);
+      }
+
+      // Draw model on top (if showModel is true)
       if (config.showModel) {
-        // Draw trimmed model
         workCtx.drawImage(
           baseCanvas,
           bounds.minX, bounds.minY, bounds.width, bounds.height,
           0, 0, bounds.width, bounds.height
         );
-      }
-
-      // Apply stroke if needed
-      if (config.outlineColor) {
-        // For outline-only, we need to draw the model first then clear the inside
-        if (!config.showModel) {
-          workCtx.drawImage(
-            baseCanvas,
-            bounds.minX, bounds.minY, bounds.width, bounds.height,
-            0, 0, bounds.width, bounds.height
-          );
-        }
-
-        applyStroke(workCtx, bounds.width, bounds.height, config.outlineColor, strokeWidth);
-
-        // For outline-only, remove the model pixels (keep only stroke)
-        if (!config.showModel) {
-          const finalData = workCtx.getImageData(0, 0, bounds.width, bounds.height);
-          const origTrimmed = baseCtx.getImageData(bounds.minX, bounds.minY, bounds.width, bounds.height);
-
-          for (let i = 0; i < finalData.data.length; i += 4) {
-            // If original pixel was opaque, make it transparent
-            if (origTrimmed.data[i + 3] >= 128) {
-              finalData.data[i + 3] = 0;
-            }
-          }
-          workCtx.putImageData(finalData, 0, 0);
-        }
       }
 
       // Convert to blob
