@@ -98,6 +98,7 @@ export default function IconGeneratorPage() {
   const modelRef = useRef<THREE.Group | null>(null);
   const gridRef = useRef<THREE.GridHelper | null>(null);
   const frameIdRef = useRef<number>(0);
+  const animatingRef = useRef<boolean>(true);
   const ambientLightRef = useRef<THREE.AmbientLight | null>(null);
   const directionalLightRef = useRef<THREE.DirectionalLight | null>(null);
   const fillLightRef = useRef<THREE.DirectionalLight | null>(null);
@@ -181,6 +182,7 @@ export default function IconGeneratorPage() {
     // Animation loop
     const animate = () => {
       frameIdRef.current = requestAnimationFrame(animate);
+      if (!animatingRef.current) return;
       controls.update();
       renderer.render(scene, camera);
     };
@@ -523,6 +525,7 @@ export default function IconGeneratorPage() {
 
     // Render model once
     model.visible = true;
+    await renderer.compileAsync(scene, camera);
     renderer.render(scene, camera);
 
     // Get base image from renderer
@@ -659,6 +662,7 @@ export default function IconGeneratorPage() {
 
     setIsBatchProcessing(true);
     setBatchProgress({ current: 0, total: fileQueue.length });
+    animatingRef.current = false;
 
     const loader = new FBXLoader();
 
@@ -788,6 +792,7 @@ export default function IconGeneratorPage() {
         scene.background = null;
 
         object.visible = true;
+        await renderer.compileAsync(scene, camera);
         renderer.render(scene, camera);
 
         // Get base image from renderer
@@ -856,6 +861,7 @@ export default function IconGeneratorPage() {
       }
     }
 
+    animatingRef.current = true;
     setIsBatchProcessing(false);
   };
 
