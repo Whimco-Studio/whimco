@@ -134,6 +134,7 @@ export default function IconGeneratorModal({
   const [isCapturing, setIsCapturing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [lightingMode, setLightingMode] = useState<LightingMode>("lit");
+  const [strokeWidth, setStrokeWidth] = useState(4);
 
   // Initialize Three.js scene
   useEffect(() => {
@@ -518,7 +519,6 @@ export default function IconGeneratorModal({
     baseCtx.drawImage(baseCanvas, 0, 0);
 
     // Get trim bounds with padding for stroke
-    const strokeWidth = 4;
     const baseImageData = baseCtx.getImageData(0, 0, baseCanvas.width, baseCanvas.height);
     const bounds = getTrimBounds(baseImageData, strokeWidth + 2);
 
@@ -733,27 +733,43 @@ export default function IconGeneratorModal({
             {/* Controls */}
             {modelLoaded && (
               <div className="p-3 bg-gray-50 border-t border-gray-200 space-y-3">
-                {/* Lighting Mode */}
-                <div>
-                  <p className="text-xs font-medium text-slate-500 mb-2">LIGHTING</p>
-                  <div className="flex flex-wrap gap-2">
-                    {LIGHTING_MODES.map((mode) => (
-                      <button
-                        key={mode.id}
-                        onClick={() => applyLightingMode(mode.id)}
-                        className={`flex items-center gap-1 px-2 py-1.5 text-xs rounded-lg border transition-colors ${
-                          lightingMode === mode.id
-                            ? "bg-purple-100 border-purple-300 text-purple-700"
-                            : "bg-white border-gray-200 text-slate-600 hover:bg-gray-100"
-                        }`}
-                        title={mode.description}
-                      >
-                        {mode.icon === "sun" && <SunIcon className="w-3 h-3" />}
-                        {mode.icon === "moon" && <MoonIcon className="w-3 h-3" />}
-                        {mode.icon === "sparkles" && <SparklesIcon className="w-3 h-3" />}
-                        <span>{mode.label}</span>
-                      </button>
-                    ))}
+                {/* Lighting Mode & Outline Thickness */}
+                <div className="flex gap-4">
+                  <div className="flex-1">
+                    <p className="text-xs font-medium text-slate-500 mb-2">LIGHTING</p>
+                    <div className="flex flex-wrap gap-1">
+                      {LIGHTING_MODES.map((mode) => (
+                        <button
+                          key={mode.id}
+                          onClick={() => applyLightingMode(mode.id)}
+                          className={`flex items-center gap-1 px-2 py-1.5 text-xs rounded-lg border transition-colors ${
+                            lightingMode === mode.id
+                              ? "bg-purple-100 border-purple-300 text-purple-700"
+                              : "bg-white border-gray-200 text-slate-600 hover:bg-gray-100"
+                          }`}
+                          title={mode.description}
+                        >
+                          {mode.icon === "sun" && <SunIcon className="w-3 h-3" />}
+                          {mode.icon === "moon" && <MoonIcon className="w-3 h-3" />}
+                          {mode.icon === "sparkles" && <SparklesIcon className="w-3 h-3" />}
+                          <span>{mode.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="w-32">
+                    <p className="text-xs font-medium text-slate-500 mb-2">
+                      OUTLINE: <span className="text-purple-600">{strokeWidth}px</span>
+                    </p>
+                    <input
+                      type="range"
+                      min="1"
+                      max="12"
+                      value={strokeWidth}
+                      onChange={(e) => setStrokeWidth(parseInt(e.target.value))}
+                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-600"
+                    />
                   </div>
                 </div>
 

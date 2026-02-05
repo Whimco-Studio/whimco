@@ -101,6 +101,7 @@ export default function IconGeneratorPage() {
   const [isCapturing, setIsCapturing] = useState(false);
   const [assetName, setAssetName] = useState("");
   const [lightingMode, setLightingMode] = useState<LightingMode>("lit");
+  const [strokeWidth, setStrokeWidth] = useState(4);
 
   // Initialize Three.js scene
   useEffect(() => {
@@ -520,7 +521,6 @@ export default function IconGeneratorPage() {
     baseCtx.drawImage(baseCanvas, 0, 0);
 
     // Get trim bounds with padding for stroke
-    const strokeWidth = 4;
     const baseImageData = baseCtx.getImageData(0, 0, baseCanvas.width, baseCanvas.height);
     const bounds = getTrimBounds(baseImageData, strokeWidth + 2);
 
@@ -673,29 +673,47 @@ export default function IconGeneratorPage() {
           {/* Controls Row */}
           {modelLoaded && (
             <div className="p-4 border-t border-gray-100 space-y-4">
-              {/* Lighting Mode */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-sm font-medium text-slate-600">Lighting Mode</p>
+              {/* Lighting Mode & Outline Thickness */}
+              <div className="flex flex-wrap gap-6">
+                <div className="flex-1 min-w-[200px]">
+                  <p className="text-sm font-medium text-slate-600 mb-2">Lighting Mode</p>
+                  <div className="flex flex-wrap gap-2">
+                    {LIGHTING_MODES.map((mode) => (
+                      <button
+                        key={mode.id}
+                        onClick={() => applyLightingMode(mode.id)}
+                        className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg border transition-colors ${
+                          lightingMode === mode.id
+                            ? "bg-purple-100 border-purple-300 text-purple-700"
+                            : "bg-gray-50 border-gray-200 text-slate-600 hover:bg-gray-100"
+                        }`}
+                        title={mode.description}
+                      >
+                        {mode.icon === "sun" && <SunIcon className="w-4 h-4" />}
+                        {mode.icon === "moon" && <MoonIcon className="w-4 h-4" />}
+                        {mode.icon === "sparkles" && <SparklesIcon className="w-4 h-4" />}
+                        <span>{mode.label}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {LIGHTING_MODES.map((mode) => (
-                    <button
-                      key={mode.id}
-                      onClick={() => applyLightingMode(mode.id)}
-                      className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg border transition-colors ${
-                        lightingMode === mode.id
-                          ? "bg-purple-100 border-purple-300 text-purple-700"
-                          : "bg-gray-50 border-gray-200 text-slate-600 hover:bg-gray-100"
-                      }`}
-                      title={mode.description}
-                    >
-                      {mode.icon === "sun" && <SunIcon className="w-4 h-4" />}
-                      {mode.icon === "moon" && <MoonIcon className="w-4 h-4" />}
-                      {mode.icon === "sparkles" && <SparklesIcon className="w-4 h-4" />}
-                      <span>{mode.label}</span>
-                    </button>
-                  ))}
+
+                <div className="w-48">
+                  <p className="text-sm font-medium text-slate-600 mb-2">
+                    Outline Thickness: <span className="text-purple-600">{strokeWidth}px</span>
+                  </p>
+                  <input
+                    type="range"
+                    min="1"
+                    max="12"
+                    value={strokeWidth}
+                    onChange={(e) => setStrokeWidth(parseInt(e.target.value))}
+                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-600"
+                  />
+                  <div className="flex justify-between text-xs text-slate-400 mt-1">
+                    <span>1px</span>
+                    <span>12px</span>
+                  </div>
                 </div>
               </div>
 
