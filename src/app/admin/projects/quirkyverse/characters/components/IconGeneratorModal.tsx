@@ -336,13 +336,52 @@ export default function IconGeneratorModal({
         break;
 
       case "unlit":
-        // For unlit/base color mode, use very high ambient with some fill from all directions
-        // This creates a flat, shadowless look while preserving material colors
-        ambientLight.intensity = 3;
-        directionalLight.intensity = 0.5;
-        directionalLight.position.set(0, 1, 0); // From above for even lighting
-        fillLight.intensity = 0.5;
-        fillLight.position.set(0, -1, 0); // From below to fill shadows
+        // Base color mode - convert to MeshBasicMaterial
+        ambientLight.intensity = 1;
+        directionalLight.intensity = 0;
+        fillLight.intensity = 0;
+
+        model.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+            const originalMat = originalMaterialsRef.current.get(child);
+            if (originalMat && !Array.isArray(originalMat)) {
+              // Get the color from the original material
+              let color = new THREE.Color(0xcccccc);
+              if ('color' in originalMat && originalMat.color instanceof THREE.Color) {
+                color = originalMat.color.clone();
+              }
+
+              // Check for texture map - if it has one, we'll use it
+              let map: THREE.Texture | null = null;
+              if ('map' in originalMat && originalMat.map instanceof THREE.Texture) {
+                map = originalMat.map;
+              }
+
+              // Create unlit material
+              const unlitMat = new THREE.MeshBasicMaterial({
+                color: map ? 0xffffff : color,
+                map: map,
+              });
+              child.material = unlitMat;
+            } else if (originalMat && Array.isArray(originalMat)) {
+              // Handle multi-material
+              child.material = originalMat.map((mat) => {
+                let color = new THREE.Color(0xcccccc);
+                if ('color' in mat && mat.color instanceof THREE.Color) {
+                  color = mat.color.clone();
+                }
+                let map: THREE.Texture | null = null;
+                if ('map' in mat && mat.map instanceof THREE.Texture) {
+                  map = mat.map;
+                }
+                return new THREE.MeshBasicMaterial({
+                  color: map ? 0xffffff : color,
+                  map: map,
+                });
+              });
+            }
+          }
+        });
         break;
 
       case "soft":
