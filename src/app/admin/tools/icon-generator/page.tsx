@@ -53,10 +53,8 @@ const CAMERA_ANGLES = [
 ];
 
 const VARIANT_CONFIG = [
-  { name: "NoOutline", label: "No Outline", outlineColor: null, showModel: true },
-  { name: "BlackOutline", label: "Black Outline", outlineColor: "#000000", showModel: true },
-  { name: "WhiteOutline", label: "White Outline", outlineColor: "#ffffff", showModel: true },
-  { name: "OutlineOnly", label: "Outline Only", outlineColor: "#000000", showModel: false },
+  { name: "Base", label: "Base (Colored)", type: "base" },
+  { name: "WhiteFill", label: "White Fill (Backdrop)", type: "whitefill" },
 ];
 
 type LightingMode = "lit" | "unlit" | "soft" | "dramatic";
@@ -483,30 +481,32 @@ export default function IconGeneratorPage() {
     return { minX, minY, maxX, maxY, width: maxX - minX + 1, height: maxY - minY + 1 };
   };
 
-  const createStrokeLayer = (
+  // Create white fill layer (model silhouette + expanded stroke area, all white)
+  const createWhiteFillLayer = (
     sourceData: ImageData,
     width: number,
     height: number,
-    strokeColor: string,
-    strokeWidthPx: number
+    expandPx: number
   ): ImageData => {
-    const strokeData = new ImageData(width, height);
+    const fillData = new ImageData(width, height);
     const src = sourceData.data;
-    const dst = strokeData.data;
-
-    const color = new THREE.Color(strokeColor);
-    const r = Math.round(color.r * 255);
-    const g = Math.round(color.g * 255);
-    const b = Math.round(color.b * 255);
+    const dst = fillData.data;
 
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const idx = (y * width + x) * 4;
         const alpha = src[idx + 3];
 
-        if (alpha < 240) {
+        // If pixel is already opaque, fill it white
+        if (alpha > 10) {
+          dst[idx] = 255;
+          dst[idx + 1] = 255;
+          dst[idx + 2] = 255;
+          dst[idx + 3] = 255;
+        } else {
+          // Check if near an opaque pixel (within expand distance)
           let hasOpaqueNeighbor = false;
-          const checkRadius = strokeWidthPx + 1;
+          const checkRadius = expandPx + 1;
 
           for (let dy = -checkRadius; dy <= checkRadius && !hasOpaqueNeighbor; dy++) {
             for (let dx = -checkRadius; dx <= checkRadius; dx++) {
@@ -526,16 +526,16 @@ export default function IconGeneratorPage() {
           }
 
           if (hasOpaqueNeighbor) {
-            dst[idx] = r;
-            dst[idx + 1] = g;
-            dst[idx + 2] = b;
+            dst[idx] = 255;
+            dst[idx + 1] = 255;
+            dst[idx + 2] = 255;
             dst[idx + 3] = 255;
           }
         }
       }
     }
 
-    return strokeData;
+    return fillData;
   };
 
   // Capture single model variants
@@ -639,23 +639,22 @@ export default function IconGeneratorPage() {
       workCanvas.height = bounds.height;
       const workCtx = workCanvas.getContext("2d")!;
 
-      if (config.outlineColor) {
-        const strokeLayer = createStrokeLayer(
-          trimmedSourceData,
-          bounds.width,
-          bounds.height,
-          config.outlineColor,
-          strokeWidth
-        );
-        workCtx.putImageData(strokeLayer, 0, 0);
-      }
-
-      if (config.showModel) {
+      if (config.type === "base") {
+        // Base variant: just the colored model
         workCtx.drawImage(
           baseCanvas,
           bounds.minX, bounds.minY, bounds.width, bounds.height,
           0, 0, bounds.width, bounds.height
         );
+      } else if (config.type === "whitefill") {
+        // White fill variant: model silhouette + expanded area, all white
+        const whiteFillLayer = createWhiteFillLayer(
+          trimmedSourceData,
+          bounds.width,
+          bounds.height,
+          strokeWidth
+        );
+        workCtx.putImageData(whiteFillLayer, 0, 0);
       }
 
       const dataUrl = workCanvas.toDataURL("image/png");
@@ -835,19 +834,20 @@ export default function IconGeneratorPage() {
               </div>
             </div>
 
-            {/* Outline Thickness */}
+            {/* Backdrop Thickness */}
             <div>
               <p className="text-sm font-medium text-slate-600 mb-2">
-                Outline Thickness: <span className="text-purple-600">{strokeWidth}px</span>
+                Backdrop Expansion: <span className="text-purple-600">{strokeWidth}px</span>
               </p>
               <input
                 type="range"
                 min="1"
-                max="12"
+                max="20"
                 value={strokeWidth}
                 onChange={(e) => setStrokeWidth(parseInt(e.target.value))}
                 className="w-full max-w-xs h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-600"
               />
+              <p className="text-xs text-slate-400 mt-1">How much the white backdrop extends beyond the model</p>
             </div>
 
             {/* Camera Angle */}
@@ -993,24 +993,27 @@ export default function IconGeneratorPage() {
                 {batchResults.map((result, idx) => (
                   <div key={idx} className="space-y-2">
                     <p className="text-sm font-medium text-slate-600">{result.modelName}</p>
-                    <div className="grid grid-cols-4 gap-2">
-                      {result.variants.map((variant) => (
-                        <div key={variant.name} className="text-center">
-                          {variant.preview && (
-                            <img
-                              src={variant.preview}
-                              alt={variant.name}
-                              className="w-full aspect-square object-contain rounded border border-gray-200"
-                              style={{
-                                background: `repeating-conic-gradient(#e5e5e5 0% 25%, #ffffff 0% 50%) 50% / 12px 12px`
-                              }}
-                            />
-                          )}
-                          <p className="text-xs text-slate-400 mt-1 truncate">
-                            {variant.name}
-                          </p>
-                        </div>
-                      ))}
+                    <div className="grid grid-cols-2 gap-2">
+                      {result.variants.map((variant) => {
+                        const config = VARIANT_CONFIG.find((c) => c.name === variant.name);
+                        return (
+                          <div key={variant.name} className="text-center">
+                            {variant.preview && (
+                              <img
+                                src={variant.preview}
+                                alt={variant.name}
+                                className="w-full aspect-square object-contain rounded border border-gray-200"
+                                style={{
+                                  background: `repeating-conic-gradient(#e5e5e5 0% 25%, #ffffff 0% 50%) 50% / 12px 12px`
+                                }}
+                              />
+                            )}
+                            <p className="text-xs text-slate-400 mt-1 truncate">
+                              {config?.label || variant.name}
+                            </p>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 ))}
