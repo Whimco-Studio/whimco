@@ -37,32 +37,28 @@ const CAMERA_ANGLES = [
 
 const VARIANT_CONFIG = [
   {
-    name: "BlackOutline",
-    label: "Black Outline",
-    bgColor: "#ffffff",
-    outlineColor: "#000000",
-    fillModel: true,
-  },
-  {
     name: "NoOutline",
     label: "No Outline",
-    bgColor: "#ffffff",
     outlineColor: null,
-    fillModel: true,
+    showModel: true,
   },
   {
-    name: "OutlineOnly",
-    label: "Outline Only",
-    bgColor: "#ffffff",
+    name: "BlackOutline",
+    label: "Black Outline",
     outlineColor: "#000000",
-    fillModel: false,
+    showModel: true,
   },
   {
     name: "WhiteOutline",
     label: "White Outline",
-    bgColor: "#000000",
     outlineColor: "#ffffff",
-    fillModel: true,
+    showModel: true,
+  },
+  {
+    name: "OutlineOnly",
+    label: "Outline Only",
+    outlineColor: "#000000",
+    showModel: false,
   },
 ];
 
@@ -73,6 +69,7 @@ export default function IconGeneratorPage() {
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const controlsRef = useRef<OrbitControls | null>(null);
   const modelRef = useRef<THREE.Group | null>(null);
+  const gridRef = useRef<THREE.GridHelper | null>(null);
   const frameIdRef = useRef<number>(0);
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -101,11 +98,16 @@ export default function IconGeneratorPage() {
     camera.position.set(100, 80, 100);
     cameraRef.current = camera;
 
-    // Renderer
-    const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+    // Renderer - enable alpha for transparent captures
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      preserveDrawingBuffer: true,
+      alpha: true
+    });
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
+    renderer.setClearColor(0x000000, 0); // Transparent background
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
@@ -133,6 +135,7 @@ export default function IconGeneratorPage() {
     // Grid
     const gridHelper = new THREE.GridHelper(200, 20, 0xcccccc, 0xdddddd);
     scene.add(gridHelper);
+    gridRef.current = gridHelper;
 
     // Animation loop
     const animate = () => {
@@ -276,56 +279,46 @@ export default function IconGeneratorPage() {
     const scene = sceneRef.current;
     const camera = cameraRef.current;
     const model = modelRef.current;
+    const grid = gridRef.current;
 
-    // Store original materials
-    const originalMaterials = new Map<THREE.Mesh, THREE.Material | THREE.Material[]>();
-    model.traverse((child) => {
-      if (child instanceof THREE.Mesh) {
-        originalMaterials.set(child, child.material);
-      }
-    });
-
-    // Store original background
+    // Store original state
     const originalBackground = scene.background;
+    const gridWasVisible = grid?.visible ?? false;
 
-    // Create outline geometry
-    const outlineMeshes: THREE.Mesh[] = [];
+    // Hide grid for capture
+    if (grid) {
+      grid.visible = false;
+    }
+
+    // Set transparent background for capture
+    scene.background = null;
 
     for (const config of VARIANT_CONFIG) {
-      // Set background
-      scene.background = new THREE.Color(config.bgColor);
+      const outlineMeshes: THREE.Mesh[] = [];
 
-      // Configure model appearance
-      model.traverse((child) => {
-        if (child instanceof THREE.Mesh) {
-          if (config.fillModel) {
-            child.visible = true;
-            child.material = new THREE.MeshBasicMaterial({
-              color: config.bgColor === "#000000" ? 0x333333 : 0xcccccc,
-            });
-          } else {
-            child.visible = false;
-          }
-        }
-      });
+      // Show or hide model based on config
+      model.visible = config.showModel;
 
-      // Add outline if needed
+      // Add outline meshes if needed
       if (config.outlineColor) {
+        const outlineColor = new THREE.Color(config.outlineColor);
+
         model.traverse((child) => {
           if (child instanceof THREE.Mesh && child.geometry) {
             const outlineMaterial = new THREE.MeshBasicMaterial({
-              color: config.outlineColor!,
+              color: outlineColor,
               side: THREE.BackSide,
             });
-            const outlineMesh = new THREE.Mesh(child.geometry.clone(), outlineMaterial);
-            outlineMesh.position.copy(child.position);
-            outlineMesh.rotation.copy(child.rotation);
-            outlineMesh.scale.copy(child.scale).multiplyScalar(1.05);
-            outlineMesh.updateMatrix();
 
-            if (child.parent) {
-              outlineMesh.applyMatrix4(child.parent.matrixWorld);
-            }
+            const outlineMesh = new THREE.Mesh(child.geometry, outlineMaterial);
+
+            // Copy world transform
+            child.updateWorldMatrix(true, false);
+            outlineMesh.applyMatrix4(child.matrixWorld);
+
+            // Scale up for outline effect
+            const scale = 1.03;
+            outlineMesh.scale.multiplyScalar(scale);
 
             scene.add(outlineMesh);
             outlineMeshes.push(outlineMesh);
@@ -346,28 +339,19 @@ export default function IconGeneratorPage() {
         preview: dataUrl,
       });
 
-      // Remove outline meshes
+      // Clean up outline meshes
       outlineMeshes.forEach((mesh) => {
         scene.remove(mesh);
-        mesh.geometry.dispose();
         (mesh.material as THREE.Material).dispose();
       });
-      outlineMeshes.length = 0;
     }
 
-    // Restore original materials and visibility
-    model.traverse((child) => {
-      if (child instanceof THREE.Mesh) {
-        child.visible = true;
-        const original = originalMaterials.get(child);
-        if (original) {
-          child.material = original;
-        }
-      }
-    });
-
-    // Restore background
+    // Restore original state
+    model.visible = true;
     scene.background = originalBackground;
+    if (grid) {
+      grid.visible = gridWasVisible;
+    }
     renderer.render(scene, camera);
 
     setVariants(capturedVariants);
@@ -548,7 +532,10 @@ export default function IconGeneratorPage() {
                         <img
                           src={variant.preview}
                           alt={variant.name}
-                          className="w-20 h-20 object-contain rounded-lg border border-gray-200 bg-white"
+                          className="w-20 h-20 object-contain rounded-lg border border-gray-200"
+                          style={{
+                            background: `repeating-conic-gradient(#e5e5e5 0% 25%, #ffffff 0% 50%) 50% / 16px 16px`
+                          }}
                         />
                       )}
                       <div className="flex-1 min-w-0">
