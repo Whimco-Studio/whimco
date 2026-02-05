@@ -225,11 +225,25 @@ export default function IconGeneratorPage() {
       // Apply current lighting mode
       applyLightingModeToModel(lightingMode, object);
 
-      // Apply selected camera angle
+      // Calculate proper camera distance to fit model
       if (cameraRef.current && controlsRef.current) {
-        const pos = selectedAngle.position;
-        cameraRef.current.position.set(pos[0], pos[1], pos[2]);
-        controlsRef.current.target.set(0, 40, 0);
+        const scaledBox = new THREE.Box3().setFromObject(object);
+        const scaledSize = scaledBox.getSize(new THREE.Vector3());
+        const scaledCenter = scaledBox.getCenter(new THREE.Vector3());
+        const maxSize = Math.max(scaledSize.x, scaledSize.y, scaledSize.z);
+
+        const fov = cameraRef.current.fov * (Math.PI / 180);
+        const cameraDistance = (maxSize / 2) / Math.tan(fov / 2) * 1.5;
+
+        const angleDir = new THREE.Vector3(
+          selectedAngle.position[0],
+          selectedAngle.position[1],
+          selectedAngle.position[2]
+        ).normalize();
+
+        const cameraPos = angleDir.multiplyScalar(cameraDistance);
+        cameraRef.current.position.copy(cameraPos);
+        controlsRef.current.target.copy(scaledCenter);
         controlsRef.current.update();
       }
     } catch (err) {
@@ -333,7 +347,28 @@ export default function IconGeneratorPage() {
   // Snap camera to angle
   const snapToAngle = (angle: typeof CAMERA_ANGLES[0]) => {
     setSelectedAngle(angle);
-    if (cameraRef.current && controlsRef.current) {
+    if (cameraRef.current && controlsRef.current && modelRef.current) {
+      // Calculate proper camera distance to fit model
+      const scaledBox = new THREE.Box3().setFromObject(modelRef.current);
+      const scaledSize = scaledBox.getSize(new THREE.Vector3());
+      const scaledCenter = scaledBox.getCenter(new THREE.Vector3());
+      const maxSize = Math.max(scaledSize.x, scaledSize.y, scaledSize.z);
+
+      const fov = cameraRef.current.fov * (Math.PI / 180);
+      const cameraDistance = (maxSize / 2) / Math.tan(fov / 2) * 1.5;
+
+      const angleDir = new THREE.Vector3(
+        angle.position[0],
+        angle.position[1],
+        angle.position[2]
+      ).normalize();
+
+      const cameraPos = angleDir.multiplyScalar(cameraDistance);
+      cameraRef.current.position.copy(cameraPos);
+      controlsRef.current.target.copy(scaledCenter);
+      controlsRef.current.update();
+    } else if (cameraRef.current && controlsRef.current) {
+      // No model loaded, use default position
       cameraRef.current.position.set(angle.position[0], angle.position[1], angle.position[2]);
       controlsRef.current.target.set(0, 40, 0);
       controlsRef.current.update();
@@ -552,9 +587,28 @@ export default function IconGeneratorPage() {
     // Apply lighting mode
     applyLightingModeToModel(lightingMode, object);
 
-    // Set camera angle
-    camera.position.set(selectedAngle.position[0], selectedAngle.position[1], selectedAngle.position[2]);
-    controlsRef.current?.target.set(0, 40, 0);
+    // Calculate proper camera distance to fit model
+    const scaledBox = new THREE.Box3().setFromObject(object);
+    const scaledSize = scaledBox.getSize(new THREE.Vector3());
+    const scaledCenter = scaledBox.getCenter(new THREE.Vector3());
+    const maxSize = Math.max(scaledSize.x, scaledSize.y, scaledSize.z);
+
+    // Calculate distance needed to fit model in view
+    const fov = camera.fov * (Math.PI / 180);
+    const cameraDistance = (maxSize / 2) / Math.tan(fov / 2) * 1.5; // 1.5x padding
+
+    // Get direction from selected angle and apply proper distance
+    const angleDir = new THREE.Vector3(
+      selectedAngle.position[0],
+      selectedAngle.position[1],
+      selectedAngle.position[2]
+    ).normalize();
+
+    const cameraPos = angleDir.multiplyScalar(cameraDistance);
+    camera.position.copy(cameraPos);
+
+    // Look at model center
+    controlsRef.current?.target.copy(scaledCenter);
     controlsRef.current?.update();
 
     // Capture
