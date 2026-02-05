@@ -20,13 +20,6 @@ import {
 import AdminHeader from "@/app/components/admin/AdminHeader";
 import JSZip from "jszip";
 
-interface CapturedVariant {
-  name: string;
-  blob: Blob | null;
-  preview: string | null;
-  downloading?: boolean;
-}
-
 interface QueuedFile {
   id: string;
   file: File;
@@ -34,6 +27,13 @@ interface QueuedFile {
   status: "pending" | "processing" | "done" | "error";
   variants?: CapturedVariant[];
   error?: string;
+}
+
+interface CapturedVariant {
+  name: string;
+  blob: Blob | null;
+  preview: string | null;
+  downloading?: boolean;
 }
 
 const CAMERA_ANGLES = [
@@ -525,18 +525,16 @@ export default function IconGeneratorPage() {
     model.visible = true;
     renderer.render(scene, camera);
 
-    // Copy renderer output to a static canvas
-    const rendererCanvas = renderer.domElement;
-    const baseCanvas = document.createElement("canvas");
-    baseCanvas.width = rendererCanvas.width;
-    baseCanvas.height = rendererCanvas.height;
-    const baseCtx = baseCanvas.getContext("2d");
-    if (!baseCtx) return;
-    baseCtx.drawImage(rendererCanvas, 0, 0);
+    // Get base image from renderer
+    const baseCanvas = renderer.domElement;
+    const baseCtx = document.createElement("canvas").getContext("2d")!;
+    baseCtx.canvas.width = baseCanvas.width;
+    baseCtx.canvas.height = baseCanvas.height;
+    baseCtx.drawImage(baseCanvas, 0, 0);
 
-    // Get trim bounds with padding for stroke (increased padding to prevent clipping)
+    // Get trim bounds with padding for stroke
     const baseImageData = baseCtx.getImageData(0, 0, baseCanvas.width, baseCanvas.height);
-    const bounds = getTrimBounds(baseImageData, strokeWidth + 10);
+    const bounds = getTrimBounds(baseImageData, strokeWidth + 2);
 
     // Get trimmed source data for stroke calculation
     const trimmedSourceData = baseCtx.getImageData(bounds.minX, bounds.minY, bounds.width, bounds.height);
@@ -546,8 +544,7 @@ export default function IconGeneratorPage() {
       const workCanvas = document.createElement("canvas");
       workCanvas.width = bounds.width;
       workCanvas.height = bounds.height;
-      const workCtx = workCanvas.getContext("2d");
-      if (!workCtx) continue;
+      const workCtx = workCanvas.getContext("2d")!;
 
       // Apply stroke if needed (draw stroke FIRST, then model on top)
       if (config.outlineColor) {
@@ -629,11 +626,6 @@ export default function IconGeneratorPage() {
     }
     if (newFiles.length > 0) {
       setFileQueue((prev) => [...prev, ...newFiles]);
-      // Load first file for preview if nothing loaded
-      if (!modelLoaded && newFiles.length > 0) {
-        setSelectedFile(newFiles[0].file);
-        loadModel(newFiles[0].file);
-      }
     }
   };
 
@@ -647,244 +639,212 @@ export default function IconGeneratorPage() {
     setFileQueue([]);
   };
 
-  // Process a single file and capture its variants (used for batch)
-  const processFileForBatch = async (queuedFile: QueuedFile, mode: LightingMode): Promise<CapturedVariant[]> => {
-    if (!sceneRef.current || !rendererRef.current || !cameraRef.current) {
-      throw new Error("Scene not initialized");
-    }
+  // Batch process all files in queue
+  const batchProcessAll = async () => {
+    if (fileQueue.length === 0 || !sceneRef.current || !rendererRef.current || !cameraRef.current) return;
 
     const scene = sceneRef.current;
     const renderer = rendererRef.current;
     const camera = cameraRef.current;
     const grid = gridRef.current;
-
-    // Remove existing model
-    if (modelRef.current) {
-      scene.remove(modelRef.current);
-      modelRef.current = null;
-    }
-
-    // Load model
-    const loader = new FBXLoader();
-    const arrayBuffer = await queuedFile.file.arrayBuffer();
-    const object = loader.parse(arrayBuffer, "");
-
-    // Center and scale
-    const box = new THREE.Box3().setFromObject(object);
-    const center = box.getCenter(new THREE.Vector3());
-    const size = box.getSize(new THREE.Vector3());
-    const maxDim = Math.max(size.x, size.y, size.z);
-    const scale = 100 / maxDim;
-
-    object.scale.multiplyScalar(scale);
-    object.position.sub(center.multiplyScalar(scale));
-    object.position.y = 0;
-
-    // Store original materials
-    originalMaterialsRef.current.clear();
-    object.traverse((child) => {
-      if (child instanceof THREE.Mesh) {
-        child.castShadow = true;
-        child.receiveShadow = true;
-        originalMaterialsRef.current.set(child, child.material);
-      }
-    });
-
-    scene.add(object);
-    modelRef.current = object;
-
-    // Apply lighting mode directly (inline to avoid closure issues during async batch)
     const ambientLight = ambientLightRef.current;
     const directionalLight = directionalLightRef.current;
     const fillLight = fillLightRef.current;
 
-    if (ambientLight && directionalLight && fillLight) {
-      switch (mode) {
-        case "lit":
-          ambientLight.intensity = 0.7;
-          directionalLight.intensity = 0.8;
-          fillLight.intensity = 0.4;
-          break;
+    if (!ambientLight || !directionalLight || !fillLight) return;
 
-        case "unlit":
-          ambientLight.intensity = 1;
-          directionalLight.intensity = 0;
-          fillLight.intensity = 0;
-
-          object.traverse((child) => {
-            if (child instanceof THREE.Mesh) {
-              const originalMat = originalMaterialsRef.current.get(child);
-              if (originalMat && !Array.isArray(originalMat)) {
-                let color = new THREE.Color(0xcccccc);
-                if ('color' in originalMat && originalMat.color instanceof THREE.Color) {
-                  color = originalMat.color.clone();
-                }
-                let map: THREE.Texture | null = null;
-                if ('map' in originalMat && originalMat.map instanceof THREE.Texture) {
-                  map = originalMat.map;
-                }
-                const unlitMat = new THREE.MeshBasicMaterial({
-                  color: map ? 0xffffff : color,
-                  map: map,
-                });
-                child.material = unlitMat;
-              } else if (originalMat && Array.isArray(originalMat)) {
-                child.material = originalMat.map((mat) => {
-                  let color = new THREE.Color(0xcccccc);
-                  if ('color' in mat && mat.color instanceof THREE.Color) {
-                    color = mat.color.clone();
-                  }
-                  let map: THREE.Texture | null = null;
-                  if ('map' in mat && mat.map instanceof THREE.Texture) {
-                    map = mat.map;
-                  }
-                  return new THREE.MeshBasicMaterial({
-                    color: map ? 0xffffff : color,
-                    map: map,
-                  });
-                });
-              }
-            }
-          });
-          break;
-
-        case "soft":
-          ambientLight.intensity = 1.2;
-          directionalLight.intensity = 0.3;
-          fillLight.intensity = 0.3;
-          break;
-
-        case "dramatic":
-          ambientLight.intensity = 0.3;
-          directionalLight.intensity = 1.2;
-          fillLight.intensity = 0.1;
-          break;
-      }
-    }
-
-    // Position camera to fit model bounds
-    if (cameraRef.current && controlsRef.current) {
-      const boundingBox = new THREE.Box3().setFromObject(object);
-      const boxCenter = boundingBox.getCenter(new THREE.Vector3());
-      const boxSize = boundingBox.getSize(new THREE.Vector3());
-      const maxDimension = Math.max(boxSize.x, boxSize.y, boxSize.z);
-
-      // Calculate camera distance to fit the model with some margin
-      const fov = cameraRef.current.fov * (Math.PI / 180);
-      const cameraDistance = (maxDimension / 2) / Math.tan(fov / 2) * 1.5;
-
-      // Position camera at 3/4 view angle
-      cameraRef.current.position.set(
-        boxCenter.x + cameraDistance * 0.7,
-        boxCenter.y + cameraDistance * 0.5,
-        boxCenter.z + cameraDistance * 0.7
-      );
-      controlsRef.current.target.copy(boxCenter);
-      controlsRef.current.update();
-    }
-
-    // Capture variants
-    const capturedVariants: CapturedVariant[] = [];
-    const originalBackground = scene.background;
-    const gridWasVisible = grid?.visible ?? false;
-
-    if (grid) grid.visible = false;
-    scene.background = null;
-
-    object.visible = true;
-    renderer.render(scene, camera);
-
-    // Copy renderer output to a static canvas (renderer may change during async processing)
-    const rendererCanvas = renderer.domElement;
-    const baseCanvas = document.createElement("canvas");
-    baseCanvas.width = rendererCanvas.width;
-    baseCanvas.height = rendererCanvas.height;
-    const baseCtx = baseCanvas.getContext("2d");
-    if (!baseCtx) throw new Error("Failed to get canvas context");
-    baseCtx.drawImage(rendererCanvas, 0, 0);
-
-    const baseImageData = baseCtx.getImageData(0, 0, baseCanvas.width, baseCanvas.height);
-    // Increase padding to prevent clipping
-    const bounds = getTrimBounds(baseImageData, strokeWidth + 10);
-    const trimmedSourceData = baseCtx.getImageData(bounds.minX, bounds.minY, bounds.width, bounds.height);
-
-    for (const config of VARIANT_CONFIG) {
-      const workCanvas = document.createElement("canvas");
-      workCanvas.width = bounds.width;
-      workCanvas.height = bounds.height;
-      const workCtx = workCanvas.getContext("2d");
-      if (!workCtx) continue;
-
-      if (config.outlineColor) {
-        const strokeLayer = createStrokeLayer(
-          trimmedSourceData,
-          bounds.width,
-          bounds.height,
-          config.outlineColor,
-          strokeWidth
-        );
-        workCtx.putImageData(strokeLayer, 0, 0);
-      }
-
-      if (config.showModel) {
-        // Use the copied baseCanvas, not the live renderer
-        workCtx.drawImage(
-          baseCanvas,
-          bounds.minX, bounds.minY, bounds.width, bounds.height,
-          0, 0, bounds.width, bounds.height
-        );
-      }
-
-      const dataUrl = workCanvas.toDataURL("image/png");
-      const blob = await (await fetch(dataUrl)).blob();
-
-      capturedVariants.push({
-        name: config.name,
-        blob,
-        preview: dataUrl,
-      });
-    }
-
-    // Restore
-    scene.background = originalBackground;
-    if (grid) grid.visible = gridWasVisible;
-    renderer.render(scene, camera);
-
-    return capturedVariants;
-  };
-
-  // Batch process all files in queue
-  const batchProcessAll = async () => {
-    if (fileQueue.length === 0) return;
-
-    // Capture lighting mode at start of batch to ensure consistency
-    const batchMode = lightingMode;
+    // Capture the current lighting mode at start of batch
+    const batchLightingMode = lightingMode;
+    const batchStrokeWidth = strokeWidth;
 
     setIsBatchProcessing(true);
     setBatchProgress({ current: 0, total: fileQueue.length });
 
+    const loader = new FBXLoader();
+
     for (let i = 0; i < fileQueue.length; i++) {
       const queuedFile = fileQueue[i];
-      setBatchProgress({ current: i + 1, total: fileQueue.length });
+      if (queuedFile.status === "done") continue;
 
-      // Update status to processing
+      setBatchProgress({ current: i + 1, total: fileQueue.length });
       setFileQueue((prev) =>
-        prev.map((f) =>
-          f.id === queuedFile.id ? { ...f, status: "processing" as const } : f
-        )
+        prev.map((f) => (f.id === queuedFile.id ? { ...f, status: "processing" as const } : f))
       );
 
       try {
-        const variants = await processFileForBatch(queuedFile, batchMode);
+        // Remove existing model
+        if (modelRef.current) {
+          scene.remove(modelRef.current);
+          modelRef.current = null;
+        }
 
-        // Update status to done with variants
+        // Load model
+        const arrayBuffer = await queuedFile.file.arrayBuffer();
+        const object = loader.parse(arrayBuffer, "");
+
+        // Center and scale
+        const box = new THREE.Box3().setFromObject(object);
+        const center = box.getCenter(new THREE.Vector3());
+        const size = box.getSize(new THREE.Vector3());
+        const maxDim = Math.max(size.x, size.y, size.z);
+        const scale = 100 / maxDim;
+
+        object.scale.multiplyScalar(scale);
+        object.position.sub(center.multiplyScalar(scale));
+        object.position.y = 0;
+
+        // Store original materials
+        originalMaterialsRef.current.clear();
+        object.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+            child.castShadow = true;
+            child.receiveShadow = true;
+            originalMaterialsRef.current.set(child, child.material);
+          }
+        });
+
+        scene.add(object);
+        modelRef.current = object;
+
+        // Apply lighting mode (same logic as applyLightingMode)
+        // Restore original materials first
+        object.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+            const original = originalMaterialsRef.current.get(child);
+            if (original) {
+              child.material = original;
+            }
+          }
+        });
+
+        switch (batchLightingMode) {
+          case "lit":
+            ambientLight.intensity = 0.7;
+            directionalLight.intensity = 0.8;
+            fillLight.intensity = 0.4;
+            break;
+          case "unlit":
+            ambientLight.intensity = 1;
+            directionalLight.intensity = 0;
+            fillLight.intensity = 0;
+            object.traverse((child) => {
+              if (child instanceof THREE.Mesh) {
+                const originalMat = originalMaterialsRef.current.get(child);
+                if (originalMat && !Array.isArray(originalMat)) {
+                  let color = new THREE.Color(0xcccccc);
+                  if ("color" in originalMat && originalMat.color instanceof THREE.Color) {
+                    color = originalMat.color.clone();
+                  }
+                  let map: THREE.Texture | null = null;
+                  if ("map" in originalMat && originalMat.map instanceof THREE.Texture) {
+                    map = originalMat.map;
+                  }
+                  child.material = new THREE.MeshBasicMaterial({
+                    color: map ? 0xffffff : color,
+                    map: map,
+                  });
+                } else if (originalMat && Array.isArray(originalMat)) {
+                  child.material = originalMat.map((mat) => {
+                    let color = new THREE.Color(0xcccccc);
+                    if ("color" in mat && mat.color instanceof THREE.Color) {
+                      color = mat.color.clone();
+                    }
+                    let map: THREE.Texture | null = null;
+                    if ("map" in mat && mat.map instanceof THREE.Texture) {
+                      map = mat.map;
+                    }
+                    return new THREE.MeshBasicMaterial({
+                      color: map ? 0xffffff : color,
+                      map: map,
+                    });
+                  });
+                }
+              }
+            });
+            break;
+          case "soft":
+            ambientLight.intensity = 1.2;
+            directionalLight.intensity = 0.3;
+            fillLight.intensity = 0.3;
+            break;
+          case "dramatic":
+            ambientLight.intensity = 0.3;
+            directionalLight.intensity = 1.2;
+            fillLight.intensity = 0.1;
+            break;
+        }
+
+        // Position camera
+        camera.position.set(100, 80, 100);
+        controlsRef.current?.target.set(0, 40, 0);
+        controlsRef.current?.update();
+
+        // CAPTURE VARIANTS - exact same logic as captureVariants
+        const capturedVariants: CapturedVariant[] = [];
+        const originalBackground = scene.background;
+        const gridWasVisible = grid?.visible ?? false;
+
+        if (grid) grid.visible = false;
+        scene.background = null;
+
+        object.visible = true;
+        renderer.render(scene, camera);
+
+        // Get base image from renderer
+        const baseCanvas = renderer.domElement;
+        const baseCtx = document.createElement("canvas").getContext("2d")!;
+        baseCtx.canvas.width = baseCanvas.width;
+        baseCtx.canvas.height = baseCanvas.height;
+        baseCtx.drawImage(baseCanvas, 0, 0);
+
+        const baseImageData = baseCtx.getImageData(0, 0, baseCanvas.width, baseCanvas.height);
+        const bounds = getTrimBounds(baseImageData, batchStrokeWidth + 2);
+        const trimmedSourceData = baseCtx.getImageData(bounds.minX, bounds.minY, bounds.width, bounds.height);
+
+        for (const config of VARIANT_CONFIG) {
+          const workCanvas = document.createElement("canvas");
+          workCanvas.width = bounds.width;
+          workCanvas.height = bounds.height;
+          const workCtx = workCanvas.getContext("2d")!;
+
+          if (config.outlineColor) {
+            const strokeLayer = createStrokeLayer(
+              trimmedSourceData,
+              bounds.width,
+              bounds.height,
+              config.outlineColor,
+              batchStrokeWidth
+            );
+            workCtx.putImageData(strokeLayer, 0, 0);
+          }
+
+          if (config.showModel) {
+            workCtx.drawImage(
+              baseCanvas,
+              bounds.minX, bounds.minY, bounds.width, bounds.height,
+              0, 0, bounds.width, bounds.height
+            );
+          }
+
+          const dataUrl = workCanvas.toDataURL("image/png");
+          const blob = await (await fetch(dataUrl)).blob();
+
+          capturedVariants.push({
+            name: config.name,
+            blob,
+            preview: dataUrl,
+          });
+        }
+
+        // Restore
+        scene.background = originalBackground;
+        if (grid) grid.visible = gridWasVisible;
+        renderer.render(scene, camera);
+
         setFileQueue((prev) =>
-          prev.map((f) =>
-            f.id === queuedFile.id ? { ...f, status: "done" as const, variants } : f
-          )
+          prev.map((f) => (f.id === queuedFile.id ? { ...f, status: "done" as const, variants: capturedVariants } : f))
         );
       } catch (err) {
-        // Update status to error
         setFileQueue((prev) =>
           prev.map((f) =>
             f.id === queuedFile.id
@@ -898,13 +858,12 @@ export default function IconGeneratorPage() {
     setIsBatchProcessing(false);
   };
 
-  // Download all batch results as a zip file
+  // Download all batch results as zip
   const downloadAllBatchResults = async () => {
     const zip = new JSZip();
 
     fileQueue.forEach((qf) => {
       if (qf.variants) {
-        // Create a folder for each model
         const folder = zip.folder(qf.name);
         if (folder) {
           qf.variants.forEach((variant) => {
@@ -916,7 +875,6 @@ export default function IconGeneratorPage() {
       }
     });
 
-    // Generate and download the zip
     const zipBlob = await zip.generateAsync({ type: "blob" });
     const url = URL.createObjectURL(zipBlob);
     const a = document.createElement("a");
@@ -1195,7 +1153,6 @@ export default function IconGeneratorPage() {
 
         {fileQueue.length > 0 ? (
           <>
-            {/* Queue list */}
             <div className="p-4 space-y-2 max-h-[300px] overflow-y-auto">
               {fileQueue.map((qf) => (
                 <div
@@ -1210,7 +1167,6 @@ export default function IconGeneratorPage() {
                       : "bg-gray-50 border-gray-200"
                   }`}
                 >
-                  {/* Status indicator */}
                   <div className="flex-shrink-0">
                     {qf.status === "processing" ? (
                       <div className="w-5 h-5 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
@@ -1222,25 +1178,16 @@ export default function IconGeneratorPage() {
                       <div className="w-5 h-5 rounded-full border-2 border-gray-300" />
                     )}
                   </div>
-
-                  {/* File name */}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-slate-700 truncate">
-                      {qf.name}
-                    </p>
-                    {qf.error && (
-                      <p className="text-xs text-red-600 mt-0.5">{qf.error}</p>
-                    )}
+                    <p className="text-sm font-medium text-slate-700 truncate">{qf.name}</p>
+                    {qf.error && <p className="text-xs text-red-600 mt-0.5">{qf.error}</p>}
                     {qf.status === "done" && qf.variants && (
-                      <p className="text-xs text-green-600 mt-0.5">
-                        {qf.variants.length} variants generated
-                      </p>
+                      <p className="text-xs text-green-600 mt-0.5">{qf.variants.length} variants generated</p>
                     )}
                   </div>
-
-                  {/* Remove button */}
                   {qf.status === "pending" && (
                     <button
+                      type="button"
                       onClick={() => removeFromQueue(qf.id)}
                       className="p-1 text-slate-400 hover:text-red-600 transition-colors"
                     >
@@ -1250,17 +1197,13 @@ export default function IconGeneratorPage() {
                 </div>
               ))}
             </div>
-
-            {/* Batch actions */}
             <div className="p-4 border-t border-gray-100 flex items-center gap-3">
               {isBatchProcessing ? (
                 <div className="flex-1 flex items-center gap-3">
                   <div className="flex-1 bg-gray-200 rounded-full h-2 overflow-hidden">
                     <div
                       className="bg-purple-600 h-full transition-all duration-300"
-                      style={{
-                        width: `${(batchProgress.current / batchProgress.total) * 100}%`,
-                      }}
+                      style={{ width: `${(batchProgress.current / batchProgress.total) * 100}%` }}
                     />
                   </div>
                   <span className="text-sm text-slate-600 flex-shrink-0">
@@ -1270,6 +1213,7 @@ export default function IconGeneratorPage() {
               ) : (
                 <>
                   <button
+                    type="button"
                     onClick={batchProcessAll}
                     disabled={fileQueue.every((f) => f.status === "done")}
                     className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 transition-colors"
@@ -1279,14 +1223,16 @@ export default function IconGeneratorPage() {
                   </button>
                   {hasCompletedBatch && (
                     <button
+                      type="button"
                       onClick={downloadAllBatchResults}
                       className="flex items-center gap-2 px-4 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors"
                     >
                       <ArrowDownTrayIcon className="w-5 h-5" />
-                      Download All
+                      Download Zip
                     </button>
                   )}
                   <button
+                    type="button"
                     onClick={clearQueue}
                     className="px-4 py-3 text-slate-600 hover:text-red-600 transition-colors"
                   >
