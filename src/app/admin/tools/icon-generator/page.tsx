@@ -503,6 +503,7 @@ export default function IconGeneratorPage() {
     }
 
     setIsCapturing(true);
+    console.log("[Single] === captureVariants START ===");
     const capturedVariants: CapturedVariant[] = [];
 
     const renderer = rendererRef.current;
@@ -510,6 +511,24 @@ export default function IconGeneratorPage() {
     const camera = cameraRef.current;
     const model = modelRef.current;
     const grid = gridRef.current;
+
+    console.log("[Single] lightingMode:", lightingMode, "strokeWidth:", strokeWidth);
+    console.log("[Single] canvas size:", renderer.domElement.width, "x", renderer.domElement.height);
+    console.log("[Single] camera pos:", camera.position.toArray(), "model visible:", model.visible);
+
+    // Count materials by type
+    const matTypes: string[] = [];
+    model.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        const mat = child.material;
+        if (Array.isArray(mat)) {
+          mat.forEach((m) => matTypes.push(m.type));
+        } else {
+          matTypes.push(mat.type);
+        }
+      }
+    });
+    console.log("[Single] material types:", matTypes);
 
     // Store original state
     const originalBackground = scene.background;
@@ -525,7 +544,9 @@ export default function IconGeneratorPage() {
 
     // Render model once
     model.visible = true;
+    console.log("[Single] compileAsync START");
     await renderer.compileAsync(scene, camera);
+    console.log("[Single] compileAsync DONE, rendering...");
     renderer.render(scene, camera);
 
     // Get base image from renderer
@@ -535,9 +556,20 @@ export default function IconGeneratorPage() {
     baseCtx.canvas.height = baseCanvas.height;
     baseCtx.drawImage(baseCanvas, 0, 0);
 
+    // Check if rendered image has non-black pixels
+    const checkData = baseCtx.getImageData(0, 0, baseCanvas.width, baseCanvas.height);
+    let nonBlackPixels = 0;
+    let nonTransparentPixels = 0;
+    for (let px = 0; px < checkData.data.length; px += 4) {
+      if (checkData.data[px + 3] > 0) nonTransparentPixels++;
+      if (checkData.data[px] > 0 || checkData.data[px + 1] > 0 || checkData.data[px + 2] > 0) nonBlackPixels++;
+    }
+    console.log("[Single] post-render pixel check — nonBlack:", nonBlackPixels, "nonTransparent:", nonTransparentPixels, "total:", checkData.data.length / 4);
+
     // Get trim bounds with padding for stroke
     const baseImageData = baseCtx.getImageData(0, 0, baseCanvas.width, baseCanvas.height);
     const bounds = getTrimBounds(baseImageData, strokeWidth + 2);
+    console.log("[Single] trim bounds:", bounds);
 
     // Get trimmed source data for stroke calculation
     const trimmedSourceData = baseCtx.getImageData(bounds.minX, bounds.minY, bounds.width, bounds.height);
@@ -580,6 +612,7 @@ export default function IconGeneratorPage() {
         blob,
         preview: dataUrl,
       });
+      console.log("[Single] variant:", config.name, "blob size:", blob.size, "showModel:", config.showModel, "outline:", config.outlineColor);
     }
 
     // Restore original state
@@ -589,6 +622,7 @@ export default function IconGeneratorPage() {
     }
     renderer.render(scene, camera);
 
+    console.log("[Single] === captureVariants DONE === variants:", capturedVariants.length);
     setVariants(capturedVariants);
     setIsCapturing(false);
   };
@@ -663,6 +697,7 @@ export default function IconGeneratorPage() {
     setIsBatchProcessing(true);
     setBatchProgress({ current: 0, total: fileQueue.length });
     animatingRef.current = false;
+    console.log("[Batch] === batchProcessAll START === files:", fileQueue.length, "lightingMode:", batchLightingMode, "strokeWidth:", batchStrokeWidth, "animating paused");
 
     const loader = new FBXLoader();
 
@@ -709,6 +744,7 @@ export default function IconGeneratorPage() {
 
         scene.add(object);
         modelRef.current = object;
+        console.log(`[Batch] [${i + 1}/${fileQueue.length}] "${queuedFile.name}" loaded — meshes:`, originalMaterialsRef.current.size, "scale:", scale.toFixed(4), "maxDim:", maxDim.toFixed(2));
 
         // Apply lighting mode (same logic as applyLightingMode)
         // Restore original materials first
@@ -783,6 +819,22 @@ export default function IconGeneratorPage() {
         controlsRef.current?.target.set(0, 40, 0);
         controlsRef.current?.update();
 
+        // Log material types after lighting applied
+        const batchMatTypes: string[] = [];
+        object.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+            const mat = child.material;
+            if (Array.isArray(mat)) {
+              mat.forEach((m) => batchMatTypes.push(m.type));
+            } else {
+              batchMatTypes.push(mat.type);
+            }
+          }
+        });
+        console.log(`[Batch] [${i + 1}] lighting: "${batchLightingMode}" — material types:`, batchMatTypes);
+        console.log(`[Batch] [${i + 1}] ambient: ${ambientLight.intensity}, dir: ${directionalLight.intensity}, fill: ${fillLight.intensity}`);
+        console.log(`[Batch] [${i + 1}] camera pos:`, camera.position.toArray(), "canvas:", renderer.domElement.width, "x", renderer.domElement.height);
+
         // CAPTURE VARIANTS - exact same logic as captureVariants
         const capturedVariants: CapturedVariant[] = [];
         const originalBackground = scene.background;
@@ -792,7 +844,9 @@ export default function IconGeneratorPage() {
         scene.background = null;
 
         object.visible = true;
+        console.log(`[Batch] [${i + 1}] compileAsync START`);
         await renderer.compileAsync(scene, camera);
+        console.log(`[Batch] [${i + 1}] compileAsync DONE, rendering...`);
         renderer.render(scene, camera);
 
         // Get base image from renderer
@@ -802,8 +856,19 @@ export default function IconGeneratorPage() {
         baseCtx.canvas.height = baseCanvas.height;
         baseCtx.drawImage(baseCanvas, 0, 0);
 
+        // Check if rendered image has non-black pixels
+        const batchCheckData = baseCtx.getImageData(0, 0, baseCanvas.width, baseCanvas.height);
+        let batchNonBlack = 0;
+        let batchNonTransparent = 0;
+        for (let px = 0; px < batchCheckData.data.length; px += 4) {
+          if (batchCheckData.data[px + 3] > 0) batchNonTransparent++;
+          if (batchCheckData.data[px] > 0 || batchCheckData.data[px + 1] > 0 || batchCheckData.data[px + 2] > 0) batchNonBlack++;
+        }
+        console.log(`[Batch] [${i + 1}] post-render pixel check — nonBlack:`, batchNonBlack, "nonTransparent:", batchNonTransparent, "total:", batchCheckData.data.length / 4);
+
         const baseImageData = baseCtx.getImageData(0, 0, baseCanvas.width, baseCanvas.height);
         const bounds = getTrimBounds(baseImageData, batchStrokeWidth + 2);
+        console.log(`[Batch] [${i + 1}] trim bounds:`, bounds);
         const trimmedSourceData = baseCtx.getImageData(bounds.minX, bounds.minY, bounds.width, bounds.height);
 
         for (const config of VARIANT_CONFIG) {
@@ -840,7 +905,10 @@ export default function IconGeneratorPage() {
             blob,
             preview: dataUrl,
           });
+          console.log(`[Batch] [${i + 1}] variant:`, config.name, "blob size:", blob.size, "showModel:", config.showModel, "outline:", config.outlineColor);
         }
+
+        console.log(`[Batch] [${i + 1}] "${queuedFile.name}" DONE — variants:`, capturedVariants.length);
 
         // Restore
         scene.background = originalBackground;
@@ -851,6 +919,7 @@ export default function IconGeneratorPage() {
           prev.map((f) => (f.id === queuedFile.id ? { ...f, status: "done" as const, variants: capturedVariants } : f))
         );
       } catch (err) {
+        console.error(`[Batch] [${i + 1}] "${queuedFile.name}" ERROR:`, err);
         setFileQueue((prev) =>
           prev.map((f) =>
             f.id === queuedFile.id
@@ -862,6 +931,7 @@ export default function IconGeneratorPage() {
     }
 
     animatingRef.current = true;
+    console.log("[Batch] === batchProcessAll DONE === animating resumed");
     setIsBatchProcessing(false);
   };
 
