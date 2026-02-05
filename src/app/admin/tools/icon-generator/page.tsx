@@ -8,14 +8,14 @@ import { FBXLoader } from "three-stdlib";
 import {
   ArrowLeftIcon,
   CameraIcon,
-  ArrowUpTrayIcon,
   ArrowDownTrayIcon,
-  CheckCircleIcon,
   ExclamationCircleIcon,
   CubeIcon,
   SunIcon,
   MoonIcon,
   SparklesIcon,
+  XMarkIcon,
+  CheckIcon,
 } from "@heroicons/react/24/outline";
 import AdminHeader from "@/app/components/admin/AdminHeader";
 
@@ -24,6 +24,15 @@ interface CapturedVariant {
   blob: Blob | null;
   preview: string | null;
   downloading?: boolean;
+}
+
+interface QueuedFile {
+  id: string;
+  file: File;
+  name: string;
+  status: "pending" | "processing" | "done" | "error";
+  variants?: CapturedVariant[];
+  error?: string;
 }
 
 const CAMERA_ANGLES = [
@@ -102,6 +111,11 @@ export default function IconGeneratorPage() {
   const [assetName, setAssetName] = useState("");
   const [lightingMode, setLightingMode] = useState<LightingMode>("lit");
   const [strokeWidth, setStrokeWidth] = useState(4);
+
+  // Batch processing state
+  const [fileQueue, setFileQueue] = useState<QueuedFile[]>([]);
+  const [isBatchProcessing, setIsBatchProcessing] = useState(false);
+  const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 });
 
   // Initialize Three.js scene
   useEffect(() => {
@@ -595,6 +609,223 @@ export default function IconGeneratorPage() {
     });
   };
 
+  // Add files to batch queue
+  const addFilesToQueue = (files: FileList) => {
+    const newFiles: QueuedFile[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (file.name.toLowerCase().endsWith(".fbx")) {
+        newFiles.push({
+          id: `${Date.now()}-${i}`,
+          file,
+          name: file.name.replace(/\.[^/.]+$/, ""),
+          status: "pending",
+        });
+      }
+    }
+    if (newFiles.length > 0) {
+      setFileQueue((prev) => [...prev, ...newFiles]);
+      // Load first file for preview if nothing loaded
+      if (!modelLoaded && newFiles.length > 0) {
+        setSelectedFile(newFiles[0].file);
+        loadModel(newFiles[0].file);
+      }
+    }
+  };
+
+  // Remove file from queue
+  const removeFromQueue = (id: string) => {
+    setFileQueue((prev) => prev.filter((f) => f.id !== id));
+  };
+
+  // Clear entire queue
+  const clearQueue = () => {
+    setFileQueue([]);
+  };
+
+  // Process a single file and capture its variants (used for batch)
+  const processFileForBatch = async (queuedFile: QueuedFile): Promise<CapturedVariant[]> => {
+    if (!sceneRef.current || !rendererRef.current || !cameraRef.current) {
+      throw new Error("Scene not initialized");
+    }
+
+    const scene = sceneRef.current;
+    const renderer = rendererRef.current;
+    const camera = cameraRef.current;
+    const grid = gridRef.current;
+
+    // Remove existing model
+    if (modelRef.current) {
+      scene.remove(modelRef.current);
+      modelRef.current = null;
+    }
+
+    // Load model
+    const loader = new FBXLoader();
+    const arrayBuffer = await queuedFile.file.arrayBuffer();
+    const object = loader.parse(arrayBuffer, "");
+
+    // Center and scale
+    const box = new THREE.Box3().setFromObject(object);
+    const center = box.getCenter(new THREE.Vector3());
+    const size = box.getSize(new THREE.Vector3());
+    const maxDim = Math.max(size.x, size.y, size.z);
+    const scale = 100 / maxDim;
+
+    object.scale.multiplyScalar(scale);
+    object.position.sub(center.multiplyScalar(scale));
+    object.position.y = 0;
+
+    // Store original materials
+    originalMaterialsRef.current.clear();
+    object.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        child.castShadow = true;
+        child.receiveShadow = true;
+        originalMaterialsRef.current.set(child, child.material);
+      }
+    });
+
+    scene.add(object);
+    modelRef.current = object;
+
+    // Apply current lighting mode to the new model
+    applyLightingMode(lightingMode);
+
+    // Position camera
+    if (cameraRef.current && controlsRef.current) {
+      cameraRef.current.position.set(100, 80, 100);
+      controlsRef.current.target.set(0, 40, 0);
+      controlsRef.current.update();
+    }
+
+    // Capture variants
+    const capturedVariants: CapturedVariant[] = [];
+    const originalBackground = scene.background;
+    const gridWasVisible = grid?.visible ?? false;
+
+    if (grid) grid.visible = false;
+    scene.background = null;
+
+    object.visible = true;
+    renderer.render(scene, camera);
+
+    const baseCanvas = renderer.domElement;
+    const baseCtx = document.createElement("canvas").getContext("2d")!;
+    baseCtx.canvas.width = baseCanvas.width;
+    baseCtx.canvas.height = baseCanvas.height;
+    baseCtx.drawImage(baseCanvas, 0, 0);
+
+    const baseImageData = baseCtx.getImageData(0, 0, baseCanvas.width, baseCanvas.height);
+    const bounds = getTrimBounds(baseImageData, strokeWidth + 2);
+    const trimmedSourceData = baseCtx.getImageData(bounds.minX, bounds.minY, bounds.width, bounds.height);
+
+    for (const config of VARIANT_CONFIG) {
+      const workCanvas = document.createElement("canvas");
+      workCanvas.width = bounds.width;
+      workCanvas.height = bounds.height;
+      const workCtx = workCanvas.getContext("2d")!;
+
+      if (config.outlineColor) {
+        const strokeLayer = createStrokeLayer(
+          trimmedSourceData,
+          bounds.width,
+          bounds.height,
+          config.outlineColor,
+          strokeWidth
+        );
+        workCtx.putImageData(strokeLayer, 0, 0);
+      }
+
+      if (config.showModel) {
+        workCtx.drawImage(
+          baseCanvas,
+          bounds.minX, bounds.minY, bounds.width, bounds.height,
+          0, 0, bounds.width, bounds.height
+        );
+      }
+
+      const dataUrl = workCanvas.toDataURL("image/png");
+      const blob = await (await fetch(dataUrl)).blob();
+
+      capturedVariants.push({
+        name: config.name,
+        blob,
+        preview: dataUrl,
+      });
+    }
+
+    // Restore
+    scene.background = originalBackground;
+    if (grid) grid.visible = gridWasVisible;
+    renderer.render(scene, camera);
+
+    return capturedVariants;
+  };
+
+  // Batch process all files in queue
+  const batchProcessAll = async () => {
+    if (fileQueue.length === 0) return;
+
+    setIsBatchProcessing(true);
+    setBatchProgress({ current: 0, total: fileQueue.length });
+
+    for (let i = 0; i < fileQueue.length; i++) {
+      const queuedFile = fileQueue[i];
+      setBatchProgress({ current: i + 1, total: fileQueue.length });
+
+      // Update status to processing
+      setFileQueue((prev) =>
+        prev.map((f) =>
+          f.id === queuedFile.id ? { ...f, status: "processing" as const } : f
+        )
+      );
+
+      try {
+        const variants = await processFileForBatch(queuedFile);
+
+        // Update status to done with variants
+        setFileQueue((prev) =>
+          prev.map((f) =>
+            f.id === queuedFile.id ? { ...f, status: "done" as const, variants } : f
+          )
+        );
+      } catch (err) {
+        // Update status to error
+        setFileQueue((prev) =>
+          prev.map((f) =>
+            f.id === queuedFile.id
+              ? { ...f, status: "error" as const, error: err instanceof Error ? err.message : "Failed" }
+              : f
+          )
+        );
+      }
+    }
+
+    setIsBatchProcessing(false);
+  };
+
+  // Download all batch results
+  const downloadAllBatchResults = () => {
+    fileQueue.forEach((qf) => {
+      if (qf.variants) {
+        qf.variants.forEach((variant) => {
+          if (variant.blob) {
+            const url = URL.createObjectURL(variant.blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `${qf.name}_${variant.name}.png`;
+            a.click();
+            URL.revokeObjectURL(url);
+          }
+        });
+      }
+    });
+  };
+
+  const completedCount = fileQueue.filter((f) => f.status === "done").length;
+  const hasCompletedBatch = completedCount > 0;
+
   return (
     <>
       <AdminHeader
@@ -836,6 +1067,139 @@ export default function IconGeneratorPage() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Batch Processing Queue */}
+      <div className="mt-6 bg-white rounded-2xl shadow-xl overflow-hidden">
+        <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+          <div>
+            <h3 className="font-semibold text-slate-700">Batch Processing</h3>
+            <p className="text-xs text-slate-500 mt-1">
+              Add multiple FBX files to process at once
+            </p>
+          </div>
+          <label className="px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 cursor-pointer transition-colors text-sm font-medium">
+            Add Files
+            <input
+              type="file"
+              accept=".fbx"
+              multiple
+              onChange={(e) => e.target.files && addFilesToQueue(e.target.files)}
+              className="hidden"
+            />
+          </label>
+        </div>
+
+        {fileQueue.length > 0 ? (
+          <>
+            {/* Queue list */}
+            <div className="p-4 space-y-2 max-h-[300px] overflow-y-auto">
+              {fileQueue.map((qf) => (
+                <div
+                  key={qf.id}
+                  className={`flex items-center gap-3 p-3 rounded-lg border ${
+                    qf.status === "processing"
+                      ? "bg-blue-50 border-blue-200"
+                      : qf.status === "done"
+                      ? "bg-green-50 border-green-200"
+                      : qf.status === "error"
+                      ? "bg-red-50 border-red-200"
+                      : "bg-gray-50 border-gray-200"
+                  }`}
+                >
+                  {/* Status indicator */}
+                  <div className="flex-shrink-0">
+                    {qf.status === "processing" ? (
+                      <div className="w-5 h-5 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
+                    ) : qf.status === "done" ? (
+                      <CheckIcon className="w-5 h-5 text-green-600" />
+                    ) : qf.status === "error" ? (
+                      <ExclamationCircleIcon className="w-5 h-5 text-red-600" />
+                    ) : (
+                      <div className="w-5 h-5 rounded-full border-2 border-gray-300" />
+                    )}
+                  </div>
+
+                  {/* File name */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-slate-700 truncate">
+                      {qf.name}
+                    </p>
+                    {qf.error && (
+                      <p className="text-xs text-red-600 mt-0.5">{qf.error}</p>
+                    )}
+                    {qf.status === "done" && qf.variants && (
+                      <p className="text-xs text-green-600 mt-0.5">
+                        {qf.variants.length} variants generated
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Remove button */}
+                  {qf.status === "pending" && (
+                    <button
+                      onClick={() => removeFromQueue(qf.id)}
+                      className="p-1 text-slate-400 hover:text-red-600 transition-colors"
+                    >
+                      <XMarkIcon className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Batch actions */}
+            <div className="p-4 border-t border-gray-100 flex items-center gap-3">
+              {isBatchProcessing ? (
+                <div className="flex-1 flex items-center gap-3">
+                  <div className="flex-1 bg-gray-200 rounded-full h-2 overflow-hidden">
+                    <div
+                      className="bg-purple-600 h-full transition-all duration-300"
+                      style={{
+                        width: `${(batchProgress.current / batchProgress.total) * 100}%`,
+                      }}
+                    />
+                  </div>
+                  <span className="text-sm text-slate-600 flex-shrink-0">
+                    {batchProgress.current} / {batchProgress.total}
+                  </span>
+                </div>
+              ) : (
+                <>
+                  <button
+                    onClick={batchProcessAll}
+                    disabled={fileQueue.every((f) => f.status === "done")}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 transition-colors"
+                  >
+                    <CameraIcon className="w-5 h-5" />
+                    Process All ({fileQueue.filter((f) => f.status === "pending").length} pending)
+                  </button>
+                  {hasCompletedBatch && (
+                    <button
+                      onClick={downloadAllBatchResults}
+                      className="flex items-center gap-2 px-4 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors"
+                    >
+                      <ArrowDownTrayIcon className="w-5 h-5" />
+                      Download All
+                    </button>
+                  )}
+                  <button
+                    onClick={clearQueue}
+                    className="px-4 py-3 text-slate-600 hover:text-red-600 transition-colors"
+                  >
+                    Clear
+                  </button>
+                </>
+              )}
+            </div>
+          </>
+        ) : (
+          <div className="p-8 text-center text-slate-400">
+            <CubeIcon className="w-12 h-12 mx-auto mb-2 opacity-50" />
+            <p>No files in queue</p>
+            <p className="text-xs mt-1">Add multiple FBX files for batch processing</p>
+          </div>
+        )}
       </div>
 
       {/* Instructions */}
