@@ -18,6 +18,7 @@ import {
   CheckIcon,
 } from "@heroicons/react/24/outline";
 import AdminHeader from "@/app/components/admin/AdminHeader";
+import JSZip from "jszip";
 
 interface CapturedVariant {
   name: string;
@@ -644,7 +645,7 @@ export default function IconGeneratorPage() {
   };
 
   // Process a single file and capture its variants (used for batch)
-  const processFileForBatch = async (queuedFile: QueuedFile): Promise<CapturedVariant[]> => {
+  const processFileForBatch = async (queuedFile: QueuedFile, mode: LightingMode): Promise<CapturedVariant[]> => {
     if (!sceneRef.current || !rendererRef.current || !cameraRef.current) {
       throw new Error("Scene not initialized");
     }
@@ -689,8 +690,74 @@ export default function IconGeneratorPage() {
     scene.add(object);
     modelRef.current = object;
 
-    // Apply current lighting mode to the new model
-    applyLightingMode(lightingMode);
+    // Apply lighting mode directly (inline to avoid closure issues during async batch)
+    const ambientLight = ambientLightRef.current;
+    const directionalLight = directionalLightRef.current;
+    const fillLight = fillLightRef.current;
+
+    if (ambientLight && directionalLight && fillLight) {
+      switch (mode) {
+        case "lit":
+          ambientLight.intensity = 0.7;
+          directionalLight.intensity = 0.8;
+          fillLight.intensity = 0.4;
+          break;
+
+        case "unlit":
+          ambientLight.intensity = 1;
+          directionalLight.intensity = 0;
+          fillLight.intensity = 0;
+
+          object.traverse((child) => {
+            if (child instanceof THREE.Mesh) {
+              const originalMat = originalMaterialsRef.current.get(child);
+              if (originalMat && !Array.isArray(originalMat)) {
+                let color = new THREE.Color(0xcccccc);
+                if ('color' in originalMat && originalMat.color instanceof THREE.Color) {
+                  color = originalMat.color.clone();
+                }
+                let map: THREE.Texture | null = null;
+                if ('map' in originalMat && originalMat.map instanceof THREE.Texture) {
+                  map = originalMat.map;
+                }
+                const unlitMat = new THREE.MeshBasicMaterial({
+                  color: map ? 0xffffff : color,
+                  map: map,
+                });
+                child.material = unlitMat;
+              } else if (originalMat && Array.isArray(originalMat)) {
+                child.material = originalMat.map((mat) => {
+                  let color = new THREE.Color(0xcccccc);
+                  if ('color' in mat && mat.color instanceof THREE.Color) {
+                    color = mat.color.clone();
+                  }
+                  let map: THREE.Texture | null = null;
+                  if ('map' in mat && mat.map instanceof THREE.Texture) {
+                    map = mat.map;
+                  }
+                  return new THREE.MeshBasicMaterial({
+                    color: map ? 0xffffff : color,
+                    map: map,
+                  });
+                });
+              }
+            }
+          });
+          break;
+
+        case "soft":
+          ambientLight.intensity = 1.2;
+          directionalLight.intensity = 0.3;
+          fillLight.intensity = 0.3;
+          break;
+
+        case "dramatic":
+          ambientLight.intensity = 0.3;
+          directionalLight.intensity = 1.2;
+          fillLight.intensity = 0.1;
+          break;
+      }
+    }
 
     // Position camera
     if (cameraRef.current && controlsRef.current) {
@@ -767,6 +834,9 @@ export default function IconGeneratorPage() {
   const batchProcessAll = async () => {
     if (fileQueue.length === 0) return;
 
+    // Capture lighting mode at start of batch to ensure consistency
+    const batchMode = lightingMode;
+
     setIsBatchProcessing(true);
     setBatchProgress({ current: 0, total: fileQueue.length });
 
@@ -782,7 +852,7 @@ export default function IconGeneratorPage() {
       );
 
       try {
-        const variants = await processFileForBatch(queuedFile);
+        const variants = await processFileForBatch(queuedFile, batchMode);
 
         // Update status to done with variants
         setFileQueue((prev) =>
@@ -805,22 +875,32 @@ export default function IconGeneratorPage() {
     setIsBatchProcessing(false);
   };
 
-  // Download all batch results
-  const downloadAllBatchResults = () => {
+  // Download all batch results as a zip file
+  const downloadAllBatchResults = async () => {
+    const zip = new JSZip();
+
     fileQueue.forEach((qf) => {
       if (qf.variants) {
-        qf.variants.forEach((variant) => {
-          if (variant.blob) {
-            const url = URL.createObjectURL(variant.blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = `${qf.name}_${variant.name}.png`;
-            a.click();
-            URL.revokeObjectURL(url);
-          }
-        });
+        // Create a folder for each model
+        const folder = zip.folder(qf.name);
+        if (folder) {
+          qf.variants.forEach((variant) => {
+            if (variant.blob) {
+              folder.file(`${variant.name}.png`, variant.blob);
+            }
+          });
+        }
       }
     });
+
+    // Generate and download the zip
+    const zipBlob = await zip.generateAsync({ type: "blob" });
+    const url = URL.createObjectURL(zipBlob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "icon_batch_export.zip";
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   const completedCount = fileQueue.filter((f) => f.status === "done").length;
