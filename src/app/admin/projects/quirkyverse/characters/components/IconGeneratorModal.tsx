@@ -280,6 +280,93 @@ export default function IconGeneratorModal({
     }
   };
 
+  // Helper: Find trim bounds of non-transparent pixels
+  const getTrimBounds = (imageData: ImageData, padding: number = 0) => {
+    const { data, width, height } = imageData;
+    let minX = width, minY = height, maxX = 0, maxY = 0;
+
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const alpha = data[(y * width + x) * 4 + 3];
+        if (alpha > 0) {
+          minX = Math.min(minX, x);
+          minY = Math.min(minY, y);
+          maxX = Math.max(maxX, x);
+          maxY = Math.max(maxY, y);
+        }
+      }
+    }
+
+    // Add padding
+    minX = Math.max(0, minX - padding);
+    minY = Math.max(0, minY - padding);
+    maxX = Math.min(width - 1, maxX + padding);
+    maxY = Math.min(height - 1, maxY + padding);
+
+    return { minX, minY, maxX, maxY, width: maxX - minX + 1, height: maxY - minY + 1 };
+  };
+
+  // Helper: Apply stroke to image
+  const applyStroke = (
+    ctx: CanvasRenderingContext2D,
+    width: number,
+    height: number,
+    strokeColor: string,
+    strokeWidth: number
+  ) => {
+    const imageData = ctx.getImageData(0, 0, width, height);
+    const { data } = imageData;
+
+    // Create a copy for reading
+    const originalData = new Uint8ClampedArray(data);
+
+    // Parse stroke color
+    const color = new THREE.Color(strokeColor);
+    const r = Math.round(color.r * 255);
+    const g = Math.round(color.g * 255);
+    const b = Math.round(color.b * 255);
+
+    // For each transparent pixel, check if any neighbor within strokeWidth is opaque
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const idx = (y * width + x) * 4;
+        const alpha = originalData[idx + 3];
+
+        if (alpha < 128) {
+          let hasOpaqueNeighbor = false;
+
+          for (let dy = -strokeWidth; dy <= strokeWidth && !hasOpaqueNeighbor; dy++) {
+            for (let dx = -strokeWidth; dx <= strokeWidth && !hasOpaqueNeighbor; dx++) {
+              if (dx === 0 && dy === 0) continue;
+
+              const nx = x + dx;
+              const ny = y + dy;
+
+              if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist <= strokeWidth) {
+                  const nIdx = (ny * width + nx) * 4;
+                  if (originalData[nIdx + 3] >= 128) {
+                    hasOpaqueNeighbor = true;
+                  }
+                }
+              }
+            }
+          }
+
+          if (hasOpaqueNeighbor) {
+            data[idx] = r;
+            data[idx + 1] = g;
+            data[idx + 2] = b;
+            data[idx + 3] = 255;
+          }
+        }
+      }
+    }
+
+    ctx.putImageData(imageData, 0, 0);
+  };
+
   // Capture current view and generate variants
   const captureVariants = async () => {
     if (!rendererRef.current || !sceneRef.current || !cameraRef.current || !modelRef.current) {
@@ -304,47 +391,69 @@ export default function IconGeneratorModal({
       grid.visible = false;
     }
 
-    // Set transparent background for capture
+    // Set transparent background
     scene.background = null;
 
+    // Render model once
+    model.visible = true;
+    renderer.render(scene, camera);
+
+    // Get base image from renderer
+    const baseCanvas = renderer.domElement;
+    const baseCtx = document.createElement("canvas").getContext("2d")!;
+    baseCtx.canvas.width = baseCanvas.width;
+    baseCtx.canvas.height = baseCanvas.height;
+    baseCtx.drawImage(baseCanvas, 0, 0);
+
+    // Get trim bounds with padding for stroke
+    const strokeWidth = 4;
+    const baseImageData = baseCtx.getImageData(0, 0, baseCanvas.width, baseCanvas.height);
+    const bounds = getTrimBounds(baseImageData, strokeWidth + 2);
+
     for (const config of VARIANT_CONFIG) {
-      const outlineMeshes: THREE.Mesh[] = [];
+      // Create working canvas at trimmed size
+      const workCanvas = document.createElement("canvas");
+      workCanvas.width = bounds.width;
+      workCanvas.height = bounds.height;
+      const workCtx = workCanvas.getContext("2d")!;
 
-      // Show or hide model based on config
-      model.visible = config.showModel;
-
-      // Add outline meshes if needed
-      if (config.outlineColor) {
-        const outlineColor = new THREE.Color(config.outlineColor);
-
-        model.traverse((child) => {
-          if (child instanceof THREE.Mesh && child.geometry) {
-            const outlineMaterial = new THREE.MeshBasicMaterial({
-              color: outlineColor,
-              side: THREE.BackSide,
-            });
-
-            const outlineMesh = new THREE.Mesh(child.geometry, outlineMaterial);
-
-            // Copy world transform
-            child.updateWorldMatrix(true, false);
-            outlineMesh.applyMatrix4(child.matrixWorld);
-
-            // Scale up for outline effect
-            const scale = 1.03;
-            outlineMesh.scale.multiplyScalar(scale);
-
-            scene.add(outlineMesh);
-            outlineMeshes.push(outlineMesh);
-          }
-        });
+      if (config.showModel) {
+        // Draw trimmed model
+        workCtx.drawImage(
+          baseCanvas,
+          bounds.minX, bounds.minY, bounds.width, bounds.height,
+          0, 0, bounds.width, bounds.height
+        );
       }
 
-      // Render
-      renderer.render(scene, camera);
+      // Apply stroke if needed
+      if (config.outlineColor) {
+        if (!config.showModel) {
+          workCtx.drawImage(
+            baseCanvas,
+            bounds.minX, bounds.minY, bounds.width, bounds.height,
+            0, 0, bounds.width, bounds.height
+          );
+        }
 
-      // Capture to blob
-      const dataUrl = renderer.domElement.toDataURL("image/png");
+        applyStroke(workCtx, bounds.width, bounds.height, config.outlineColor, strokeWidth);
+
+        // For outline-only, remove the model pixels
+        if (!config.showModel) {
+          const finalData = workCtx.getImageData(0, 0, bounds.width, bounds.height);
+          const origTrimmed = baseCtx.getImageData(bounds.minX, bounds.minY, bounds.width, bounds.height);
+
+          for (let i = 0; i < finalData.data.length; i += 4) {
+            if (origTrimmed.data[i + 3] >= 128) {
+              finalData.data[i + 3] = 0;
+            }
+          }
+          workCtx.putImageData(finalData, 0, 0);
+        }
+      }
+
+      // Convert to blob
+      const dataUrl = workCanvas.toDataURL("image/png");
       const blob = await (await fetch(dataUrl)).blob();
 
       capturedVariants.push({
@@ -356,16 +465,9 @@ export default function IconGeneratorModal({
         uploading: false,
         uploaded: false,
       });
-
-      // Clean up outline meshes
-      outlineMeshes.forEach((mesh) => {
-        scene.remove(mesh);
-        (mesh.material as THREE.Material).dispose();
-      });
     }
 
     // Restore original state
-    model.visible = true;
     scene.background = originalBackground;
     if (grid) {
       grid.visible = gridWasVisible;
