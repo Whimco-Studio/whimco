@@ -8,36 +8,22 @@ import { FBXLoader } from "three-stdlib";
 import {
   ArrowLeftIcon,
   CameraIcon,
+  ArrowUpTrayIcon,
   ArrowDownTrayIcon,
+  CheckCircleIcon,
   ExclamationCircleIcon,
   CubeIcon,
   SunIcon,
   MoonIcon,
   SparklesIcon,
-  XMarkIcon,
-  CheckIcon,
-  TrashIcon,
 } from "@heroicons/react/24/outline";
 import AdminHeader from "@/app/components/admin/AdminHeader";
-
-interface QueuedFile {
-  id: string;
-  file: File;
-  name: string;
-  status: "pending" | "processing" | "done" | "error";
-  variants?: CapturedVariant[];
-  error?: string;
-}
 
 interface CapturedVariant {
   name: string;
   blob: Blob | null;
   preview: string | null;
-}
-
-interface BatchResult {
-  modelName: string;
-  variants: CapturedVariant[];
+  downloading?: boolean;
 }
 
 const CAMERA_ANGLES = [
@@ -53,8 +39,30 @@ const CAMERA_ANGLES = [
 ];
 
 const VARIANT_CONFIG = [
-  { name: "Base", label: "Base (Colored)", type: "base" },
-  { name: "WhiteFill", label: "White Fill (Backdrop)", type: "whitefill" },
+  {
+    name: "NoOutline",
+    label: "No Outline",
+    outlineColor: null,
+    showModel: true,
+  },
+  {
+    name: "BlackOutline",
+    label: "Black Outline",
+    outlineColor: "#000000",
+    showModel: true,
+  },
+  {
+    name: "WhiteOutline",
+    label: "White Outline",
+    outlineColor: "#ffffff",
+    showModel: true,
+  },
+  {
+    name: "OutlineOnly",
+    label: "Outline Only",
+    outlineColor: "#000000",
+    showModel: false,
+  },
 ];
 
 type LightingMode = "lit" | "unlit" | "soft" | "dramatic";
@@ -85,18 +93,15 @@ export default function IconGeneratorPage() {
   const fillLightRef = useRef<THREE.DirectionalLight | null>(null);
   const originalMaterialsRef = useRef<Map<THREE.Mesh, THREE.Material | THREE.Material[]>>(new Map());
 
-  const [fileQueue, setFileQueue] = useState<QueuedFile[]>([]);
-  const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [modelLoaded, setModelLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isBatchProcessing, setIsBatchProcessing] = useState(false);
-  const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 });
-  const [batchResults, setBatchResults] = useState<BatchResult[]>([]);
-
-  // Settings
+  const [variants, setVariants] = useState<CapturedVariant[]>([]);
+  const [isCapturing, setIsCapturing] = useState(false);
+  const [assetName, setAssetName] = useState("");
   const [lightingMode, setLightingMode] = useState<LightingMode>("lit");
   const [strokeWidth, setStrokeWidth] = useState(4);
-  const [selectedAngle, setSelectedAngle] = useState(CAMERA_ANGLES[5]); // Default to 3/4 Front Left
 
   // Initialize Three.js scene
   useEffect(() => {
@@ -106,14 +111,17 @@ export default function IconGeneratorPage() {
     const width = container.clientWidth;
     const height = container.clientHeight;
 
+    // Scene
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0xf0f0f0);
     sceneRef.current = scene;
 
+    // Camera
     const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
     camera.position.set(100, 80, 100);
     cameraRef.current = camera;
 
+    // Renderer - enable alpha for transparent captures
     const renderer = new THREE.WebGLRenderer({
       antialias: true,
       preserveDrawingBuffer: true,
@@ -122,10 +130,11 @@ export default function IconGeneratorPage() {
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
-    renderer.setClearColor(0x000000, 0);
+    renderer.setClearColor(0x000000, 0); // Transparent background
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
+    // Controls
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
@@ -133,6 +142,7 @@ export default function IconGeneratorPage() {
     controls.update();
     controlsRef.current = controls;
 
+    // Lights
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
     scene.add(ambientLight);
     ambientLightRef.current = ambientLight;
@@ -148,10 +158,12 @@ export default function IconGeneratorPage() {
     scene.add(fillLight);
     fillLightRef.current = fillLight;
 
+    // Grid
     const gridHelper = new THREE.GridHelper(200, 20, 0xcccccc, 0xdddddd);
     scene.add(gridHelper);
     gridRef.current = gridHelper;
 
+    // Animation loop
     const animate = () => {
       frameIdRef.current = requestAnimationFrame(animate);
       controls.update();
@@ -159,6 +171,7 @@ export default function IconGeneratorPage() {
     };
     animate();
 
+    // Handle resize
     const handleResize = () => {
       if (!containerRef.current) return;
       const newWidth = containerRef.current.clientWidth;
@@ -180,13 +193,20 @@ export default function IconGeneratorPage() {
     };
   }, []);
 
-  // Load FBX model for preview
-  const loadModelForPreview = useCallback(async (file: File) => {
+  // Load FBX model
+  const loadModel = useCallback(async (file: File) => {
     if (!sceneRef.current) return;
 
     setIsLoading(true);
     setError(null);
+    setModelLoaded(false);
+    setVariants([]);
 
+    // Set default asset name from filename
+    const nameWithoutExt = file.name.replace(/\.[^/.]+$/, "");
+    setAssetName(nameWithoutExt);
+
+    // Remove existing model
     if (modelRef.current) {
       sceneRef.current.remove(modelRef.current);
       modelRef.current = null;
@@ -198,6 +218,7 @@ export default function IconGeneratorPage() {
       const arrayBuffer = await file.arrayBuffer();
       const object = loader.parse(arrayBuffer, "");
 
+      // Center and scale model
       const box = new THREE.Box3().setFromObject(object);
       const center = box.getCenter(new THREE.Vector3());
       const size = box.getSize(new THREE.Vector3());
@@ -208,40 +229,28 @@ export default function IconGeneratorPage() {
       object.position.sub(center.multiplyScalar(scale));
       object.position.y = 0;
 
+      // Store original materials and enable shadows
       originalMaterialsRef.current.clear();
       object.traverse((child) => {
         if (child instanceof THREE.Mesh) {
           child.castShadow = true;
           child.receiveShadow = true;
+          // Store original material for restoration
           originalMaterialsRef.current.set(child, child.material);
         }
       });
 
       sceneRef.current.add(object);
       modelRef.current = object;
+      setModelLoaded(true);
 
-      // Apply current lighting mode
-      applyLightingModeToModel(lightingMode, object);
+      // Reset to standard lighting when loading new model
+      setLightingMode("lit");
 
-      // Calculate proper camera distance to fit model
+      // Reset camera
       if (cameraRef.current && controlsRef.current) {
-        const scaledBox = new THREE.Box3().setFromObject(object);
-        const scaledSize = scaledBox.getSize(new THREE.Vector3());
-        const scaledCenter = scaledBox.getCenter(new THREE.Vector3());
-        const maxSize = Math.max(scaledSize.x, scaledSize.y, scaledSize.z);
-
-        const fov = cameraRef.current.fov * (Math.PI / 180);
-        const cameraDistance = (maxSize / 2) / Math.tan(fov / 2) * 1.5;
-
-        const angleDir = new THREE.Vector3(
-          selectedAngle.position[0],
-          selectedAngle.position[1],
-          selectedAngle.position[2]
-        ).normalize();
-
-        const cameraPos = angleDir.multiplyScalar(cameraDistance);
-        cameraRef.current.position.copy(cameraPos);
-        controlsRef.current.target.copy(scaledCenter);
+        cameraRef.current.position.set(100, 80, 100);
+        controlsRef.current.target.set(0, 40, 0);
         controlsRef.current.update();
       }
     } catch (err) {
@@ -249,31 +258,68 @@ export default function IconGeneratorPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [lightingMode, selectedAngle]);
+  }, []);
 
-  // Apply lighting mode to a model
-  const applyLightingModeToModel = useCallback((mode: LightingMode, model?: THREE.Group) => {
-    const targetModel = model || modelRef.current;
+  // Handle file selection
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      const file = files[0];
+      if (file.name.toLowerCase().endsWith(".fbx")) {
+        setSelectedFile(file);
+        loadModel(file);
+      } else {
+        setError("Please select an FBX file");
+      }
+    }
+  };
+
+  // Handle drag and drop
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      const file = files[0];
+      if (file.name.toLowerCase().endsWith(".fbx")) {
+        setSelectedFile(file);
+        loadModel(file);
+      } else {
+        setError("Please drop an FBX file");
+      }
+    }
+  }, [loadModel]);
+
+  // Snap camera to angle
+  const snapToAngle = (position: number[]) => {
+    if (cameraRef.current && controlsRef.current) {
+      cameraRef.current.position.set(position[0], position[1], position[2]);
+      controlsRef.current.target.set(0, 40, 0);
+      controlsRef.current.update();
+    }
+  };
+
+  // Apply lighting mode
+  const applyLightingMode = useCallback((mode: LightingMode) => {
+    const model = modelRef.current;
     const ambientLight = ambientLightRef.current;
     const directionalLight = directionalLightRef.current;
     const fillLight = fillLightRef.current;
 
-    if (!ambientLight || !directionalLight || !fillLight) return;
+    if (!model || !ambientLight || !directionalLight || !fillLight) return;
 
-    // Restore original materials first if we have a model
-    if (targetModel) {
-      targetModel.traverse((child) => {
-        if (child instanceof THREE.Mesh) {
-          const original = originalMaterialsRef.current.get(child);
-          if (original) {
-            child.material = original;
-          }
+    // Restore original materials first
+    model.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        const original = originalMaterialsRef.current.get(child);
+        if (original) {
+          child.material = original;
         }
-      });
-    }
+      }
+    });
 
     switch (mode) {
       case "lit":
+        // Standard lighting
         ambientLight.intensity = 0.7;
         directionalLight.intensity = 0.8;
         fillLight.intensity = 0.4;
@@ -285,186 +331,68 @@ export default function IconGeneratorPage() {
         directionalLight.intensity = 0;
         fillLight.intensity = 0;
 
-        if (targetModel) {
-          targetModel.traverse((child) => {
-            if (child instanceof THREE.Mesh) {
-              const originalMat = originalMaterialsRef.current.get(child);
-              if (originalMat && !Array.isArray(originalMat)) {
-                // Get the color from the original material
+        model.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+            const originalMat = originalMaterialsRef.current.get(child);
+            if (originalMat && !Array.isArray(originalMat)) {
+              // Get the color from the original material
+              let color = new THREE.Color(0xcccccc);
+              if ('color' in originalMat && originalMat.color instanceof THREE.Color) {
+                color = originalMat.color.clone();
+              }
+
+              // Check for texture map - if it has one, we'll use it
+              let map: THREE.Texture | null = null;
+              if ('map' in originalMat && originalMat.map instanceof THREE.Texture) {
+                map = originalMat.map;
+              }
+
+              // Create unlit material
+              const unlitMat = new THREE.MeshBasicMaterial({
+                color: map ? 0xffffff : color,
+                map: map,
+              });
+              child.material = unlitMat;
+            } else if (originalMat && Array.isArray(originalMat)) {
+              // Handle multi-material
+              child.material = originalMat.map((mat) => {
                 let color = new THREE.Color(0xcccccc);
-                if ('color' in originalMat && originalMat.color instanceof THREE.Color) {
-                  color = originalMat.color.clone();
+                if ('color' in mat && mat.color instanceof THREE.Color) {
+                  color = mat.color.clone();
                 }
-
-                // Check for texture map - if it has one, we'll use it
                 let map: THREE.Texture | null = null;
-                if ('map' in originalMat && originalMat.map instanceof THREE.Texture) {
-                  map = originalMat.map;
+                if ('map' in mat && mat.map instanceof THREE.Texture) {
+                  map = mat.map;
                 }
-
-                // Create unlit material
-                const unlitMat = new THREE.MeshBasicMaterial({
+                return new THREE.MeshBasicMaterial({
                   color: map ? 0xffffff : color,
                   map: map,
                 });
-                child.material = unlitMat;
-              } else if (originalMat && Array.isArray(originalMat)) {
-                // Handle multi-material
-                child.material = originalMat.map((mat) => {
-                  let color = new THREE.Color(0xcccccc);
-                  if ('color' in mat && mat.color instanceof THREE.Color) {
-                    color = mat.color.clone();
-                  }
-                  let map: THREE.Texture | null = null;
-                  if ('map' in mat && mat.map instanceof THREE.Texture) {
-                    map = mat.map;
-                  }
-                  return new THREE.MeshBasicMaterial({
-                    color: map ? 0xffffff : color,
-                    map: map,
-                  });
-                });
-              }
+              });
             }
-          });
-        }
+          }
+        });
         break;
 
       case "soft":
+        // Soft lighting - high ambient, low directional
         ambientLight.intensity = 1.2;
         directionalLight.intensity = 0.3;
         fillLight.intensity = 0.3;
         break;
 
       case "dramatic":
+        // Dramatic lighting - low ambient, strong directional
         ambientLight.intensity = 0.3;
         directionalLight.intensity = 1.2;
         fillLight.intensity = 0.1;
         break;
     }
+
+    setLightingMode(mode);
   }, []);
 
-  // Handle lighting mode change
-  const handleLightingModeChange = useCallback((mode: LightingMode) => {
-    setLightingMode(mode);
-    applyLightingModeToModel(mode);
-  }, [applyLightingModeToModel]);
-
-  // Snap camera to angle
-  const snapToAngle = (angle: typeof CAMERA_ANGLES[0]) => {
-    setSelectedAngle(angle);
-    if (cameraRef.current && controlsRef.current && modelRef.current) {
-      // Calculate proper camera distance to fit model
-      const scaledBox = new THREE.Box3().setFromObject(modelRef.current);
-      const scaledSize = scaledBox.getSize(new THREE.Vector3());
-      const scaledCenter = scaledBox.getCenter(new THREE.Vector3());
-      const maxSize = Math.max(scaledSize.x, scaledSize.y, scaledSize.z);
-
-      const fov = cameraRef.current.fov * (Math.PI / 180);
-      const cameraDistance = (maxSize / 2) / Math.tan(fov / 2) * 1.5;
-
-      const angleDir = new THREE.Vector3(
-        angle.position[0],
-        angle.position[1],
-        angle.position[2]
-      ).normalize();
-
-      const cameraPos = angleDir.multiplyScalar(cameraDistance);
-      cameraRef.current.position.copy(cameraPos);
-      controlsRef.current.target.copy(scaledCenter);
-      controlsRef.current.update();
-    } else if (cameraRef.current && controlsRef.current) {
-      // No model loaded, use default position
-      cameraRef.current.position.set(angle.position[0], angle.position[1], angle.position[2]);
-      controlsRef.current.target.set(0, 40, 0);
-      controlsRef.current.update();
-    }
-  };
-
-  // Handle file selection (multiple)
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files.length > 0) {
-      const newFiles: QueuedFile[] = [];
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        if (file.name.toLowerCase().endsWith(".fbx")) {
-          newFiles.push({
-            id: `${Date.now()}-${i}`,
-            file,
-            name: file.name.replace(/\.[^/.]+$/, ""),
-            status: "pending",
-          });
-        }
-      }
-      setFileQueue((prev) => [...prev, ...newFiles]);
-
-      // Auto-select first file for preview if none selected
-      if (!selectedFileId && newFiles.length > 0) {
-        setSelectedFileId(newFiles[0].id);
-        loadModelForPreview(newFiles[0].file);
-      }
-    }
-    // Reset input
-    e.target.value = "";
-  };
-
-  // Handle drag and drop (multiple)
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    const files = e.dataTransfer.files;
-    if (files && files.length > 0) {
-      const newFiles: QueuedFile[] = [];
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        if (file.name.toLowerCase().endsWith(".fbx")) {
-          newFiles.push({
-            id: `${Date.now()}-${i}`,
-            file,
-            name: file.name.replace(/\.[^/.]+$/, ""),
-            status: "pending",
-          });
-        }
-      }
-      setFileQueue((prev) => [...prev, ...newFiles]);
-
-      if (!selectedFileId && newFiles.length > 0) {
-        setSelectedFileId(newFiles[0].id);
-        loadModelForPreview(newFiles[0].file);
-      }
-    }
-  }, [selectedFileId, loadModelForPreview]);
-
-  // Select file for preview
-  const selectFileForPreview = (queuedFile: QueuedFile) => {
-    setSelectedFileId(queuedFile.id);
-    loadModelForPreview(queuedFile.file);
-  };
-
-  // Remove file from queue
-  const removeFromQueue = (id: string) => {
-    setFileQueue((prev) => prev.filter((f) => f.id !== id));
-    if (selectedFileId === id) {
-      setSelectedFileId(null);
-      if (modelRef.current && sceneRef.current) {
-        sceneRef.current.remove(modelRef.current);
-        modelRef.current = null;
-      }
-    }
-  };
-
-  // Clear all files
-  const clearQueue = () => {
-    setFileQueue([]);
-    setSelectedFileId(null);
-    setBatchResults([]);
-    if (modelRef.current && sceneRef.current) {
-      sceneRef.current.remove(modelRef.current);
-      modelRef.current = null;
-    }
-  };
-
-  // Helper functions for capture
+  // Helper: Find trim bounds of non-transparent pixels
   const getTrimBounds = (imageData: ImageData, padding: number = 0) => {
     const { data, width, height } = imageData;
     let minX = width, minY = height, maxX = 0, maxY = 0;
@@ -481,6 +409,7 @@ export default function IconGeneratorPage() {
       }
     }
 
+    // Add padding
     minX = Math.max(0, minX - padding);
     minY = Math.max(0, minY - padding);
     maxX = Math.min(width - 1, maxX + padding);
@@ -489,33 +418,37 @@ export default function IconGeneratorPage() {
     return { minX, minY, maxX, maxY, width: maxX - minX + 1, height: maxY - minY + 1 };
   };
 
-  // Create white fill layer (model silhouette + expanded stroke area, all white)
-  const createWhiteFillLayer = (
+  // Helper: Create stroke layer with fringe to prevent dark edge artifacts
+  const createStrokeLayer = (
     sourceData: ImageData,
     width: number,
     height: number,
-    expandPx: number
+    strokeColor: string,
+    strokeWidthPx: number
   ): ImageData => {
-    const fillData = new ImageData(width, height);
+    const strokeData = new ImageData(width, height);
     const src = sourceData.data;
-    const dst = fillData.data;
+    const dst = strokeData.data;
 
+    // Parse stroke color
+    const color = new THREE.Color(strokeColor);
+    const r = Math.round(color.r * 255);
+    const g = Math.round(color.g * 255);
+    const b = Math.round(color.b * 255);
+
+    // For each pixel, check if it should be part of the stroke
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const idx = (y * width + x) * 4;
         const alpha = src[idx + 3];
 
-        // If pixel is already opaque, fill it white
-        if (alpha > 10) {
-          dst[idx] = 255;
-          dst[idx + 1] = 255;
-          dst[idx + 2] = 255;
-          dst[idx + 3] = 255;
-        } else {
-          // Check if near an opaque pixel (within expand distance)
+        // Create stroke on transparent/semi-transparent pixels (alpha < 240)
+        // This covers anti-aliased edges so they blend with stroke color, not black
+        if (alpha < 240) {
           let hasOpaqueNeighbor = false;
-          const checkRadius = expandPx + 1;
 
+          // Check neighbors within stroke width + 1 (extra for anti-aliasing coverage)
+          const checkRadius = strokeWidthPx + 1;
           for (let dy = -checkRadius; dy <= checkRadius && !hasOpaqueNeighbor; dy++) {
             for (let dx = -checkRadius; dx <= checkRadius; dx++) {
               const nx = x + dx;
@@ -534,137 +467,93 @@ export default function IconGeneratorPage() {
           }
 
           if (hasOpaqueNeighbor) {
-            dst[idx] = 255;
-            dst[idx + 1] = 255;
-            dst[idx + 2] = 255;
+            dst[idx] = r;
+            dst[idx + 1] = g;
+            dst[idx + 2] = b;
             dst[idx + 3] = 255;
           }
         }
       }
     }
 
-    return fillData;
+    return strokeData;
   };
 
-  // Capture single model variants
-  const captureModelVariants = async (file: File, modelName: string): Promise<CapturedVariant[]> => {
-    if (!rendererRef.current || !sceneRef.current || !cameraRef.current) {
-      throw new Error("Renderer not initialized");
+  // Capture current view and generate variants
+  const captureVariants = async () => {
+    if (!rendererRef.current || !sceneRef.current || !cameraRef.current || !modelRef.current) {
+      return;
     }
+
+    setIsCapturing(true);
+    const capturedVariants: CapturedVariant[] = [];
 
     const renderer = rendererRef.current;
     const scene = sceneRef.current;
     const camera = cameraRef.current;
+    const model = modelRef.current;
     const grid = gridRef.current;
 
-    // Remove existing model
-    if (modelRef.current) {
-      scene.remove(modelRef.current);
-      modelRef.current = null;
-    }
-
-    // Load the model
-    const loader = new FBXLoader();
-    const arrayBuffer = await file.arrayBuffer();
-    const object = loader.parse(arrayBuffer, "");
-
-    // Center and scale
-    const box = new THREE.Box3().setFromObject(object);
-    const center = box.getCenter(new THREE.Vector3());
-    const size = box.getSize(new THREE.Vector3());
-    const maxDim = Math.max(size.x, size.y, size.z);
-    const scale = 100 / maxDim;
-
-    object.scale.multiplyScalar(scale);
-    object.position.sub(center.multiplyScalar(scale));
-    object.position.y = 0;
-
-    // Store and setup materials
-    originalMaterialsRef.current.clear();
-    object.traverse((child) => {
-      if (child instanceof THREE.Mesh) {
-        child.castShadow = true;
-        child.receiveShadow = true;
-        originalMaterialsRef.current.set(child, child.material);
-      }
-    });
-
-    scene.add(object);
-    modelRef.current = object;
-
-    // Apply lighting mode
-    applyLightingModeToModel(lightingMode, object);
-
-    // Calculate proper camera distance to fit model
-    const scaledBox = new THREE.Box3().setFromObject(object);
-    const scaledSize = scaledBox.getSize(new THREE.Vector3());
-    const scaledCenter = scaledBox.getCenter(new THREE.Vector3());
-    const maxSize = Math.max(scaledSize.x, scaledSize.y, scaledSize.z);
-
-    // Calculate distance needed to fit model in view
-    const fov = camera.fov * (Math.PI / 180);
-    const cameraDistance = (maxSize / 2) / Math.tan(fov / 2) * 1.5; // 1.5x padding
-
-    // Get direction from selected angle and apply proper distance
-    const angleDir = new THREE.Vector3(
-      selectedAngle.position[0],
-      selectedAngle.position[1],
-      selectedAngle.position[2]
-    ).normalize();
-
-    const cameraPos = angleDir.multiplyScalar(cameraDistance);
-    camera.position.copy(cameraPos);
-
-    // Look at model center
-    controlsRef.current?.target.copy(scaledCenter);
-    controlsRef.current?.update();
-
-    // Capture
+    // Store original state
     const originalBackground = scene.background;
     const gridWasVisible = grid?.visible ?? false;
 
-    if (grid) grid.visible = false;
+    // Hide grid for capture
+    if (grid) {
+      grid.visible = false;
+    }
+
+    // Set transparent background
     scene.background = null;
 
-    object.visible = true;
+    // Render model once
+    model.visible = true;
     renderer.render(scene, camera);
 
+    // Get base image from renderer
     const baseCanvas = renderer.domElement;
     const baseCtx = document.createElement("canvas").getContext("2d")!;
     baseCtx.canvas.width = baseCanvas.width;
     baseCtx.canvas.height = baseCanvas.height;
     baseCtx.drawImage(baseCanvas, 0, 0);
 
+    // Get trim bounds with padding for stroke
     const baseImageData = baseCtx.getImageData(0, 0, baseCanvas.width, baseCanvas.height);
     const bounds = getTrimBounds(baseImageData, strokeWidth + 2);
+
+    // Get trimmed source data for stroke calculation
     const trimmedSourceData = baseCtx.getImageData(bounds.minX, bounds.minY, bounds.width, bounds.height);
 
-    const capturedVariants: CapturedVariant[] = [];
-
     for (const config of VARIANT_CONFIG) {
+      // Create working canvas at trimmed size
       const workCanvas = document.createElement("canvas");
       workCanvas.width = bounds.width;
       workCanvas.height = bounds.height;
       const workCtx = workCanvas.getContext("2d")!;
 
-      if (config.type === "base") {
-        // Base variant: just the colored model
+      // Apply stroke if needed (draw stroke FIRST, then model on top)
+      if (config.outlineColor) {
+        // Create stroke layer
+        const strokeLayer = createStrokeLayer(
+          trimmedSourceData,
+          bounds.width,
+          bounds.height,
+          config.outlineColor,
+          strokeWidth
+        );
+        workCtx.putImageData(strokeLayer, 0, 0);
+      }
+
+      // Draw model on top (if showModel is true)
+      if (config.showModel) {
         workCtx.drawImage(
           baseCanvas,
           bounds.minX, bounds.minY, bounds.width, bounds.height,
           0, 0, bounds.width, bounds.height
         );
-      } else if (config.type === "whitefill") {
-        // White fill variant: model silhouette + expanded area, all white
-        const whiteFillLayer = createWhiteFillLayer(
-          trimmedSourceData,
-          bounds.width,
-          bounds.height,
-          strokeWidth
-        );
-        workCtx.putImageData(whiteFillLayer, 0, 0);
       }
 
+      // Convert to blob
       const dataUrl = workCanvas.toDataURL("image/png");
       const blob = await (await fetch(dataUrl)).blob();
 
@@ -675,91 +564,45 @@ export default function IconGeneratorPage() {
       });
     }
 
-    // Restore
+    // Restore original state
     scene.background = originalBackground;
-    if (grid) grid.visible = gridWasVisible;
+    if (grid) {
+      grid.visible = gridWasVisible;
+    }
     renderer.render(scene, camera);
 
-    return capturedVariants;
+    setVariants(capturedVariants);
+    setIsCapturing(false);
   };
 
-  // Batch process all files
-  const batchProcessAll = async () => {
-    if (fileQueue.length === 0) return;
+  // Download single variant
+  const downloadVariant = (variant: CapturedVariant) => {
+    if (!variant.blob) return;
+    const url = URL.createObjectURL(variant.blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${assetName}_${variant.name}.png`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
-    setIsBatchProcessing(true);
-    setBatchProgress({ current: 0, total: fileQueue.length });
-    setBatchResults([]);
-
-    const results: BatchResult[] = [];
-
-    for (let i = 0; i < fileQueue.length; i++) {
-      const queuedFile = fileQueue[i];
-      setBatchProgress({ current: i + 1, total: fileQueue.length });
-
-      // Update status
-      setFileQueue((prev) =>
-        prev.map((f) =>
-          f.id === queuedFile.id ? { ...f, status: "processing" as const } : f
-        )
-      );
-
-      try {
-        const variants = await captureModelVariants(queuedFile.file, queuedFile.name);
-
-        results.push({
-          modelName: queuedFile.name,
-          variants,
-        });
-
-        setFileQueue((prev) =>
-          prev.map((f) =>
-            f.id === queuedFile.id ? { ...f, status: "done" as const, variants } : f
-          )
-        );
-      } catch (err) {
-        setFileQueue((prev) =>
-          prev.map((f) =>
-            f.id === queuedFile.id
-              ? { ...f, status: "error" as const, error: err instanceof Error ? err.message : "Failed" }
-              : f
-          )
-        );
+  // Download all variants
+  const downloadAll = () => {
+    variants.forEach((variant) => {
+      if (variant.blob) {
+        downloadVariant(variant);
       }
-    }
-
-    setBatchResults(results);
-    setIsBatchProcessing(false);
-  };
-
-  // Download all results
-  const downloadAllResults = () => {
-    batchResults.forEach((result) => {
-      result.variants.forEach((variant) => {
-        if (variant.blob) {
-          const url = URL.createObjectURL(variant.blob);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = `${result.modelName}_${variant.name}.png`;
-          a.click();
-          URL.revokeObjectURL(url);
-        }
-      });
     });
   };
-
-  const selectedFile = fileQueue.find((f) => f.id === selectedFileId);
-  const hasFiles = fileQueue.length > 0;
-  const allDone = fileQueue.length > 0 && fileQueue.every((f) => f.status === "done");
-  const totalVariants = batchResults.reduce((sum, r) => sum + r.variants.length, 0);
 
   return (
     <>
       <AdminHeader
-        title="Batch Icon Generator"
-        subtitle="Generate icon variants from multiple 3D models"
+        title="Icon Generator"
+        subtitle="Generate icon variants from 3D models"
       />
 
+      {/* Back link */}
       <Link
         href="/admin"
         className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-slate-700 mb-6"
@@ -768,274 +611,228 @@ export default function IconGeneratorPage() {
         Back to Dashboard
       </Link>
 
+      {/* Main content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Viewport & Settings */}
-        <div className="lg:col-span-2 space-y-4">
-          {/* 3D Viewport */}
-          <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-            <div
-              ref={containerRef}
-              onDrop={handleDrop}
-              onDragOver={(e) => e.preventDefault()}
-              className="h-[400px] bg-gray-100 relative"
-            >
-              {!hasFiles && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center border-2 border-dashed border-gray-300 m-4 rounded-xl">
-                  <CubeIcon className="w-16 h-16 text-gray-300 mb-4" />
-                  <p className="text-slate-600 font-medium mb-2">Drop FBX files here</p>
-                  <p className="text-slate-400 text-sm mb-4">Upload multiple files for batch processing</p>
-                  <label className="px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 cursor-pointer">
-                    Browse Files
+        {/* Viewport */}
+        <div className="lg:col-span-2 bg-white rounded-2xl shadow-xl overflow-hidden">
+          <div
+            ref={containerRef}
+            onDrop={handleDrop}
+            onDragOver={(e) => e.preventDefault()}
+            className="h-[500px] bg-gray-100 relative"
+          >
+            {!selectedFile && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center border-2 border-dashed border-gray-300 m-4 rounded-xl">
+                <CubeIcon className="w-16 h-16 text-gray-300 mb-4" />
+                <p className="text-slate-600 font-medium mb-2">Drop FBX file here</p>
+                <p className="text-slate-400 text-sm mb-4">or</p>
+                <label className="px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 cursor-pointer">
+                  Browse Files
+                  <input
+                    type="file"
+                    accept=".fbx"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+            )}
+
+            {isLoading && (
+              <div className="absolute inset-0 flex items-center justify-center bg-white/80">
+                <div className="flex flex-col items-center gap-3">
+                  <div className="w-10 h-10 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin" />
+                  <p className="text-slate-600">Loading model...</p>
+                </div>
+              </div>
+            )}
+
+            {error && (
+              <div className="absolute bottom-4 left-4 right-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 flex items-center gap-2">
+                <ExclamationCircleIcon className="w-5 h-5" />
+                {error}
+              </div>
+            )}
+          </div>
+
+          {/* Controls Row */}
+          {modelLoaded && (
+            <div className="p-4 border-t border-gray-100 space-y-4">
+              {/* Lighting Mode & Outline Thickness */}
+              <div className="flex flex-wrap gap-6">
+                <div className="flex-1 min-w-[200px]">
+                  <p className="text-sm font-medium text-slate-600 mb-2">Lighting Mode</p>
+                  <div className="flex flex-wrap gap-2">
+                    {LIGHTING_MODES.map((mode) => (
+                      <button
+                        key={mode.id}
+                        onClick={() => applyLightingMode(mode.id)}
+                        className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg border transition-colors ${
+                          lightingMode === mode.id
+                            ? "bg-purple-100 border-purple-300 text-purple-700"
+                            : "bg-gray-50 border-gray-200 text-slate-600 hover:bg-gray-100"
+                        }`}
+                        title={mode.description}
+                      >
+                        {mode.icon === "sun" && <SunIcon className="w-4 h-4" />}
+                        {mode.icon === "moon" && <MoonIcon className="w-4 h-4" />}
+                        {mode.icon === "sparkles" && <SparklesIcon className="w-4 h-4" />}
+                        <span>{mode.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="w-48">
+                  <p className="text-sm font-medium text-slate-600 mb-2">
+                    Outline Thickness: <span className="text-purple-600">{strokeWidth}px</span>
+                  </p>
+                  <input
+                    type="range"
+                    min="1"
+                    max="12"
+                    value={strokeWidth}
+                    onChange={(e) => setStrokeWidth(parseInt(e.target.value))}
+                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-600"
+                  />
+                  <div className="flex justify-between text-xs text-slate-400 mt-1">
+                    <span>1px</span>
+                    <span>12px</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Camera Angle Buttons */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-medium text-slate-600">Snap to Angle</p>
+                  <label className="text-sm text-purple-600 hover:text-purple-700 cursor-pointer">
+                    Load Different FBX
                     <input
                       type="file"
                       accept=".fbx"
-                      multiple
                       onChange={handleFileSelect}
                       className="hidden"
                     />
                   </label>
                 </div>
-              )}
-
-              {isLoading && (
-                <div className="absolute inset-0 flex items-center justify-center bg-white/80">
-                  <div className="flex flex-col items-center gap-3">
-                    <div className="w-10 h-10 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin" />
-                    <p className="text-slate-600">Loading preview...</p>
-                  </div>
-                </div>
-              )}
-
-              {error && (
-                <div className="absolute bottom-4 left-4 right-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 flex items-center gap-2">
-                  <ExclamationCircleIcon className="w-5 h-5" />
-                  {error}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Settings Panel */}
-          <div className="bg-white rounded-2xl shadow-xl p-4 space-y-4">
-            <h3 className="font-semibold text-slate-700">Settings (Applied to All)</h3>
-
-            {/* Lighting Mode */}
-            <div>
-              <p className="text-sm font-medium text-slate-600 mb-2">Lighting Mode</p>
-              <div className="flex flex-wrap gap-2">
-                {LIGHTING_MODES.map((mode) => (
-                  <button
-                    key={mode.id}
-                    onClick={() => handleLightingModeChange(mode.id)}
-                    className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg border transition-colors ${
-                      lightingMode === mode.id
-                        ? "bg-purple-100 border-purple-300 text-purple-700"
-                        : "bg-gray-50 border-gray-200 text-slate-600 hover:bg-gray-100"
-                    }`}
-                  >
-                    {mode.icon === "sun" && <SunIcon className="w-4 h-4" />}
-                    {mode.icon === "moon" && <MoonIcon className="w-4 h-4" />}
-                    {mode.icon === "sparkles" && <SparklesIcon className="w-4 h-4" />}
-                    <span>{mode.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Backdrop Thickness */}
-            <div>
-              <p className="text-sm font-medium text-slate-600 mb-2">
-                Backdrop Expansion: <span className="text-purple-600">{strokeWidth}px</span>
-              </p>
-              <input
-                type="range"
-                min="1"
-                max="20"
-                value={strokeWidth}
-                onChange={(e) => setStrokeWidth(parseInt(e.target.value))}
-                className="w-full max-w-xs h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-600"
-              />
-              <p className="text-xs text-slate-400 mt-1">How much the white backdrop extends beyond the model</p>
-            </div>
-
-            {/* Camera Angle */}
-            <div>
-              <p className="text-sm font-medium text-slate-600 mb-2">Camera Angle</p>
-              <div className="flex flex-wrap gap-2">
-                {CAMERA_ANGLES.map((angle) => (
-                  <button
-                    key={angle.name}
-                    onClick={() => snapToAngle(angle)}
-                    className={`flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg border transition-colors ${
-                      selectedAngle.name === angle.name
-                        ? "bg-purple-100 border-purple-300 text-purple-700"
-                        : "bg-gray-100 border-gray-200 text-slate-600 hover:bg-gray-200"
-                    }`}
-                  >
-                    <span>{angle.icon}</span>
-                    <span>{angle.name}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* File Queue & Results */}
-        <div className="space-y-4">
-          {/* File Queue */}
-          <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-            <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold text-slate-700">File Queue</h3>
-                <p className="text-xs text-slate-500">{fileQueue.length} files</p>
-              </div>
-              <div className="flex gap-2">
-                <label className="px-3 py-1.5 text-sm bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 cursor-pointer">
-                  Add Files
-                  <input
-                    type="file"
-                    accept=".fbx"
-                    multiple
-                    onChange={handleFileSelect}
-                    className="hidden"
-                  />
-                </label>
-                {hasFiles && (
-                  <button
-                    onClick={clearQueue}
-                    className="px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded-lg"
-                  >
-                    Clear All
-                  </button>
-                )}
-              </div>
-            </div>
-
-            <div className="max-h-[300px] overflow-y-auto">
-              {fileQueue.length === 0 ? (
-                <div className="p-8 text-center text-slate-400">
-                  <CubeIcon className="w-10 h-10 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">No files added</p>
-                </div>
-              ) : (
-                <div className="divide-y divide-gray-100">
-                  {fileQueue.map((qf) => (
-                    <div
-                      key={qf.id}
-                      onClick={() => selectFileForPreview(qf)}
-                      className={`p-3 flex items-center gap-3 cursor-pointer hover:bg-gray-50 ${
-                        selectedFileId === qf.id ? "bg-purple-50" : ""
-                      }`}
+                <div className="flex flex-wrap gap-2">
+                  {CAMERA_ANGLES.map((angle) => (
+                    <button
+                      key={angle.name}
+                      onClick={() => snapToAngle(angle.position)}
+                      className="flex items-center gap-1 px-3 py-1.5 text-sm bg-gray-100 border border-gray-200 rounded-lg hover:bg-gray-200 transition-colors"
+                      title={angle.name}
                     >
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-slate-700 truncate">
-                          {qf.name}
-                        </p>
-                        <p className="text-xs text-slate-400">
-                          {qf.status === "pending" && "Pending"}
-                          {qf.status === "processing" && "Processing..."}
-                          {qf.status === "done" && "Completed"}
-                          {qf.status === "error" && qf.error}
-                        </p>
-                      </div>
-                      {qf.status === "done" && (
-                        <CheckIcon className="w-5 h-5 text-green-500" />
-                      )}
-                      {qf.status === "processing" && (
-                        <div className="w-5 h-5 border-2 border-purple-300 border-t-purple-600 rounded-full animate-spin" />
-                      )}
-                      {qf.status === "error" && (
-                        <ExclamationCircleIcon className="w-5 h-5 text-red-500" />
-                      )}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          removeFromQueue(qf.id);
-                        }}
-                        className="p-1 hover:bg-gray-200 rounded"
-                      >
-                        <XMarkIcon className="w-4 h-4 text-gray-400" />
-                      </button>
-                    </div>
+                      <span>{angle.icon}</span>
+                      <span className="text-slate-600">{angle.name}</span>
+                    </button>
                   ))}
                 </div>
-              )}
-            </div>
-
-            {/* Batch Process Button */}
-            {hasFiles && (
-              <div className="p-4 border-t border-gray-100">
-                <button
-                  onClick={batchProcessAll}
-                  disabled={isBatchProcessing}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:from-purple-700 hover:to-pink-700 disabled:opacity-50"
-                >
-                  {isBatchProcessing ? (
-                    <>
-                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Processing {batchProgress.current}/{batchProgress.total}...
-                    </>
-                  ) : (
-                    <>
-                      <CameraIcon className="w-5 h-5" />
-                      Generate All Icons
-                    </>
-                  )}
-                </button>
               </div>
+            </div>
+          )}
+
+          {/* Capture Button */}
+          {modelLoaded && (
+            <div className="p-4 border-t border-gray-100 flex items-center gap-4">
+              <div className="flex-1">
+                <label className="text-sm text-slate-500 mb-1 block">Asset Name</label>
+                <input
+                  type="text"
+                  value={assetName}
+                  onChange={(e) => setAssetName(e.target.value)}
+                  placeholder="Enter asset name"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-purple-500 text-slate-700"
+                />
+              </div>
+              <button
+                onClick={captureVariants}
+                disabled={isCapturing}
+                className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 transition-colors"
+              >
+                {isCapturing ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Capturing...
+                  </>
+                ) : (
+                  <>
+                    <CameraIcon className="w-5 h-5" />
+                    Capture Icons
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Variants Panel */}
+        <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+          <div className="p-4 border-b border-gray-100">
+            <h3 className="font-semibold text-slate-700">Generated Variants</h3>
+            <p className="text-xs text-slate-500 mt-1">
+              4 icon variants will be generated
+            </p>
+          </div>
+
+          <div className="p-4 space-y-3 max-h-[400px] overflow-y-auto">
+            {variants.length === 0 ? (
+              <div className="text-center py-8 text-slate-400">
+                <CameraIcon className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                <p>No captures yet</p>
+                <p className="text-xs mt-1">Load an FBX and click Capture</p>
+              </div>
+            ) : (
+              variants.map((variant) => {
+                const config = VARIANT_CONFIG.find((c) => c.name === variant.name);
+                return (
+                  <div
+                    key={variant.name}
+                    className="p-3 rounded-xl border border-gray-200 bg-gray-50"
+                  >
+                    <div className="flex items-start gap-3">
+                      {variant.preview && (
+                        <img
+                          src={variant.preview}
+                          alt={variant.name}
+                          className="w-20 h-20 object-contain rounded-lg border border-gray-200"
+                          style={{
+                            background: `repeating-conic-gradient(#e5e5e5 0% 25%, #ffffff 0% 50%) 50% / 16px 16px`
+                          }}
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-slate-700 text-sm">
+                          {config?.label || variant.name}
+                        </p>
+                        <p className="text-xs text-slate-400 mt-1">
+                          {assetName}_{variant.name}.png
+                        </p>
+                        <button
+                          onClick={() => downloadVariant(variant)}
+                          className="mt-2 flex items-center gap-1 px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded hover:bg-purple-200 transition-colors"
+                        >
+                          <ArrowDownTrayIcon className="w-3 h-3" />
+                          Download
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
             )}
           </div>
 
-          {/* Results */}
-          {batchResults.length > 0 && (
-            <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-              <div className="p-4 border-b border-gray-100">
-                <h3 className="font-semibold text-slate-700">Results</h3>
-                <p className="text-xs text-slate-500">
-                  {batchResults.length} models, {totalVariants} images
-                </p>
-              </div>
-
-              <div className="max-h-[300px] overflow-y-auto p-4 space-y-4">
-                {batchResults.map((result, idx) => (
-                  <div key={idx} className="space-y-2">
-                    <p className="text-sm font-medium text-slate-600">{result.modelName}</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      {result.variants.map((variant) => {
-                        const config = VARIANT_CONFIG.find((c) => c.name === variant.name);
-                        return (
-                          <div key={variant.name} className="text-center">
-                            {variant.preview && (
-                              <img
-                                src={variant.preview}
-                                alt={variant.name}
-                                className="w-full aspect-square object-contain rounded border border-gray-200"
-                                style={{
-                                  background: `repeating-conic-gradient(#e5e5e5 0% 25%, #ffffff 0% 50%) 50% / 12px 12px`
-                                }}
-                              />
-                            )}
-                            <p className="text-xs text-slate-400 mt-1 truncate">
-                              {config?.label || variant.name}
-                            </p>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="p-4 border-t border-gray-100">
-                <button
-                  onClick={downloadAllResults}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl hover:from-green-700 hover:to-emerald-700"
-                >
-                  <ArrowDownTrayIcon className="w-5 h-5" />
-                  Download All ({totalVariants} images)
-                </button>
-              </div>
+          {variants.length > 0 && (
+            <div className="p-4 border-t border-gray-100">
+              <button
+                onClick={downloadAll}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:from-purple-700 hover:to-pink-700 transition-colors"
+              >
+                <ArrowDownTrayIcon className="w-5 h-5" />
+                Download All
+              </button>
             </div>
           )}
         </div>
@@ -1046,20 +843,20 @@ export default function IconGeneratorPage() {
         <h3 className="font-bold text-slate-700 mb-4">How to Use</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-sm">
           <div className="p-4 bg-purple-50 rounded-xl">
-            <p className="font-medium text-purple-700 mb-1">1. Add Models</p>
-            <p className="text-slate-600">Drop or select multiple FBX files</p>
+            <p className="font-medium text-purple-700 mb-1">1. Load Model</p>
+            <p className="text-slate-600">Drop or select an FBX file</p>
           </div>
           <div className="p-4 bg-purple-50 rounded-xl">
-            <p className="font-medium text-purple-700 mb-1">2. Configure</p>
-            <p className="text-slate-600">Set lighting, outline, and camera angle</p>
+            <p className="font-medium text-purple-700 mb-1">2. Position</p>
+            <p className="text-slate-600">Use snap buttons or orbit controls</p>
           </div>
           <div className="p-4 bg-purple-50 rounded-xl">
-            <p className="font-medium text-purple-700 mb-1">3. Generate</p>
-            <p className="text-slate-600">Click Generate All to batch process</p>
+            <p className="font-medium text-purple-700 mb-1">3. Capture</p>
+            <p className="text-slate-600">Click Capture to generate variants</p>
           </div>
           <div className="p-4 bg-purple-50 rounded-xl">
             <p className="font-medium text-purple-700 mb-1">4. Download</p>
-            <p className="text-slate-600">Download all icons at once</p>
+            <p className="text-slate-600">Download individual or all icons</p>
           </div>
         </div>
       </div>
