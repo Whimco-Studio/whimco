@@ -419,7 +419,7 @@ export default function IconGeneratorModal({
     return { minX, minY, maxX, maxY, width: maxX - minX + 1, height: maxY - minY + 1 };
   };
 
-  // Helper: Create stroke layer (returns ImageData with just the stroke)
+  // Helper: Create stroke layer with fringe to prevent dark edge artifacts
   const createStrokeLayer = (
     sourceData: ImageData,
     width: number,
@@ -443,21 +443,23 @@ export default function IconGeneratorModal({
         const idx = (y * width + x) * 4;
         const alpha = src[idx + 3];
 
-        // Only create stroke on transparent pixels (alpha < 10)
-        if (alpha < 10) {
+        // Create stroke on transparent/semi-transparent pixels (alpha < 240)
+        // This covers anti-aliased edges so they blend with stroke color, not black
+        if (alpha < 240) {
           let hasOpaqueNeighbor = false;
 
-          // Check neighbors within stroke width
-          for (let dy = -strokeWidthPx; dy <= strokeWidthPx && !hasOpaqueNeighbor; dy++) {
-            for (let dx = -strokeWidthPx; dx <= strokeWidthPx; dx++) {
+          // Check neighbors within stroke width + 1 (extra for anti-aliasing coverage)
+          const checkRadius = strokeWidthPx + 1;
+          for (let dy = -checkRadius; dy <= checkRadius && !hasOpaqueNeighbor; dy++) {
+            for (let dx = -checkRadius; dx <= checkRadius; dx++) {
               const nx = x + dx;
               const ny = y + dy;
 
               if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
                 const dist = Math.sqrt(dx * dx + dy * dy);
-                if (dist <= strokeWidthPx) {
+                if (dist <= checkRadius) {
                   const nIdx = (ny * width + nx) * 4;
-                  if (src[nIdx + 3] > 128) {
+                  if (src[nIdx + 3] > 240) {
                     hasOpaqueNeighbor = true;
                   }
                 }
