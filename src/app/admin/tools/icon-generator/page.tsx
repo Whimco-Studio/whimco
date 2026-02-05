@@ -280,117 +280,13 @@ export default function IconGeneratorPage() {
         break;
 
       case "unlit":
-        ambientLight.intensity = 1;
-        directionalLight.intensity = 0;
-        fillLight.intensity = 0;
-
-        if (targetModel) {
-          targetModel.traverse((child) => {
-            if (child instanceof THREE.Mesh) {
-              const originalMat = originalMaterialsRef.current.get(child);
-              if (originalMat && !Array.isArray(originalMat)) {
-                // Extract color from FBX material - check multiple properties
-                let color: THREE.Color | null = null;
-                const hasVertexColors = child.geometry.hasAttribute('color');
-
-                // Check for texture map first (diffuse map)
-                let map: THREE.Texture | null = null;
-                if ('map' in originalMat && originalMat.map instanceof THREE.Texture) {
-                  map = originalMat.map;
-                }
-                // Also check for emissive map as fallback
-                if (!map && 'emissiveMap' in originalMat && (originalMat as THREE.MeshPhongMaterial).emissiveMap instanceof THREE.Texture) {
-                  map = (originalMat as THREE.MeshPhongMaterial).emissiveMap;
-                }
-
-                // Check for diffuse color (common in FBX MeshPhongMaterial)
-                if ('color' in originalMat && originalMat.color instanceof THREE.Color) {
-                  const matColor = originalMat.color;
-                  // Only use if it's not black (some FBX exporters set color to black when using textures)
-                  if (matColor.r > 0.01 || matColor.g > 0.01 || matColor.b > 0.01) {
-                    color = matColor.clone();
-                  }
-                }
-
-                // Check for emissive color as fallback
-                if (!color) {
-                  if ('emissive' in originalMat && (originalMat as THREE.MeshPhongMaterial).emissive instanceof THREE.Color) {
-                    const emissive = (originalMat as THREE.MeshPhongMaterial).emissive;
-                    if (emissive.r > 0.01 || emissive.g > 0.01 || emissive.b > 0.01) {
-                      color = emissive.clone();
-                    }
-                  }
-                }
-
-                // Check for specular color as another fallback (for MeshPhongMaterial)
-                if (!color) {
-                  if ('specular' in originalMat && (originalMat as THREE.MeshPhongMaterial).specular instanceof THREE.Color) {
-                    const specular = (originalMat as THREE.MeshPhongMaterial).specular;
-                    if (specular.r > 0.01 || specular.g > 0.01 || specular.b > 0.01) {
-                      color = specular.clone();
-                    }
-                  }
-                }
-
-                // If we have a texture, vertex colors, or found a valid color, create MeshBasicMaterial
-                if (map || hasVertexColors || color) {
-                  child.material = new THREE.MeshBasicMaterial({
-                    color: map ? 0xffffff : (color || new THREE.Color(0xcccccc)),
-                    map: map,
-                    vertexColors: hasVertexColors,
-                  });
-                }
-                // Otherwise keep the original material - the high ambient will illuminate it
-              } else if (originalMat && Array.isArray(originalMat)) {
-                child.material = originalMat.map((mat) => {
-                  let color: THREE.Color | null = null;
-                  const hasVertexColors = child.geometry.hasAttribute('color');
-
-                  let map: THREE.Texture | null = null;
-                  if ('map' in mat && mat.map instanceof THREE.Texture) {
-                    map = mat.map;
-                  }
-                  if (!map && 'emissiveMap' in mat && (mat as THREE.MeshPhongMaterial).emissiveMap instanceof THREE.Texture) {
-                    map = (mat as THREE.MeshPhongMaterial).emissiveMap;
-                  }
-
-                  if ('color' in mat && mat.color instanceof THREE.Color) {
-                    const matColor = mat.color;
-                    if (matColor.r > 0.01 || matColor.g > 0.01 || matColor.b > 0.01) {
-                      color = matColor.clone();
-                    }
-                  }
-                  if (!color) {
-                    if ('emissive' in mat && (mat as THREE.MeshPhongMaterial).emissive instanceof THREE.Color) {
-                      const emissive = (mat as THREE.MeshPhongMaterial).emissive;
-                      if (emissive.r > 0.01 || emissive.g > 0.01 || emissive.b > 0.01) {
-                        color = emissive.clone();
-                      }
-                    }
-                  }
-                  if (!color) {
-                    if ('specular' in mat && (mat as THREE.MeshPhongMaterial).specular instanceof THREE.Color) {
-                      const specular = (mat as THREE.MeshPhongMaterial).specular;
-                      if (specular.r > 0.01 || specular.g > 0.01 || specular.b > 0.01) {
-                        color = specular.clone();
-                      }
-                    }
-                  }
-
-                  if (map || hasVertexColors || color) {
-                    return new THREE.MeshBasicMaterial({
-                      color: map ? 0xffffff : (color || new THREE.Color(0xcccccc)),
-                      map: map,
-                      vertexColors: hasVertexColors,
-                    });
-                  }
-                  // Return original if no color data found
-                  return mat;
-                });
-              }
-            }
-          });
-        }
+        // For unlit/base color mode, use very high ambient with some fill from all directions
+        // This creates a flat, shadowless look while preserving material colors
+        ambientLight.intensity = 3;
+        directionalLight.intensity = 0.5;
+        directionalLight.position.set(0, 1, 0); // From above for even lighting
+        fillLight.intensity = 0.5;
+        fillLight.position.set(0, -1, 0); // From below to fill shadows
         break;
 
       case "soft":
