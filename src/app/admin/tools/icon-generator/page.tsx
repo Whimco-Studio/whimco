@@ -819,8 +819,9 @@ export default function IconGeneratorPage() {
           }
 
           if (config.showModel) {
+            // Use the COPIED canvas, not the live renderer (animation loop may re-render)
             workCtx.drawImage(
-              baseCanvas,
+              baseCtx.canvas,
               bounds.minX, bounds.minY, bounds.width, bounds.height,
               0, 0, bounds.width, bounds.height
             );
