@@ -11,6 +11,9 @@ import {
   ArrowPathIcon,
   CheckCircleIcon,
   ExclamationCircleIcon,
+  SunIcon,
+  MoonIcon,
+  SparklesIcon,
 } from "@heroicons/react/24/outline";
 
 interface IconGeneratorModalProps {
@@ -91,6 +94,20 @@ const VARIANT_CONFIG: Array<{
   },
 ];
 
+type LightingMode = "lit" | "unlit" | "soft" | "dramatic";
+
+const LIGHTING_MODES: Array<{
+  id: LightingMode;
+  label: string;
+  description: string;
+  icon: string;
+}> = [
+  { id: "lit", label: "Standard", description: "Default lighting", icon: "sun" },
+  { id: "unlit", label: "Base Color", description: "Flat colors, no shading", icon: "moon" },
+  { id: "soft", label: "Soft", description: "High ambient, soft shadows", icon: "sparkles" },
+  { id: "dramatic", label: "Dramatic", description: "Strong directional light", icon: "sun" },
+];
+
 export default function IconGeneratorModal({
   characterName,
   onClose,
@@ -104,6 +121,10 @@ export default function IconGeneratorModal({
   const modelRef = useRef<THREE.Group | null>(null);
   const gridRef = useRef<THREE.GridHelper | null>(null);
   const frameIdRef = useRef<number>(0);
+  const ambientLightRef = useRef<THREE.AmbientLight | null>(null);
+  const directionalLightRef = useRef<THREE.DirectionalLight | null>(null);
+  const fillLightRef = useRef<THREE.DirectionalLight | null>(null);
+  const originalMaterialsRef = useRef<Map<THREE.Mesh, THREE.Material | THREE.Material[]>>(new Map());
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -112,6 +133,7 @@ export default function IconGeneratorModal({
   const [variants, setVariants] = useState<CapturedVariant[]>([]);
   const [isCapturing, setIsCapturing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [lightingMode, setLightingMode] = useState<LightingMode>("lit");
 
   // Initialize Three.js scene
   useEffect(() => {
@@ -155,15 +177,18 @@ export default function IconGeneratorModal({
     // Lights
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
     scene.add(ambientLight);
+    ambientLightRef.current = ambientLight;
 
     const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
     directionalLight.position.set(100, 200, 100);
     directionalLight.castShadow = true;
     scene.add(directionalLight);
+    directionalLightRef.current = directionalLight;
 
     const fillLight = new THREE.DirectionalLight(0xffffff, 0.4);
     fillLight.position.set(-100, 100, -100);
     scene.add(fillLight);
+    fillLightRef.current = fillLight;
 
     // Grid
     const gridHelper = new THREE.GridHelper(200, 20, 0xcccccc, 0xdddddd);
@@ -231,17 +256,20 @@ export default function IconGeneratorModal({
       object.position.sub(center.multiplyScalar(scale));
       object.position.y = 0;
 
-      // Enable shadows on meshes
+      // Store original materials and enable shadows
+      originalMaterialsRef.current.clear();
       object.traverse((child) => {
         if (child instanceof THREE.Mesh) {
           child.castShadow = true;
           child.receiveShadow = true;
+          originalMaterialsRef.current.set(child, child.material);
         }
       });
 
       sceneRef.current.add(object);
       modelRef.current = object;
       setModelLoaded(true);
+      setLightingMode("lit");
 
       // Reset camera
       if (cameraRef.current && controlsRef.current) {
@@ -279,6 +307,90 @@ export default function IconGeneratorModal({
       controlsRef.current.update();
     }
   };
+
+  // Apply lighting mode
+  const applyLightingMode = useCallback((mode: LightingMode) => {
+    const model = modelRef.current;
+    const ambientLight = ambientLightRef.current;
+    const directionalLight = directionalLightRef.current;
+    const fillLight = fillLightRef.current;
+
+    if (!model || !ambientLight || !directionalLight || !fillLight) return;
+
+    // Restore original materials first
+    model.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        const original = originalMaterialsRef.current.get(child);
+        if (original) {
+          child.material = original;
+        }
+      }
+    });
+
+    switch (mode) {
+      case "lit":
+        ambientLight.intensity = 0.7;
+        directionalLight.intensity = 0.8;
+        fillLight.intensity = 0.4;
+        break;
+
+      case "unlit":
+        ambientLight.intensity = 1;
+        directionalLight.intensity = 0;
+        fillLight.intensity = 0;
+
+        model.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+            const originalMat = originalMaterialsRef.current.get(child);
+            if (originalMat && !Array.isArray(originalMat)) {
+              let color = new THREE.Color(0xcccccc);
+              if ('color' in originalMat && originalMat.color instanceof THREE.Color) {
+                color = originalMat.color.clone();
+              }
+              let map: THREE.Texture | null = null;
+              if ('map' in originalMat && originalMat.map instanceof THREE.Texture) {
+                map = originalMat.map;
+              }
+              const unlitMat = new THREE.MeshBasicMaterial({
+                color: map ? 0xffffff : color,
+                map: map,
+              });
+              child.material = unlitMat;
+            } else if (originalMat && Array.isArray(originalMat)) {
+              child.material = originalMat.map((mat) => {
+                let color = new THREE.Color(0xcccccc);
+                if ('color' in mat && mat.color instanceof THREE.Color) {
+                  color = mat.color.clone();
+                }
+                let map: THREE.Texture | null = null;
+                if ('map' in mat && mat.map instanceof THREE.Texture) {
+                  map = mat.map;
+                }
+                return new THREE.MeshBasicMaterial({
+                  color: map ? 0xffffff : color,
+                  map: map,
+                });
+              });
+            }
+          }
+        });
+        break;
+
+      case "soft":
+        ambientLight.intensity = 1.2;
+        directionalLight.intensity = 0.3;
+        fillLight.intensity = 0.3;
+        break;
+
+      case "dramatic":
+        ambientLight.intensity = 0.3;
+        directionalLight.intensity = 1.2;
+        fillLight.intensity = 0.1;
+        break;
+    }
+
+    setLightingMode(mode);
+  }, []);
 
   // Helper: Find trim bounds of non-transparent pixels
   const getTrimBounds = (imageData: ImageData, padding: number = 0) => {
@@ -618,22 +730,49 @@ export default function IconGeneratorModal({
               )}
             </div>
 
-            {/* Camera Angle Buttons */}
+            {/* Controls */}
             {modelLoaded && (
-              <div className="p-3 bg-gray-50 border-t border-gray-200">
-                <p className="text-xs font-medium text-slate-500 mb-2">SNAP TO ANGLE</p>
-                <div className="flex flex-wrap gap-2">
-                  {CAMERA_ANGLES.map((angle) => (
-                    <button
-                      key={angle.name}
-                      onClick={() => snapToAngle(angle.position)}
-                      className="flex items-center gap-1 px-3 py-1.5 text-sm bg-white border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
-                      title={angle.name}
-                    >
-                      <span>{angle.icon}</span>
-                      <span className="text-slate-600">{angle.name}</span>
-                    </button>
-                  ))}
+              <div className="p-3 bg-gray-50 border-t border-gray-200 space-y-3">
+                {/* Lighting Mode */}
+                <div>
+                  <p className="text-xs font-medium text-slate-500 mb-2">LIGHTING</p>
+                  <div className="flex flex-wrap gap-2">
+                    {LIGHTING_MODES.map((mode) => (
+                      <button
+                        key={mode.id}
+                        onClick={() => applyLightingMode(mode.id)}
+                        className={`flex items-center gap-1 px-2 py-1.5 text-xs rounded-lg border transition-colors ${
+                          lightingMode === mode.id
+                            ? "bg-purple-100 border-purple-300 text-purple-700"
+                            : "bg-white border-gray-200 text-slate-600 hover:bg-gray-100"
+                        }`}
+                        title={mode.description}
+                      >
+                        {mode.icon === "sun" && <SunIcon className="w-3 h-3" />}
+                        {mode.icon === "moon" && <MoonIcon className="w-3 h-3" />}
+                        {mode.icon === "sparkles" && <SparklesIcon className="w-3 h-3" />}
+                        <span>{mode.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Camera Angle Buttons */}
+                <div>
+                  <p className="text-xs font-medium text-slate-500 mb-2">SNAP TO ANGLE</p>
+                  <div className="flex flex-wrap gap-2">
+                    {CAMERA_ANGLES.map((angle) => (
+                      <button
+                        key={angle.name}
+                        onClick={() => snapToAngle(angle.position)}
+                        className="flex items-center gap-1 px-3 py-1.5 text-sm bg-white border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
+                        title={angle.name}
+                      >
+                        <span>{angle.icon}</span>
+                        <span className="text-slate-600">{angle.name}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}

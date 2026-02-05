@@ -13,6 +13,9 @@ import {
   CheckCircleIcon,
   ExclamationCircleIcon,
   CubeIcon,
+  SunIcon,
+  MoonIcon,
+  SparklesIcon,
 } from "@heroicons/react/24/outline";
 import AdminHeader from "@/app/components/admin/AdminHeader";
 
@@ -62,6 +65,20 @@ const VARIANT_CONFIG = [
   },
 ];
 
+type LightingMode = "lit" | "unlit" | "soft" | "dramatic";
+
+const LIGHTING_MODES: Array<{
+  id: LightingMode;
+  label: string;
+  description: string;
+  icon: string;
+}> = [
+  { id: "lit", label: "Standard", description: "Default lighting", icon: "sun" },
+  { id: "unlit", label: "Base Color", description: "Flat colors, no shading", icon: "moon" },
+  { id: "soft", label: "Soft", description: "High ambient, soft shadows", icon: "sparkles" },
+  { id: "dramatic", label: "Dramatic", description: "Strong directional light", icon: "sun" },
+];
+
 export default function IconGeneratorPage() {
   const containerRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
@@ -71,6 +88,10 @@ export default function IconGeneratorPage() {
   const modelRef = useRef<THREE.Group | null>(null);
   const gridRef = useRef<THREE.GridHelper | null>(null);
   const frameIdRef = useRef<number>(0);
+  const ambientLightRef = useRef<THREE.AmbientLight | null>(null);
+  const directionalLightRef = useRef<THREE.DirectionalLight | null>(null);
+  const fillLightRef = useRef<THREE.DirectionalLight | null>(null);
+  const originalMaterialsRef = useRef<Map<THREE.Mesh, THREE.Material | THREE.Material[]>>(new Map());
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -79,6 +100,7 @@ export default function IconGeneratorPage() {
   const [variants, setVariants] = useState<CapturedVariant[]>([]);
   const [isCapturing, setIsCapturing] = useState(false);
   const [assetName, setAssetName] = useState("");
+  const [lightingMode, setLightingMode] = useState<LightingMode>("lit");
 
   // Initialize Three.js scene
   useEffect(() => {
@@ -122,15 +144,18 @@ export default function IconGeneratorPage() {
     // Lights
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
     scene.add(ambientLight);
+    ambientLightRef.current = ambientLight;
 
     const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
     directionalLight.position.set(100, 200, 100);
     directionalLight.castShadow = true;
     scene.add(directionalLight);
+    directionalLightRef.current = directionalLight;
 
     const fillLight = new THREE.DirectionalLight(0xffffff, 0.4);
     fillLight.position.set(-100, 100, -100);
     scene.add(fillLight);
+    fillLightRef.current = fillLight;
 
     // Grid
     const gridHelper = new THREE.GridHelper(200, 20, 0xcccccc, 0xdddddd);
@@ -203,17 +228,23 @@ export default function IconGeneratorPage() {
       object.position.sub(center.multiplyScalar(scale));
       object.position.y = 0;
 
-      // Enable shadows on meshes
+      // Store original materials and enable shadows
+      originalMaterialsRef.current.clear();
       object.traverse((child) => {
         if (child instanceof THREE.Mesh) {
           child.castShadow = true;
           child.receiveShadow = true;
+          // Store original material for restoration
+          originalMaterialsRef.current.set(child, child.material);
         }
       });
 
       sceneRef.current.add(object);
       modelRef.current = object;
       setModelLoaded(true);
+
+      // Reset to standard lighting when loading new model
+      setLightingMode("lit");
 
       // Reset camera
       if (cameraRef.current && controlsRef.current) {
@@ -265,6 +296,100 @@ export default function IconGeneratorPage() {
       controlsRef.current.update();
     }
   };
+
+  // Apply lighting mode
+  const applyLightingMode = useCallback((mode: LightingMode) => {
+    const model = modelRef.current;
+    const ambientLight = ambientLightRef.current;
+    const directionalLight = directionalLightRef.current;
+    const fillLight = fillLightRef.current;
+
+    if (!model || !ambientLight || !directionalLight || !fillLight) return;
+
+    // Restore original materials first
+    model.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        const original = originalMaterialsRef.current.get(child);
+        if (original) {
+          child.material = original;
+        }
+      }
+    });
+
+    switch (mode) {
+      case "lit":
+        // Standard lighting
+        ambientLight.intensity = 0.7;
+        directionalLight.intensity = 0.8;
+        fillLight.intensity = 0.4;
+        break;
+
+      case "unlit":
+        // Base color mode - convert to MeshBasicMaterial
+        ambientLight.intensity = 1;
+        directionalLight.intensity = 0;
+        fillLight.intensity = 0;
+
+        model.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+            const originalMat = originalMaterialsRef.current.get(child);
+            if (originalMat && !Array.isArray(originalMat)) {
+              // Get the color from the original material
+              let color = new THREE.Color(0xcccccc);
+              if ('color' in originalMat && originalMat.color instanceof THREE.Color) {
+                color = originalMat.color.clone();
+              }
+
+              // Check for texture map - if it has one, we'll use it
+              let map: THREE.Texture | null = null;
+              if ('map' in originalMat && originalMat.map instanceof THREE.Texture) {
+                map = originalMat.map;
+              }
+
+              // Create unlit material
+              const unlitMat = new THREE.MeshBasicMaterial({
+                color: map ? 0xffffff : color,
+                map: map,
+              });
+              child.material = unlitMat;
+            } else if (originalMat && Array.isArray(originalMat)) {
+              // Handle multi-material
+              child.material = originalMat.map((mat) => {
+                let color = new THREE.Color(0xcccccc);
+                if ('color' in mat && mat.color instanceof THREE.Color) {
+                  color = mat.color.clone();
+                }
+                let map: THREE.Texture | null = null;
+                if ('map' in mat && mat.map instanceof THREE.Texture) {
+                  map = mat.map;
+                }
+                return new THREE.MeshBasicMaterial({
+                  color: map ? 0xffffff : color,
+                  map: map,
+                });
+              });
+            }
+          }
+        });
+        break;
+
+      case "soft":
+        // Soft lighting - high ambient, low directional
+        ambientLight.intensity = 1.2;
+        directionalLight.intensity = 0.3;
+        fillLight.intensity = 0.3;
+        break;
+
+      case "dramatic":
+        // Dramatic lighting - low ambient, strong directional
+        ambientLight.intensity = 0.3;
+        directionalLight.intensity = 1.2;
+        fillLight.intensity = 0.1;
+        break;
+    }
+
+    setLightingMode(mode);
+  }, []);
 
   // Helper: Find trim bounds of non-transparent pixels
   const getTrimBounds = (imageData: ImageData, padding: number = 0) => {
@@ -545,33 +670,62 @@ export default function IconGeneratorPage() {
             )}
           </div>
 
-          {/* Camera Angle Buttons */}
+          {/* Controls Row */}
           {modelLoaded && (
-            <div className="p-4 border-t border-gray-100">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-sm font-medium text-slate-600">Snap to Angle</p>
-                <label className="text-sm text-purple-600 hover:text-purple-700 cursor-pointer">
-                  Load Different FBX
-                  <input
-                    type="file"
-                    accept=".fbx"
-                    onChange={handleFileSelect}
-                    className="hidden"
-                  />
-                </label>
+            <div className="p-4 border-t border-gray-100 space-y-4">
+              {/* Lighting Mode */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-medium text-slate-600">Lighting Mode</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {LIGHTING_MODES.map((mode) => (
+                    <button
+                      key={mode.id}
+                      onClick={() => applyLightingMode(mode.id)}
+                      className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg border transition-colors ${
+                        lightingMode === mode.id
+                          ? "bg-purple-100 border-purple-300 text-purple-700"
+                          : "bg-gray-50 border-gray-200 text-slate-600 hover:bg-gray-100"
+                      }`}
+                      title={mode.description}
+                    >
+                      {mode.icon === "sun" && <SunIcon className="w-4 h-4" />}
+                      {mode.icon === "moon" && <MoonIcon className="w-4 h-4" />}
+                      {mode.icon === "sparkles" && <SparklesIcon className="w-4 h-4" />}
+                      <span>{mode.label}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {CAMERA_ANGLES.map((angle) => (
-                  <button
-                    key={angle.name}
-                    onClick={() => snapToAngle(angle.position)}
-                    className="flex items-center gap-1 px-3 py-1.5 text-sm bg-gray-100 border border-gray-200 rounded-lg hover:bg-gray-200 transition-colors"
-                    title={angle.name}
-                  >
-                    <span>{angle.icon}</span>
-                    <span className="text-slate-600">{angle.name}</span>
-                  </button>
-                ))}
+
+              {/* Camera Angle Buttons */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-medium text-slate-600">Snap to Angle</p>
+                  <label className="text-sm text-purple-600 hover:text-purple-700 cursor-pointer">
+                    Load Different FBX
+                    <input
+                      type="file"
+                      accept=".fbx"
+                      onChange={handleFileSelect}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {CAMERA_ANGLES.map((angle) => (
+                    <button
+                      key={angle.name}
+                      onClick={() => snapToAngle(angle.position)}
+                      className="flex items-center gap-1 px-3 py-1.5 text-sm bg-gray-100 border border-gray-200 rounded-lg hover:bg-gray-200 transition-colors"
+                      title={angle.name}
+                    >
+                      <span>{angle.icon}</span>
+                      <span className="text-slate-600">{angle.name}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           )}
