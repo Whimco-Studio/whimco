@@ -560,7 +560,7 @@ export default function SkyboxConverterPage() {
                 type="text"
                 value={assetName}
                 onChange={(e) => setAssetName(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-300"
+                className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-300"
                 placeholder="Skybox"
               />
               <p className="mt-1 text-xs text-slate-400">
