@@ -731,8 +731,6 @@ export default function IconGeneratorPage() {
     animatingRef.current = false;
     console.log("[Batch] === batchProcessAll START === files:", fileQueue.length, "lightingMode:", batchLightingMode, "strokeWidth:", batchStrokeWidth, "animating paused");
 
-    const loader = new FBXLoader();
-
     for (let i = 0; i < fileQueue.length; i++) {
       const queuedFile = fileQueue[i];
       if (queuedFile.status === "done") continue;
@@ -749,9 +747,29 @@ export default function IconGeneratorPage() {
           modelRef.current = null;
         }
 
-        // Load model
+        // Load model with a LoadingManager to track async texture loading
         const arrayBuffer = await queuedFile.file.arrayBuffer();
-        const object = loader.parse(arrayBuffer, "");
+
+        const loadManager = new THREE.LoadingManager();
+        let resourcesLoading = false;
+        const resourcesReady = new Promise<void>((resolve) => {
+          loadManager.onStart = () => { resourcesLoading = true; };
+          loadManager.onLoad = () => resolve();
+          loadManager.onError = () => resolve();
+        });
+
+        const fileLoader = new FBXLoader(loadManager);
+        const object = fileLoader.parse(arrayBuffer, "");
+
+        // Wait for any async resources (embedded textures) to finish loading
+        if (resourcesLoading) {
+          console.log(`[Batch] [${i + 1}] waiting for async resources (textures)...`);
+          await Promise.race([
+            resourcesReady,
+            new Promise<void>((resolve) => setTimeout(resolve, 10000)),
+          ]);
+          console.log(`[Batch] [${i + 1}] resources loaded`);
+        }
 
         // Center and scale
         const box = new THREE.Box3().setFromObject(object);
@@ -778,10 +796,7 @@ export default function IconGeneratorPage() {
         modelRef.current = object;
         console.log(`[Batch] [${i + 1}/${fileQueue.length}] "${queuedFile.name}" loaded — meshes:`, originalMaterialsRef.current.size, "scale:", scale.toFixed(4), "maxDim:", maxDim.toFixed(2));
 
-        // Wait for embedded texture images to finish decoding
-        await waitForTextures(object);
-
-        // Warm-up render to upload textures to GPU with original materials
+        // Warm-up render to upload textures to GPU
         renderer.render(scene, camera);
         console.log(`[Batch] [${i + 1}] warm-up render done (texture upload)`);
 
