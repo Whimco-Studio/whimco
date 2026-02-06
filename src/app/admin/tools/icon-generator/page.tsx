@@ -409,6 +409,38 @@ export default function IconGeneratorPage() {
     setLightingMode(mode);
   }, []);
 
+  // Helper: Wait for all texture images on a model to finish decoding
+  const waitForTextures = async (object: THREE.Object3D) => {
+    const promises: Promise<void>[] = [];
+    object.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        const mats = Array.isArray(child.material) ? child.material : [child.material];
+        for (const mat of mats) {
+          for (const key of Object.keys(mat)) {
+            const value = (mat as Record<string, unknown>)[key];
+            if (
+              value instanceof THREE.Texture &&
+              value.image instanceof HTMLImageElement &&
+              !value.image.complete
+            ) {
+              promises.push(
+                new Promise<void>((resolve) => {
+                  (value.image as HTMLImageElement).addEventListener("load", () => resolve(), { once: true });
+                  (value.image as HTMLImageElement).addEventListener("error", () => resolve(), { once: true });
+                })
+              );
+            }
+          }
+        }
+      }
+    });
+    if (promises.length > 0) {
+      console.log(`[Textures] waiting for ${promises.length} texture(s) to decode...`);
+      await Promise.all(promises);
+      console.log("[Textures] all textures decoded");
+    }
+  };
+
   // Helper: Find trim bounds of non-transparent pixels
   const getTrimBounds = (imageData: ImageData, padding: number = 0) => {
     const { data, width, height } = imageData;
@@ -745,6 +777,9 @@ export default function IconGeneratorPage() {
         scene.add(object);
         modelRef.current = object;
         console.log(`[Batch] [${i + 1}/${fileQueue.length}] "${queuedFile.name}" loaded — meshes:`, originalMaterialsRef.current.size, "scale:", scale.toFixed(4), "maxDim:", maxDim.toFixed(2));
+
+        // Wait for embedded texture images to finish decoding
+        await waitForTextures(object);
 
         // Apply lighting mode (same logic as applyLightingMode)
         // Restore original materials first
