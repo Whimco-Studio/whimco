@@ -100,35 +100,35 @@ function renderCubeFace(
       // Compute 3D direction based on face
       let dx: number, dy: number, dz: number;
       switch (faceId) {
-        case "Ft": // +Z
-          dx = nx;
-          dy = -ny;
-          dz = 1;
-          break;
-        case "Bk": // -Z
+        case "Ft": // -Z (swapped with Bk for Roblox)
           dx = -nx;
           dy = -ny;
           dz = -1;
           break;
-        case "Lf": // -X
-          dx = -1;
+        case "Bk": // +Z (swapped with Ft for Roblox)
+          dx = nx;
           dy = -ny;
-          dz = nx;
+          dz = 1;
           break;
-        case "Rt": // +X
+        case "Lf": // +X (swapped with Rt for Roblox)
           dx = 1;
           dy = -ny;
           dz = -nx;
           break;
-        case "Up": // -Y (swapped for Roblox)
-          dx = nx;
-          dy = -1;
-          dz = -ny;
+        case "Rt": // -X (swapped with Lf for Roblox)
+          dx = -1;
+          dy = -ny;
+          dz = nx;
           break;
-        case "Dn": // +Y (swapped for Roblox)
+        case "Up": // +Y (swapped with Dn for Roblox)
           dx = nx;
           dy = 1;
           dz = ny;
+          break;
+        case "Dn": // -Y (swapped with Up for Roblox)
+          dx = nx;
+          dy = -1;
+          dz = -ny;
           break;
       }
 
@@ -169,19 +169,15 @@ function postProcessForRoblox(
   result.height = size;
   const ctx = result.getContext("2d")!;
 
-  // All faces get 180-degree rotation
   ctx.translate(size / 2, size / 2);
-  ctx.rotate(Math.PI);
 
   // Additional transforms per face
   switch (faceId) {
     case "Up":
-      // +90 degree rotation (total = 180 + 90 = 270)
-      ctx.rotate(Math.PI / 2);
+      ctx.rotate(-Math.PI / 2);
       break;
     case "Dn":
-      // +90 degree rotation (total = 180 + 90 = 270)
-      ctx.rotate(Math.PI / 2);
+      ctx.rotate(-Math.PI / 2);
       break;
   }
 
