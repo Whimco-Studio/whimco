@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import Link from "next/link";
 import {
   ArrowLeftIcon,
@@ -10,6 +10,8 @@ import {
 } from "@heroicons/react/24/outline";
 import AdminHeader from "@/app/components/admin/AdminHeader";
 import JSZip from "jszip";
+import * as THREE from "three";
+import { OrbitControls } from "three-stdlib";
 
 type FaceId = "Ft" | "Bk" | "Lf" | "Rt" | "Up" | "Dn";
 
@@ -196,6 +198,114 @@ export default function SkyboxConverterPage() {
   const [progressText, setProgressText] = useState("");
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 3D preview refs
+  const previewContainerRef = useRef<HTMLDivElement>(null);
+  const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
+  const sceneRef = useRef<THREE.Scene | null>(null);
+  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
+  const controlsRef = useRef<OrbitControls | null>(null);
+  const cubeTextureRef = useRef<THREE.CubeTexture | null>(null);
+  const frameIdRef = useRef<number>(0);
+
+  const allFacesReady = faces.length === 6 && !processing;
+
+  // 3D skybox preview
+  useEffect(() => {
+    if (!allFacesReady || !previewContainerRef.current) return;
+
+    const container = previewContainerRef.current;
+
+    // Build face lookup by id
+    const faceMap = new Map(faces.map((f) => [f.id, f]));
+    // CubeTexture order: +X (Rt), -X (Lf), +Y (Up), -Y (Dn), +Z (Ft), -Z (Bk)
+    const order: FaceId[] = ["Rt", "Lf", "Up", "Dn", "Ft", "Bk"];
+    const previews = order.map((id) => faceMap.get(id)?.preview);
+    if (previews.some((p) => !p)) return;
+
+    // Load all 6 face images
+    let cancelled = false;
+    const images: HTMLImageElement[] = [];
+    let loaded = 0;
+
+    const onAllLoaded = () => {
+      if (cancelled) return;
+
+      const cubeTexture = new THREE.CubeTexture(images);
+      cubeTexture.needsUpdate = true;
+      cubeTextureRef.current = cubeTexture;
+
+      const scene = new THREE.Scene();
+      scene.background = cubeTexture;
+      sceneRef.current = scene;
+
+      const camera = new THREE.PerspectiveCamera(
+        75,
+        container.clientWidth / container.clientHeight,
+        0.1,
+        1000
+      );
+      camera.position.set(0.0001, 0, 0);
+      cameraRef.current = camera;
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(container.clientWidth, container.clientHeight);
+      renderer.setPixelRatio(window.devicePixelRatio);
+      container.innerHTML = "";
+      container.appendChild(renderer.domElement);
+      rendererRef.current = renderer;
+
+      const controls = new OrbitControls(camera, renderer.domElement);
+      controls.enableZoom = false;
+      controls.enablePan = false;
+      controls.enableDamping = true;
+      controls.rotateSpeed = -0.5;
+      controlsRef.current = controls;
+
+      const animate = () => {
+        if (cancelled) return;
+        frameIdRef.current = requestAnimationFrame(animate);
+        controls.update();
+        renderer.render(scene, camera);
+      };
+      animate();
+
+      const onResize = () => {
+        if (!container.clientWidth || !container.clientHeight) return;
+        camera.aspect = container.clientWidth / container.clientHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(container.clientWidth, container.clientHeight);
+      };
+      window.addEventListener("resize", onResize);
+
+      // Store cleanup ref for resize
+      (container as unknown as Record<string, () => void>).__resizeCleanup = () =>
+        window.removeEventListener("resize", onResize);
+    };
+
+    previews.forEach((src, i) => {
+      const img = new Image();
+      img.onload = () => {
+        images[i] = img;
+        loaded++;
+        if (loaded === 6) onAllLoaded();
+      };
+      img.src = src!;
+    });
+
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(frameIdRef.current);
+      controlsRef.current?.dispose();
+      rendererRef.current?.dispose();
+      if (container) {
+        const resizeCleanup = (container as unknown as Record<string, () => void>).__resizeCleanup;
+        resizeCleanup?.();
+        container.innerHTML = "";
+      }
+      cubeTextureRef.current?.dispose();
+    };
+  }, [allFacesReady, faces]);
 
   const handleFile = useCallback((file: File) => {
     if (!file.type.startsWith("image/")) return;
@@ -547,6 +657,23 @@ export default function SkyboxConverterPage() {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* 3D Skybox Preview */}
+        {allFacesReady && (
+          <div className="p-5 rounded-2xl bg-white/60 backdrop-blur-sm border border-white/30 shadow-sm">
+            <h3 className="text-sm font-semibold text-slate-700 mb-3">
+              3D Skybox Preview
+            </h3>
+            <div
+              ref={previewContainerRef}
+              className="w-full rounded-xl overflow-hidden border border-slate-200"
+              style={{ height: 450 }}
+            />
+            <p className="mt-2 text-xs text-slate-400 text-center">
+              Click and drag to look around
+            </p>
           </div>
         )}
       </div>
