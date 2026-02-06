@@ -218,10 +218,25 @@ export default function SkyboxConverterPage() {
 
     // Build face lookup by id
     const faceMap = new Map(faces.map((f) => [f.id, f]));
-    // CubeTexture order: +X (Rt), -X (Lf), +Y (Up), -Y (Dn), +Z (Ft), -Z (Bk)
-    const order: FaceId[] = ["Rt", "Lf", "Up", "Dn", "Ft", "Bk"];
+    // CubeTexture order: +X, -X, +Y, -Y, +Z, -Z
+    // Roblox swaps Lf/Rt: "Lf" is rendered as +X, "Rt" as -X
+    const order: FaceId[] = ["Lf", "Rt", "Up", "Dn", "Ft", "Bk"];
     const previews = order.map((id) => faceMap.get(id)?.preview);
     if (previews.some((p) => !p)) return;
+
+    // Undo Roblox-specific -90° rotation on Up/Dn faces
+    const undoRobloxRotation = (
+      img: HTMLImageElement
+    ): HTMLCanvasElement => {
+      const c = document.createElement("canvas");
+      c.width = img.width;
+      c.height = img.height;
+      const ctx = c.getContext("2d")!;
+      ctx.translate(c.width / 2, c.height / 2);
+      ctx.rotate(Math.PI / 2); // +90° to undo the -90°
+      ctx.drawImage(img, -c.width / 2, -c.height / 2);
+      return c;
+    };
 
     // Load all 6 face images
     let cancelled = false;
@@ -231,7 +246,12 @@ export default function SkyboxConverterPage() {
     const onAllLoaded = () => {
       if (cancelled) return;
 
-      const cubeTexture = new THREE.CubeTexture(images);
+      // Un-rotate Up (index 2) and Dn (index 3) for standard cubemap
+      const texImages: (HTMLImageElement | HTMLCanvasElement)[] = images.map(
+        (img, i) => (i === 2 || i === 3 ? undoRobloxRotation(img) : img)
+      );
+
+      const cubeTexture = new THREE.CubeTexture(texImages as any);
       cubeTexture.needsUpdate = true;
       cubeTextureRef.current = cubeTexture;
 
