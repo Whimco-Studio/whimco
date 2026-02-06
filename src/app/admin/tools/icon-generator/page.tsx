@@ -54,24 +54,14 @@ const VARIANT_CONFIG = [
     label: "No Outline",
     outlineColor: null,
     showModel: true,
+    fillColor: null,
   },
   {
-    name: "BlackOutline",
-    label: "Black Outline",
-    outlineColor: "#000000",
-    showModel: true,
-  },
-  {
-    name: "WhiteOutline",
-    label: "White Outline",
+    name: "WhiteExtruded",
+    label: "White Extruded",
     outlineColor: "#ffffff",
-    showModel: true,
-  },
-  {
-    name: "OutlineOnly",
-    label: "Outline Only",
-    outlineColor: "#000000",
     showModel: false,
+    fillColor: "#ffffff",
   },
 ];
 
@@ -615,7 +605,6 @@ export default function IconGeneratorPage() {
 
       // Apply stroke if needed (draw stroke FIRST, then model on top)
       if (config.outlineColor) {
-        // Create stroke layer
         const strokeLayer = createStrokeLayer(
           trimmedSourceData,
           bounds.width,
@@ -624,6 +613,23 @@ export default function IconGeneratorPage() {
           strokeWidth
         );
         workCtx.putImageData(strokeLayer, 0, 0);
+      }
+
+      // Fill silhouette with solid color (if fillColor is set)
+      if (config.fillColor) {
+        const r = parseInt(config.fillColor.slice(1, 3), 16);
+        const g = parseInt(config.fillColor.slice(3, 5), 16);
+        const b = parseInt(config.fillColor.slice(5, 7), 16);
+        const fillData = workCtx.getImageData(0, 0, bounds.width, bounds.height);
+        for (let px = 0; px < trimmedSourceData.data.length; px += 4) {
+          if (trimmedSourceData.data[px + 3] > 0) {
+            fillData.data[px] = r;
+            fillData.data[px + 1] = g;
+            fillData.data[px + 2] = b;
+            fillData.data[px + 3] = 255;
+          }
+        }
+        workCtx.putImageData(fillData, 0, 0);
       }
 
       // Draw model on top (if showModel is true)
@@ -644,7 +650,7 @@ export default function IconGeneratorPage() {
         blob,
         preview: dataUrl,
       });
-      console.log("[Single] variant:", config.name, "blob size:", blob.size, "showModel:", config.showModel, "outline:", config.outlineColor);
+      console.log("[Single] variant:", config.name, "blob size:", blob.size, "showModel:", config.showModel, "outline:", config.outlineColor, "fill:", config.fillColor);
     }
 
     // Restore original state
@@ -972,8 +978,24 @@ export default function IconGeneratorPage() {
             workCtx.putImageData(strokeLayer, 0, 0);
           }
 
+          // Fill silhouette with solid color (if fillColor is set)
+          if (config.fillColor) {
+            const r = parseInt(config.fillColor.slice(1, 3), 16);
+            const g = parseInt(config.fillColor.slice(3, 5), 16);
+            const b = parseInt(config.fillColor.slice(5, 7), 16);
+            const fillData = workCtx.getImageData(0, 0, bounds.width, bounds.height);
+            for (let px = 0; px < trimmedSourceData.data.length; px += 4) {
+              if (trimmedSourceData.data[px + 3] > 0) {
+                fillData.data[px] = r;
+                fillData.data[px + 1] = g;
+                fillData.data[px + 2] = b;
+                fillData.data[px + 3] = 255;
+              }
+            }
+            workCtx.putImageData(fillData, 0, 0);
+          }
+
           if (config.showModel) {
-            // Use the COPIED canvas, not the live renderer (animation loop may re-render)
             workCtx.drawImage(
               baseCtx.canvas,
               bounds.minX, bounds.minY, bounds.width, bounds.height,
@@ -989,7 +1011,7 @@ export default function IconGeneratorPage() {
             blob,
             preview: dataUrl,
           });
-          console.log(`[Batch] [${i + 1}] variant:`, config.name, "blob size:", blob.size, "showModel:", config.showModel, "outline:", config.outlineColor);
+          console.log(`[Batch] [${i + 1}] variant:`, config.name, "blob size:", blob.size, "showModel:", config.showModel, "outline:", config.outlineColor, "fill:", config.fillColor);
         }
 
         console.log(`[Batch] [${i + 1}] "${queuedFile.name}" DONE — variants:`, capturedVariants.length);
