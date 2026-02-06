@@ -180,8 +180,8 @@ function postProcessForRoblox(
       ctx.rotate(Math.PI / 2);
       break;
     case "Dn":
-      // -90 degree rotation (total = 180 - 90 = 90)
-      ctx.rotate(-Math.PI / 2);
+      // +90 degree rotation (total = 180 + 90 = 270)
+      ctx.rotate(Math.PI / 2);
       break;
   }
 
