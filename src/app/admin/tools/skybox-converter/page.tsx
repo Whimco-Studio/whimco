@@ -175,7 +175,6 @@ function postProcessForRoblox(
 
   // Additional transforms per face
   switch (faceId) {
-    case "Lf":
     case "Rt":
       // Horizontal flip
       ctx.scale(-1, 1);
