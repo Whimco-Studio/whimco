@@ -100,15 +100,15 @@ function renderCubeFace(
       // Compute 3D direction based on face
       let dx: number, dy: number, dz: number;
       switch (faceId) {
-        case "Ft": // -Z (swapped with Bk for Roblox)
-          dx = -nx;
-          dy = -ny;
-          dz = -1;
-          break;
-        case "Bk": // +Z (swapped with Ft for Roblox)
+        case "Ft": // +Z
           dx = nx;
           dy = -ny;
           dz = 1;
+          break;
+        case "Bk": // -Z
+          dx = -nx;
+          dy = -ny;
+          dz = -1;
           break;
         case "Lf": // +X (swapped with Rt for Roblox)
           dx = 1;
