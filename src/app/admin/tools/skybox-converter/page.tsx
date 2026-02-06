@@ -175,10 +175,6 @@ function postProcessForRoblox(
 
   // Additional transforms per face
   switch (faceId) {
-    case "Rt":
-      // Horizontal flip
-      ctx.scale(-1, 1);
-      break;
     case "Up":
       // +90 degree rotation (total = 180 + 90 = 270)
       ctx.rotate(Math.PI / 2);
