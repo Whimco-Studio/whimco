@@ -25,6 +25,7 @@ import {
   WrenchScrewdriverIcon,
   CubeTransparentIcon,
   CameraIcon,
+  MapIcon,
 } from "@heroicons/react/24/outline";
 
 interface NavItem {
@@ -125,6 +126,12 @@ const navigation: NavSection[] = [
         name: "Icon Generator",
         href: "/admin/tools/icon-generator",
         icon: <CameraIcon className="w-5 h-5" />,
+        adminOnly: true,
+      },
+      {
+        name: "Skybox Converter",
+        href: "/admin/tools/skybox-converter",
+        icon: <MapIcon className="w-5 h-5" />,
         adminOnly: true,
       },
     ],
