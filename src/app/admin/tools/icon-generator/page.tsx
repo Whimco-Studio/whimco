@@ -781,6 +781,10 @@ export default function IconGeneratorPage() {
         // Wait for embedded texture images to finish decoding
         await waitForTextures(object);
 
+        // Warm-up render to upload textures to GPU with original materials
+        renderer.render(scene, camera);
+        console.log(`[Batch] [${i + 1}] warm-up render done (texture upload)`);
+
         // Apply lighting mode (same logic as applyLightingMode)
         // Restore original materials first
         object.traverse((child) => {
@@ -814,10 +818,23 @@ export default function IconGeneratorPage() {
                   if ("map" in originalMat && originalMat.map instanceof THREE.Texture) {
                     map = originalMat.map;
                   }
+                  const mapImg = map?.image as HTMLImageElement | undefined;
+                  console.log(`[Batch] [${i + 1}] unlit material:`, {
+                    origType: originalMat.type,
+                    origColor: ("color" in originalMat && originalMat.color instanceof THREE.Color) ? originalMat.color.getHexString() : "N/A",
+                    hasMap: !!map,
+                    mapNeedsUpdate: map?.needsUpdate,
+                    mapImageComplete: mapImg?.complete,
+                    mapImageSize: mapImg ? `${mapImg.width}x${mapImg.height}` : "N/A",
+                    mapImageSrc: mapImg?.src?.substring(0, 80),
+                    resultColor: map ? "ffffff" : color.getHexString(),
+                  });
                   child.material = new THREE.MeshBasicMaterial({
                     color: map ? 0xffffff : color,
                     map: map,
                   });
+                  // Force texture re-upload to GPU
+                  if (map) map.needsUpdate = true;
                 } else if (originalMat && Array.isArray(originalMat)) {
                   child.material = originalMat.map((mat) => {
                     let color = new THREE.Color(0xcccccc);
@@ -828,10 +845,12 @@ export default function IconGeneratorPage() {
                     if ("map" in mat && mat.map instanceof THREE.Texture) {
                       map = mat.map;
                     }
-                    return new THREE.MeshBasicMaterial({
+                    const newMat = new THREE.MeshBasicMaterial({
                       color: map ? 0xffffff : color,
                       map: map,
                     });
+                    if (map) map.needsUpdate = true;
+                    return newMat;
                   });
                 }
               }
@@ -881,7 +900,22 @@ export default function IconGeneratorPage() {
         object.visible = true;
         console.log(`[Batch] [${i + 1}] compileAsync START`);
         await renderer.compileAsync(scene, camera);
-        console.log(`[Batch] [${i + 1}] compileAsync DONE, rendering...`);
+        console.log(`[Batch] [${i + 1}] compileAsync DONE`);
+
+        // Force texture re-upload after compileAsync may have consumed needsUpdate
+        object.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+            const mats = Array.isArray(child.material) ? child.material : [child.material];
+            for (const mat of mats) {
+              if ("map" in mat && mat.map instanceof THREE.Texture) {
+                console.log(`[Batch] [${i + 1}] forcing texture needsUpdate (was: ${mat.map.needsUpdate})`);
+                mat.map.needsUpdate = true;
+              }
+            }
+          }
+        });
+
+        console.log(`[Batch] [${i + 1}] rendering...`);
         renderer.render(scene, camera);
 
         // Get base image from renderer
