@@ -120,15 +120,15 @@ function renderCubeFace(
           dy = -ny;
           dz = -nx;
           break;
-        case "Up": // +Y
-          dx = nx;
-          dy = 1;
-          dz = ny;
-          break;
-        case "Dn": // -Y
+        case "Up": // -Y (swapped for Roblox)
           dx = nx;
           dy = -1;
           dz = -ny;
+          break;
+        case "Dn": // +Y (swapped for Roblox)
+          dx = nx;
+          dy = 1;
+          dz = ny;
           break;
       }
 
