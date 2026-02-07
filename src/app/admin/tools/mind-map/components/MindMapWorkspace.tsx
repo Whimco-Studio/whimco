@@ -168,6 +168,26 @@ export default function MindMapWorkspace() {
     []
   );
 
+  // ── Alt+drag to duplicate ───────────────────────────────────
+  const onNodeDragStart = useCallback(
+    (event: MouseEvent | globalThis.MouseEvent, node: GameNode) => {
+      if (!(event as globalThis.MouseEvent).altKey) return;
+
+      // Create a clone at the original position
+      const clone: GameNode = {
+        id: `n-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        type: "gameNode",
+        position: { ...node.position },
+        data: {
+          ...node.data,
+          createdAt: new Date().toISOString(),
+        },
+      };
+      addNode(clone);
+    },
+    [addNode]
+  );
+
   // ── Node double-click → open inspector ─────────────────────
   const onNodeDoubleClick = useCallback(
     (_event: MouseEvent | globalThis.MouseEvent, node: GameNode) => {
@@ -383,6 +403,7 @@ export default function MindMapWorkspace() {
         onPaneContextMenu={onPaneContextMenu}
         onNodeContextMenu={onNodeContextMenu}
         onEdgeContextMenu={onEdgeContextMenu}
+        onNodeDragStart={onNodeDragStart}
         onNodeDoubleClick={onNodeDoubleClick}
         onPaneClick={onPaneClick}
         nodeTypes={nodeTypes}
