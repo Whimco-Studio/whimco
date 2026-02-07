@@ -96,23 +96,21 @@ export default function MindMapPage() {
 
   return (
     <MindMapContext.Provider value={ctxValue}>
-      <div className="flex flex-col h-full">
+      <div>
         {/* Header area — normal admin styling */}
-        <div className="flex-shrink-0">
-          <AdminHeader title="Mind Map" subtitle="Game development planning" />
-          <div className="mb-4">
-            <Link
-              href="/admin/tools/3d-viewer"
-              className="inline-flex items-center gap-1.5 text-sm text-white/60 hover:text-white/80 transition-colors"
-            >
-              <ArrowLeftIcon className="w-4 h-4" />
-              Back to Tools
-            </Link>
-          </div>
+        <AdminHeader title="Mind Map" subtitle="Game development planning" />
+        <div className="mb-4">
+          <Link
+            href="/admin/tools/3d-viewer"
+            className="inline-flex items-center gap-1.5 text-sm text-white/60 hover:text-white/80 transition-colors"
+          >
+            <ArrowLeftIcon className="w-4 h-4" />
+            Back to Tools
+          </Link>
         </div>
 
-        {/* Dark canvas area — fills remaining space */}
-        <div className="flex-1 -mx-4 xl:-mx-8 -mb-8 bg-[#1a1a2e] rounded-t-2xl overflow-hidden relative">
+        {/* Dark canvas area — explicit viewport height since admin layout has no height chain */}
+        <div className="h-[calc(100vh-180px)] -mx-4 xl:-mx-8 -mb-8 bg-[#1a1a2e] rounded-t-2xl overflow-hidden relative">
           <ReactFlowProvider>
             <MindMapWorkspace />
           </ReactFlowProvider>
