@@ -26,6 +26,7 @@ import {
   CubeTransparentIcon,
   CameraIcon,
   MapIcon,
+  CircleStackIcon,
 } from "@heroicons/react/24/outline";
 
 interface NavItem {
@@ -132,6 +133,12 @@ const navigation: NavSection[] = [
         name: "Skybox Converter",
         href: "/admin/tools/skybox-converter",
         icon: <MapIcon className="w-5 h-5" />,
+        adminOnly: true,
+      },
+      {
+        name: "Mind Map",
+        href: "/admin/tools/mind-map",
+        icon: <CircleStackIcon className="w-5 h-5" />,
         adminOnly: true,
       },
     ],

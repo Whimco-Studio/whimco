@@ -8,6 +8,15 @@ const config: Config = {
 	],
 	theme: {
 		extend: {
+			keyframes: {
+				"slide-right": {
+					"0%": { transform: "translateX(-100%)" },
+					"100%": { transform: "translateX(400%)" },
+				},
+			},
+			animation: {
+				"slide-right": "slide-right 2s ease-in-out infinite",
+			},
 			backgroundImage: {
 				"custom-gradient":
 					"linear-gradient(45deg, rgba(255,134,255,1) 0%, rgba(132,134,240,1) 50%, rgba(0,255,255,1) 100%)",
