@@ -228,7 +228,23 @@ export default function IconGeneratorPage() {
       if (slot === "normal") {
         texture.colorSpace = THREE.LinearSRGBColorSpace;
       }
-      texture.flipY = false;
+      // Match the flipY of existing model textures (FBXLoader default is true)
+      let modelFlipY = true;
+      const model = modelRef.current;
+      if (model) {
+        model.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+            const mats = Array.isArray(child.material) ? child.material : [child.material];
+            for (const mat of mats) {
+              if ("map" in mat && mat.map instanceof THREE.Texture) {
+                modelFlipY = mat.map.flipY;
+                return;
+              }
+            }
+          }
+        });
+      }
+      texture.flipY = modelFlipY;
       texture.needsUpdate = true;
 
       setTextureSlots((prev) => {
