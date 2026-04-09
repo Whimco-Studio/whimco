@@ -105,20 +105,35 @@ export default function IconGeneratorPage() {
   const [lightingMode, setLightingMode] = useState<LightingMode>("lit");
   const [strokeWidth, setStrokeWidth] = useState(4);
 
-  // Manual PBR texture slots
-  type TextureSlot = "color" | "roughness" | "metallic" | "normal";
+  // Per-mesh PBR texture configuration
+  type TextureSlot = "color" | "roughness" | "metallic" | "normal" | "emissive";
   interface TextureSlotState {
     file: File | null;
     preview: string | null;
     texture: THREE.Texture | null;
   }
+  interface MeshTextureConfig {
+    slots: Record<TextureSlot, TextureSlotState>;
+    emissiveIntensity: number;
+    doubleSided: boolean;
+  }
+  interface MeshInfo {
+    uuid: string;
+    name: string;
+  }
   const emptySlot: TextureSlotState = { file: null, preview: null, texture: null };
-  const [textureSlots, setTextureSlots] = useState<Record<TextureSlot, TextureSlotState>>({
-    color: { ...emptySlot },
-    roughness: { ...emptySlot },
-    metallic: { ...emptySlot },
-    normal: { ...emptySlot },
+  const makeEmptyConfig = (): MeshTextureConfig => ({
+    slots: { color: { ...emptySlot }, roughness: { ...emptySlot }, metallic: { ...emptySlot }, normal: { ...emptySlot }, emissive: { ...emptySlot } },
+    emissiveIntensity: 1.0,
+    doubleSided: false,
   });
+
+  const [meshList, setMeshList] = useState<MeshInfo[]>([]);
+  const [selectedMeshId, setSelectedMeshId] = useState<string>("__all__");
+  const [meshConfigs, setMeshConfigs] = useState<Map<string, MeshTextureConfig>>(new Map());
+  // Keep a ref in sync so useCallback functions can access current configs
+  const meshConfigsRef = useRef(meshConfigs);
+  meshConfigsRef.current = meshConfigs;
 
   // Batch processing state
   const [fileQueue, setFileQueue] = useState<QueuedFile[]>([]);
@@ -216,72 +231,117 @@ export default function IconGeneratorPage() {
     };
   }, []);
 
-  // Load a texture file into a slot and apply to the model
-  const setTextureSlot = (slot: TextureSlot, file: File) => {
+  // Detect flipY from existing model textures
+  const getModelFlipY = (): boolean => {
+    let flipY = true;
+    const model = modelRef.current;
+    if (model) {
+      model.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          const mats = Array.isArray(child.material) ? child.material : [child.material];
+          for (const mat of mats) {
+            if ("map" in mat && mat.map instanceof THREE.Texture) {
+              flipY = mat.map.flipY;
+              return;
+            }
+          }
+        }
+      });
+    }
+    return flipY;
+  };
+
+  // Get config for a mesh, or create a default one
+  const getOrCreateConfig = (meshId: string): MeshTextureConfig => {
+    return meshConfigs.get(meshId) ?? makeEmptyConfig();
+  };
+
+  // Get the effective config for a mesh (check mesh-specific first, then "all")
+  const getEffectiveConfig = (meshId: string, configs: Map<string, MeshTextureConfig>): MeshTextureConfig => {
+    const meshSpecific = configs.get(meshId);
+    const allConfig = configs.get("__all__");
+    if (!meshSpecific && !allConfig) return makeEmptyConfig();
+    if (!meshSpecific) return allConfig!;
+    if (!allConfig) return meshSpecific;
+    // Merge: mesh-specific slots override "all" slots where set
+    const merged = makeEmptyConfig();
+    merged.doubleSided = meshSpecific.doubleSided || allConfig.doubleSided;
+    merged.emissiveIntensity = meshSpecific.slots.emissive.texture ? meshSpecific.emissiveIntensity : allConfig.emissiveIntensity;
+    const slotKeys: TextureSlot[] = ["color", "roughness", "metallic", "normal", "emissive"];
+    for (const key of slotKeys) {
+      merged.slots[key] = meshSpecific.slots[key].texture ? meshSpecific.slots[key] : allConfig.slots[key];
+    }
+    return merged;
+  };
+
+  // Load a texture file into a slot for a specific mesh (or "__all__")
+  const setTextureSlot = (meshId: string, slot: TextureSlot, file: File) => {
     const blobUrl = URL.createObjectURL(file);
-    // Also register in the filename map so FBXLoader auto-resolution still works
     textureMapRef.current.set(file.name.toLowerCase(), blobUrl);
 
     const loader = new THREE.TextureLoader();
     loader.load(blobUrl, (texture) => {
-      texture.colorSpace = slot === "color" ? THREE.SRGBColorSpace : THREE.LinearSRGBColorSpace;
-      if (slot === "normal") {
-        texture.colorSpace = THREE.LinearSRGBColorSpace;
-      }
-      // Match the flipY of existing model textures (FBXLoader default is true)
-      let modelFlipY = true;
-      const model = modelRef.current;
-      if (model) {
-        model.traverse((child) => {
-          if (child instanceof THREE.Mesh) {
-            const mats = Array.isArray(child.material) ? child.material : [child.material];
-            for (const mat of mats) {
-              if ("map" in mat && mat.map instanceof THREE.Texture) {
-                modelFlipY = mat.map.flipY;
-                return;
-              }
-            }
-          }
-        });
-      }
-      texture.flipY = modelFlipY;
+      texture.colorSpace = (slot === "color" || slot === "emissive") ? THREE.SRGBColorSpace : THREE.LinearSRGBColorSpace;
+      texture.flipY = getModelFlipY();
       texture.needsUpdate = true;
 
-      setTextureSlots((prev) => {
-        // Revoke old preview URL
-        if (prev[slot].preview) URL.revokeObjectURL(prev[slot].preview!);
-        return {
-          ...prev,
-          [slot]: { file, preview: blobUrl, texture },
-        };
+      setMeshConfigs((prev) => {
+        const next = new Map(prev);
+        const config = next.get(meshId) ?? makeEmptyConfig();
+        if (config.slots[slot].preview) URL.revokeObjectURL(config.slots[slot].preview!);
+        config.slots[slot] = { file, preview: blobUrl, texture };
+        next.set(meshId, config);
+        applyAllMeshTextures(next);
+        return next;
       });
-
-      // Apply to model if loaded
-      applyManualTextures({ ...textureSlots, [slot]: { file, preview: blobUrl, texture } });
     });
   };
 
-  const clearTextureSlot = (slot: TextureSlot) => {
-    setTextureSlots((prev) => {
-      if (prev[slot].preview) URL.revokeObjectURL(prev[slot].preview!);
-      if (prev[slot].file) {
-        textureMapRef.current.delete(prev[slot].file!.name.toLowerCase());
-      }
-      return { ...prev, [slot]: { ...emptySlot } };
+  const clearTextureSlot = (meshId: string, slot: TextureSlot) => {
+    setMeshConfigs((prev) => {
+      const next = new Map(prev);
+      const config = next.get(meshId);
+      if (!config) return prev;
+      if (config.slots[slot].preview) URL.revokeObjectURL(config.slots[slot].preview!);
+      config.slots[slot] = { ...emptySlot };
+      next.set(meshId, config);
+      applyAllMeshTextures(next);
+      return next;
     });
-    // Re-apply with the slot cleared
-    applyManualTextures({ ...textureSlots, [slot]: { ...emptySlot } });
   };
 
-  const clearAllTextureSlots = () => {
-    setTextureSlots((prev) => {
-      Object.values(prev).forEach((s) => {
-        if (s.preview) URL.revokeObjectURL(s.preview);
-      });
-      return { color: { ...emptySlot }, roughness: { ...emptySlot }, metallic: { ...emptySlot }, normal: { ...emptySlot } };
+  const setMeshDoubleSided = (meshId: string, doubleSided: boolean) => {
+    setMeshConfigs((prev) => {
+      const next = new Map(prev);
+      const config = next.get(meshId) ?? makeEmptyConfig();
+      config.doubleSided = doubleSided;
+      next.set(meshId, config);
+      applyAllMeshTextures(next);
+      return next;
     });
-    textureMapRef.current.forEach((url) => URL.revokeObjectURL(url));
-    textureMapRef.current.clear();
+  };
+
+  const setMeshEmissiveIntensity = (meshId: string, intensity: number) => {
+    setMeshConfigs((prev) => {
+      const next = new Map(prev);
+      const config = next.get(meshId) ?? makeEmptyConfig();
+      config.emissiveIntensity = intensity;
+      next.set(meshId, config);
+      applyAllMeshTextures(next);
+      return next;
+    });
+  };
+
+  const clearAllMeshConfigs = () => {
+    setMeshConfigs((prev) => {
+      prev.forEach((config) => {
+        Object.values(config.slots).forEach((s) => {
+          if (s.preview) URL.revokeObjectURL(s.preview);
+        });
+      });
+      return new Map();
+    });
+    setSelectedMeshId("__all__");
     // Restore original materials
     const model = modelRef.current;
     if (model) {
@@ -294,33 +354,42 @@ export default function IconGeneratorPage() {
     }
   };
 
-  // Apply manual texture slots to all meshes on the model
-  const applyManualTextures = (slots: Record<TextureSlot, TextureSlotState>) => {
+  // Apply per-mesh texture configs to the model
+  const applyAllMeshTextures = (configs: Map<string, MeshTextureConfig>) => {
     const model = modelRef.current;
     if (!model) return;
 
-    const hasAny = Object.values(slots).some((s) => s.texture);
-    if (!hasAny) return;
+    const hasAnyConfig = configs.size > 0;
+    if (!hasAnyConfig) return;
 
     model.traverse((child) => {
       if (child instanceof THREE.Mesh) {
+        const effective = getEffectiveConfig(child.uuid, configs);
+        const hasAnyTexture = Object.values(effective.slots).some((s) => s.texture);
+        const needsDoubleSide = effective.doubleSided;
+
+        if (!hasAnyTexture && !needsDoubleSide) return;
+
         const origMat = originalMaterialsRef.current.get(child);
         const base = origMat && !Array.isArray(origMat) ? origMat : null;
 
-        // Start from existing material properties
         let color = new THREE.Color(0xcccccc);
         let existingMap: THREE.Texture | null = null;
         if (base && "color" in base && base.color instanceof THREE.Color) color = base.color.clone();
         if (base && "map" in base && base.map instanceof THREE.Texture) existingMap = base.map;
 
         const mat = new THREE.MeshStandardMaterial({
-          color: slots.color.texture ? 0xffffff : color,
-          map: slots.color.texture || existingMap,
-          roughnessMap: slots.roughness.texture || null,
-          roughness: slots.roughness.texture ? 1.0 : 0.5,
-          metalnessMap: slots.metallic.texture || null,
-          metalness: slots.metallic.texture ? 1.0 : 0.0,
-          normalMap: slots.normal.texture || null,
+          color: effective.slots.color.texture ? 0xffffff : color,
+          map: effective.slots.color.texture || existingMap,
+          roughnessMap: effective.slots.roughness.texture || null,
+          roughness: effective.slots.roughness.texture ? 1.0 : 0.5,
+          metalnessMap: effective.slots.metallic.texture || null,
+          metalness: effective.slots.metallic.texture ? 1.0 : 0.0,
+          normalMap: effective.slots.normal.texture || null,
+          emissiveMap: effective.slots.emissive.texture || null,
+          emissive: effective.slots.emissive.texture ? new THREE.Color(0xffffff) : new THREE.Color(0x000000),
+          emissiveIntensity: effective.emissiveIntensity,
+          side: effective.doubleSided ? THREE.DoubleSide : THREE.FrontSide,
         });
 
         child.material = mat;
@@ -411,6 +480,17 @@ export default function IconGeneratorPage() {
 
       sceneRef.current.add(object);
       modelRef.current = object;
+
+      // Enumerate meshes for per-mesh texture assignment
+      const meshes: MeshInfo[] = [];
+      object.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          meshes.push({ uuid: child.uuid, name: child.name || `Mesh ${meshes.length + 1}` });
+        }
+      });
+      setMeshList(meshes);
+      setSelectedMeshId("__all__");
+      setMeshConfigs(new Map());
 
       // Wait for any async texture loading (blob URL textures load asynchronously)
       await waitForTextures(object);
@@ -595,6 +675,9 @@ export default function IconGeneratorPage() {
     }
 
     setLightingMode(mode);
+
+    // Re-apply per-mesh texture configs on top of the new lighting materials
+    applyAllMeshTextures(meshConfigsRef.current);
   }, []);
 
   // Helper: Wait for all texture images on a model to finish decoding
@@ -1376,65 +1459,124 @@ export default function IconGeneratorPage() {
                 </div>
               </div>
 
-              {/* PBR Texture Slots */}
+              {/* Per-Mesh PBR Texture Slots */}
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-sm font-medium text-slate-600">Textures</p>
-                  {Object.values(textureSlots).some((s) => s.file) && (
-                    <button
-                      onClick={clearAllTextureSlots}
-                      className="text-xs text-red-500 hover:text-red-600"
-                    >
-                      Clear All
-                    </button>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {meshConfigs.size > 0 && (
+                      <button
+                        type="button"
+                        onClick={clearAllMeshConfigs}
+                        className="text-xs text-red-500 hover:text-red-600"
+                      >
+                        Clear All
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <div className="grid grid-cols-4 gap-2">
-                  {([
-                    { slot: "color" as TextureSlot, label: "Color" },
-                    { slot: "roughness" as TextureSlot, label: "Roughness" },
-                    { slot: "metallic" as TextureSlot, label: "Metallic" },
-                    { slot: "normal" as TextureSlot, label: "Normal" },
-                  ]).map(({ slot, label }) => (
-                    <div key={slot} className="relative group">
-                      <label className={`block cursor-pointer rounded-lg border-2 border-dashed transition-colors overflow-hidden ${
-                        textureSlots[slot].file
-                          ? "border-purple-300 bg-purple-50"
-                          : "border-gray-200 hover:border-purple-300 bg-gray-50"
-                      }`}>
-                        {textureSlots[slot].preview ? (
-                          <img
-                            src={textureSlots[slot].preview!}
-                            alt={label}
-                            className="w-full aspect-square object-cover"
-                          />
-                        ) : (
-                          <div className="w-full aspect-square flex items-center justify-center">
-                            <span className="text-xl text-gray-300">+</span>
+
+                {/* Mesh Selector */}
+                {meshList.length > 1 && (
+                  <div className="mb-3">
+                    <select
+                      value={selectedMeshId}
+                      onChange={(e) => setSelectedMeshId(e.target.value)}
+                      className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg bg-white text-slate-700 focus:outline-none focus:border-purple-500"
+                    >
+                      <option value="__all__">All Meshes</option>
+                      {meshList.map((m) => (
+                        <option key={m.uuid} value={m.uuid}>{m.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Texture Slot Grid */}
+                {(() => {
+                  const config = getOrCreateConfig(selectedMeshId);
+                  return (
+                    <>
+                      <div className="grid grid-cols-5 gap-2">
+                        {([
+                          { slot: "color" as TextureSlot, label: "Color" },
+                          { slot: "roughness" as TextureSlot, label: "Rough" },
+                          { slot: "metallic" as TextureSlot, label: "Metal" },
+                          { slot: "normal" as TextureSlot, label: "Normal" },
+                          { slot: "emissive" as TextureSlot, label: "Emissive" },
+                        ]).map(({ slot, label }) => (
+                          <div key={slot} className="relative group">
+                            <label className={`block cursor-pointer rounded-lg border-2 border-dashed transition-colors overflow-hidden ${
+                              config.slots[slot].file
+                                ? "border-purple-300 bg-purple-50"
+                                : "border-gray-200 hover:border-purple-300 bg-gray-50"
+                            }`}>
+                              {config.slots[slot].preview ? (
+                                <img
+                                  src={config.slots[slot].preview!}
+                                  alt={label}
+                                  className="w-full aspect-square object-cover"
+                                />
+                              ) : (
+                                <div className="w-full aspect-square flex items-center justify-center">
+                                  <span className="text-xl text-gray-300">+</span>
+                                </div>
+                              )}
+                              <input
+                                type="file"
+                                accept=".png,.jpg,.jpeg,.tga,.bmp"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) setTextureSlot(selectedMeshId, slot, file);
+                                }}
+                                className="hidden"
+                              />
+                            </label>
+                            {config.slots[slot].file && (
+                              <button
+                                type="button"
+                                onClick={() => clearTextureSlot(selectedMeshId, slot)}
+                                className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <XMarkIcon className="w-3 h-3" />
+                              </button>
+                            )}
+                            <p className="text-xs text-center text-slate-500 mt-1">{label}</p>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Emissive Intensity + Double Sided */}
+                      <div className="flex flex-wrap items-center gap-4 mt-3">
+                        {config.slots.emissive.texture && (
+                          <div className="flex-1 min-w-[140px]">
+                            <p className="text-xs text-slate-500 mb-1">
+                              Emissive: <span className="text-purple-600">{config.emissiveIntensity.toFixed(1)}</span>
+                            </p>
+                            <input
+                              type="range"
+                              min="0"
+                              max="5"
+                              step="0.1"
+                              value={config.emissiveIntensity}
+                              onChange={(e) => setMeshEmissiveIntensity(selectedMeshId, parseFloat(e.target.value))}
+                              className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-600"
+                            />
                           </div>
                         )}
-                        <input
-                          type="file"
-                          accept=".png,.jpg,.jpeg,.tga,.bmp"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) setTextureSlot(slot, file);
-                          }}
-                          className="hidden"
-                        />
-                      </label>
-                      {textureSlots[slot].file && (
-                        <button
-                          onClick={() => clearTextureSlot(slot)}
-                          className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <XMarkIcon className="w-3 h-3" />
-                        </button>
-                      )}
-                      <p className="text-xs text-center text-slate-500 mt-1">{label}</p>
-                    </div>
-                  ))}
-                </div>
+                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={config.doubleSided}
+                            onChange={(e) => setMeshDoubleSided(selectedMeshId, e.target.checked)}
+                            className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500 accent-purple-600"
+                          />
+                          <span className="text-xs text-slate-600">Double Sided</span>
+                        </label>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
 
               {/* Camera Angle Buttons */}
