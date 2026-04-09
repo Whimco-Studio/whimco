@@ -105,8 +105,20 @@ export default function IconGeneratorPage() {
   const [lightingMode, setLightingMode] = useState<LightingMode>("lit");
   const [strokeWidth, setStrokeWidth] = useState(4);
 
-  // Texture files state
-  const [textureFileNames, setTextureFileNames] = useState<string[]>([]);
+  // Manual PBR texture slots
+  type TextureSlot = "color" | "roughness" | "metallic" | "normal";
+  interface TextureSlotState {
+    file: File | null;
+    preview: string | null;
+    texture: THREE.Texture | null;
+  }
+  const emptySlot: TextureSlotState = { file: null, preview: null, texture: null };
+  const [textureSlots, setTextureSlots] = useState<Record<TextureSlot, TextureSlotState>>({
+    color: { ...emptySlot },
+    roughness: { ...emptySlot },
+    metallic: { ...emptySlot },
+    normal: { ...emptySlot },
+  });
 
   // Batch processing state
   const [fileQueue, setFileQueue] = useState<QueuedFile[]>([]);
@@ -204,24 +216,100 @@ export default function IconGeneratorPage() {
     };
   }, []);
 
-  // Register texture files as blob URLs so FBXLoader can resolve external references
-  const registerTextureFiles = (files: File[]) => {
-    // Revoke old blob URLs
-    textureMapRef.current.forEach((url) => URL.revokeObjectURL(url));
-    textureMapRef.current.clear();
+  // Load a texture file into a slot and apply to the model
+  const setTextureSlot = (slot: TextureSlot, file: File) => {
+    const blobUrl = URL.createObjectURL(file);
+    // Also register in the filename map so FBXLoader auto-resolution still works
+    textureMapRef.current.set(file.name.toLowerCase(), blobUrl);
 
-    for (const file of files) {
-      const blobUrl = URL.createObjectURL(file);
-      // Map by filename (case-insensitive) since FBX references may differ in case
-      textureMapRef.current.set(file.name.toLowerCase(), blobUrl);
-    }
-    setTextureFileNames(files.map((f) => f.name));
+    const loader = new THREE.TextureLoader();
+    loader.load(blobUrl, (texture) => {
+      texture.colorSpace = slot === "color" ? THREE.SRGBColorSpace : THREE.LinearSRGBColorSpace;
+      if (slot === "normal") {
+        texture.colorSpace = THREE.LinearSRGBColorSpace;
+      }
+      texture.flipY = false;
+      texture.needsUpdate = true;
+
+      setTextureSlots((prev) => {
+        // Revoke old preview URL
+        if (prev[slot].preview) URL.revokeObjectURL(prev[slot].preview!);
+        return {
+          ...prev,
+          [slot]: { file, preview: blobUrl, texture },
+        };
+      });
+
+      // Apply to model if loaded
+      applyManualTextures({ ...textureSlots, [slot]: { file, preview: blobUrl, texture } });
+    });
   };
 
-  const clearTextures = () => {
+  const clearTextureSlot = (slot: TextureSlot) => {
+    setTextureSlots((prev) => {
+      if (prev[slot].preview) URL.revokeObjectURL(prev[slot].preview!);
+      if (prev[slot].file) {
+        textureMapRef.current.delete(prev[slot].file!.name.toLowerCase());
+      }
+      return { ...prev, [slot]: { ...emptySlot } };
+    });
+    // Re-apply with the slot cleared
+    applyManualTextures({ ...textureSlots, [slot]: { ...emptySlot } });
+  };
+
+  const clearAllTextureSlots = () => {
+    setTextureSlots((prev) => {
+      Object.values(prev).forEach((s) => {
+        if (s.preview) URL.revokeObjectURL(s.preview);
+      });
+      return { color: { ...emptySlot }, roughness: { ...emptySlot }, metallic: { ...emptySlot }, normal: { ...emptySlot } };
+    });
     textureMapRef.current.forEach((url) => URL.revokeObjectURL(url));
     textureMapRef.current.clear();
-    setTextureFileNames([]);
+    // Restore original materials
+    const model = modelRef.current;
+    if (model) {
+      model.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          const original = originalMaterialsRef.current.get(child);
+          if (original) child.material = original;
+        }
+      });
+    }
+  };
+
+  // Apply manual texture slots to all meshes on the model
+  const applyManualTextures = (slots: Record<TextureSlot, TextureSlotState>) => {
+    const model = modelRef.current;
+    if (!model) return;
+
+    const hasAny = Object.values(slots).some((s) => s.texture);
+    if (!hasAny) return;
+
+    model.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        const origMat = originalMaterialsRef.current.get(child);
+        const base = origMat && !Array.isArray(origMat) ? origMat : null;
+
+        // Start from existing material properties
+        let color = new THREE.Color(0xcccccc);
+        let existingMap: THREE.Texture | null = null;
+        if (base && "color" in base && base.color instanceof THREE.Color) color = base.color.clone();
+        if (base && "map" in base && base.map instanceof THREE.Texture) existingMap = base.map;
+
+        const mat = new THREE.MeshStandardMaterial({
+          color: slots.color.texture ? 0xffffff : color,
+          map: slots.color.texture || existingMap,
+          roughnessMap: slots.roughness.texture || null,
+          roughness: slots.roughness.texture ? 1.0 : 0.5,
+          metalnessMap: slots.metallic.texture || null,
+          metalness: slots.metallic.texture ? 1.0 : 0.0,
+          normalMap: slots.normal.texture || null,
+        });
+
+        child.material = mat;
+      }
+    });
   };
 
   // A reusable blob URL for a 1x1 transparent PNG, used as fallback for missing textures
@@ -347,19 +435,27 @@ export default function IconGeneratorPage() {
     return { fbxFile, textureFiles };
   };
 
+  // Register texture files into the filename map for FBXLoader auto-resolution
+  const registerTextureFilesForLoader = (files: File[]) => {
+    for (const file of files) {
+      const blobUrl = URL.createObjectURL(file);
+      textureMapRef.current.set(file.name.toLowerCase(), blobUrl);
+    }
+  };
+
   // Handle file selection
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
       const { fbxFile, textureFiles } = separateFiles(files);
       if (textureFiles.length > 0) {
-        registerTextureFiles(textureFiles);
+        registerTextureFilesForLoader(textureFiles);
       }
       if (fbxFile) {
         setSelectedFile(fbxFile);
         loadModel(fbxFile);
       } else {
-        setError("Please select an FBX file (texture files can be included alongside)");
+        setError("Please select an FBX file");
       }
     }
   };
@@ -371,15 +467,13 @@ export default function IconGeneratorPage() {
     if (files && files.length > 0) {
       const { fbxFile, textureFiles } = separateFiles(files);
       if (textureFiles.length > 0) {
-        registerTextureFiles(textureFiles);
+        registerTextureFilesForLoader(textureFiles);
       }
       if (fbxFile) {
         setSelectedFile(fbxFile);
         loadModel(fbxFile);
-      } else if (textureFiles.length > 0) {
-        // Only texture files dropped - that's fine, just register them
       } else {
-        setError("Please drop an FBX file (texture files can be included alongside)");
+        setError("Please drop an FBX file");
       }
     }
   }, [loadModel]);
@@ -1266,57 +1360,65 @@ export default function IconGeneratorPage() {
                 </div>
               </div>
 
-              {/* Texture Files */}
+              {/* PBR Texture Slots */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-sm font-medium text-slate-600">
-                    Textures
-                    {textureFileNames.length > 0 && (
-                      <span className="text-purple-600 ml-1">({textureFileNames.length} loaded)</span>
-                    )}
-                  </p>
-                  <div className="flex items-center gap-2">
-                    {textureFileNames.length > 0 && (
-                      <button
-                        onClick={clearTextures}
-                        className="text-xs text-red-500 hover:text-red-600"
-                      >
-                        Clear
-                      </button>
-                    )}
-                    <label className="text-sm text-purple-600 hover:text-purple-700 cursor-pointer">
-                      Upload Textures
-                      <input
-                        type="file"
-                        accept=".png,.jpg,.jpeg,.tga,.bmp"
-                        multiple
-                        onChange={(e) => {
-                          if (e.target.files && e.target.files.length > 0) {
-                            const files = Array.from(e.target.files);
-                            registerTextureFiles(files);
-                          }
-                        }}
-                        className="hidden"
-                      />
-                    </label>
-                  </div>
+                  <p className="text-sm font-medium text-slate-600">Textures</p>
+                  {Object.values(textureSlots).some((s) => s.file) && (
+                    <button
+                      onClick={clearAllTextureSlots}
+                      className="text-xs text-red-500 hover:text-red-600"
+                    >
+                      Clear All
+                    </button>
+                  )}
                 </div>
-                {textureFileNames.length > 0 ? (
-                  <div className="flex flex-wrap gap-1">
-                    {textureFileNames.map((name) => (
-                      <span
-                        key={name}
-                        className="px-2 py-0.5 text-xs bg-purple-50 text-purple-600 rounded border border-purple-200"
-                      >
-                        {name}
-                      </span>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-xs text-slate-400">
-                    If your FBX uses external textures, upload them here before loading the model
-                  </p>
-                )}
+                <div className="grid grid-cols-4 gap-2">
+                  {([
+                    { slot: "color" as TextureSlot, label: "Color" },
+                    { slot: "roughness" as TextureSlot, label: "Roughness" },
+                    { slot: "metallic" as TextureSlot, label: "Metallic" },
+                    { slot: "normal" as TextureSlot, label: "Normal" },
+                  ]).map(({ slot, label }) => (
+                    <div key={slot} className="relative group">
+                      <label className={`block cursor-pointer rounded-lg border-2 border-dashed transition-colors overflow-hidden ${
+                        textureSlots[slot].file
+                          ? "border-purple-300 bg-purple-50"
+                          : "border-gray-200 hover:border-purple-300 bg-gray-50"
+                      }`}>
+                        {textureSlots[slot].preview ? (
+                          <img
+                            src={textureSlots[slot].preview!}
+                            alt={label}
+                            className="w-full aspect-square object-cover"
+                          />
+                        ) : (
+                          <div className="w-full aspect-square flex items-center justify-center">
+                            <span className="text-xl text-gray-300">+</span>
+                          </div>
+                        )}
+                        <input
+                          type="file"
+                          accept=".png,.jpg,.jpeg,.tga,.bmp"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) setTextureSlot(slot, file);
+                          }}
+                          className="hidden"
+                        />
+                      </label>
+                      {textureSlots[slot].file && (
+                        <button
+                          onClick={() => clearTextureSlot(slot)}
+                          className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <XMarkIcon className="w-3 h-3" />
+                        </button>
+                      )}
+                      <p className="text-xs text-center text-slate-500 mt-1">{label}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {/* Camera Angle Buttons */}
@@ -1473,7 +1575,7 @@ export default function IconGeneratorPage() {
               onChange={(e) => {
                 if (e.target.files) {
                   const { textureFiles } = separateFiles(e.target.files);
-                  if (textureFiles.length > 0) registerTextureFiles(textureFiles);
+                  if (textureFiles.length > 0) registerTextureFilesForLoader(textureFiles);
                   addFilesToQueue(e.target.files);
                 }
               }}
