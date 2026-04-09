@@ -105,6 +105,9 @@ export default function IconGeneratorPage() {
   const [lightingMode, setLightingMode] = useState<LightingMode>("lit");
   const [strokeWidth, setStrokeWidth] = useState(4);
 
+  // Texture files state
+  const [textureFileNames, setTextureFileNames] = useState<string[]>([]);
+
   // Batch processing state
   const [fileQueue, setFileQueue] = useState<QueuedFile[]>([]);
   const [isBatchProcessing, setIsBatchProcessing] = useState(false);
@@ -212,6 +215,29 @@ export default function IconGeneratorPage() {
       // Map by filename (case-insensitive) since FBX references may differ in case
       textureMapRef.current.set(file.name.toLowerCase(), blobUrl);
     }
+    setTextureFileNames(files.map((f) => f.name));
+  };
+
+  const clearTextures = () => {
+    textureMapRef.current.forEach((url) => URL.revokeObjectURL(url));
+    textureMapRef.current.clear();
+    setTextureFileNames([]);
+  };
+
+  // A reusable blob URL for a 1x1 transparent PNG, used as fallback for missing textures
+  const fallbackBlobUrlRef = useRef<string | null>(null);
+  const getFallbackBlobUrl = () => {
+    if (!fallbackBlobUrlRef.current) {
+      const bytes = new Uint8Array([
+        0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a,0x00,0x00,0x00,0x0d,0x49,0x48,0x44,0x52,
+        0x00,0x00,0x00,0x01,0x00,0x00,0x00,0x01,0x08,0x06,0x00,0x00,0x00,0x1f,0x15,0xc4,
+        0x89,0x00,0x00,0x00,0x0a,0x49,0x44,0x41,0x54,0x78,0x9c,0x62,0x00,0x00,0x00,0x02,
+        0x00,0x01,0xe5,0x27,0xde,0xfc,0x00,0x00,0x00,0x00,0x49,0x45,0x4e,0x44,0xae,0x42,
+        0x60,0x82,
+      ]);
+      fallbackBlobUrlRef.current = URL.createObjectURL(new Blob([bytes], { type: "image/png" }));
+    }
+    return fallbackBlobUrlRef.current;
   };
 
   // Create a LoadingManager that intercepts texture requests and serves from uploaded files
@@ -225,8 +251,8 @@ export default function IconGeneratorPage() {
       if (blobUrl) {
         return blobUrl;
       }
-      // Return a data URI for a 1x1 transparent pixel to suppress 404s for missing textures
-      return "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQI12NgAAIABQABNjN9GQAAAAlwSFlzAAAWJQAAFiUBSVIk8AAAAA0lEQVQI12P4z8BQDwAEgAF/QualzQAAAABJRU5ErkJggg==";
+      // Return a blob URL for a 1x1 transparent pixel to suppress 404s for missing textures
+      return getFallbackBlobUrl();
     });
     return manager;
   };
@@ -1238,6 +1264,59 @@ export default function IconGeneratorPage() {
                     <span>12px</span>
                   </div>
                 </div>
+              </div>
+
+              {/* Texture Files */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-medium text-slate-600">
+                    Textures
+                    {textureFileNames.length > 0 && (
+                      <span className="text-purple-600 ml-1">({textureFileNames.length} loaded)</span>
+                    )}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    {textureFileNames.length > 0 && (
+                      <button
+                        onClick={clearTextures}
+                        className="text-xs text-red-500 hover:text-red-600"
+                      >
+                        Clear
+                      </button>
+                    )}
+                    <label className="text-sm text-purple-600 hover:text-purple-700 cursor-pointer">
+                      Upload Textures
+                      <input
+                        type="file"
+                        accept=".png,.jpg,.jpeg,.tga,.bmp"
+                        multiple
+                        onChange={(e) => {
+                          if (e.target.files && e.target.files.length > 0) {
+                            const files = Array.from(e.target.files);
+                            registerTextureFiles(files);
+                          }
+                        }}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                </div>
+                {textureFileNames.length > 0 ? (
+                  <div className="flex flex-wrap gap-1">
+                    {textureFileNames.map((name) => (
+                      <span
+                        key={name}
+                        className="px-2 py-0.5 text-xs bg-purple-50 text-purple-600 rounded border border-purple-200"
+                      >
+                        {name}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400">
+                    If your FBX uses external textures, upload them here before loading the model
+                  </p>
+                )}
               </div>
 
               {/* Camera Angle Buttons */}
