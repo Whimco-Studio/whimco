@@ -93,6 +93,7 @@ export default function IconGeneratorPage() {
   const directionalLightRef = useRef<THREE.DirectionalLight | null>(null);
   const fillLightRef = useRef<THREE.DirectionalLight | null>(null);
   const originalMaterialsRef = useRef<Map<THREE.Mesh, THREE.Material | THREE.Material[]>>(new Map());
+  const textureMapRef = useRef<Map<string, string>>(new Map());
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -200,6 +201,36 @@ export default function IconGeneratorPage() {
     };
   }, []);
 
+  // Register texture files as blob URLs so FBXLoader can resolve external references
+  const registerTextureFiles = (files: File[]) => {
+    // Revoke old blob URLs
+    textureMapRef.current.forEach((url) => URL.revokeObjectURL(url));
+    textureMapRef.current.clear();
+
+    for (const file of files) {
+      const blobUrl = URL.createObjectURL(file);
+      // Map by filename (case-insensitive) since FBX references may differ in case
+      textureMapRef.current.set(file.name.toLowerCase(), blobUrl);
+    }
+  };
+
+  // Create a LoadingManager that intercepts texture requests and serves from uploaded files
+  const createTextureLoadingManager = () => {
+    const manager = new THREE.LoadingManager();
+    manager.setURLModifier((url: string) => {
+      // Extract just the filename from the URL (handles full paths, relative paths, encoded names)
+      const decoded = decodeURIComponent(url);
+      const filename = decoded.split(/[\\/]/).pop()?.toLowerCase() || "";
+      const blobUrl = textureMapRef.current.get(filename);
+      if (blobUrl) {
+        return blobUrl;
+      }
+      // Return a data URI for a 1x1 transparent pixel to suppress 404s for missing textures
+      return "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQI12NgAAIABQABNjN9GQAAAAlwSFlzAAAWJQAAFiUBSVIk8AAAAA0lEQVQI12P4z8BQDwAEgAF/QualzQAAAABJRU5ErkJggg==";
+    });
+    return manager;
+  };
+
   // Load FBX model
   const loadModel = useCallback(async (file: File) => {
     if (!sceneRef.current) return;
@@ -219,7 +250,8 @@ export default function IconGeneratorPage() {
       modelRef.current = null;
     }
 
-    const loader = new FBXLoader();
+    const loadManager = createTextureLoadingManager();
+    const loader = new FBXLoader(loadManager);
 
     try {
       const arrayBuffer = await file.arrayBuffer();
@@ -249,6 +281,10 @@ export default function IconGeneratorPage() {
 
       sceneRef.current.add(object);
       modelRef.current = object;
+
+      // Wait for any async texture loading (blob URL textures load asynchronously)
+      await waitForTextures(object);
+
       setModelLoaded(true);
 
       // Reset to standard lighting when loading new model
@@ -267,16 +303,37 @@ export default function IconGeneratorPage() {
     }
   }, []);
 
+  // Separate FBX and texture files from a FileList
+  const separateFiles = (files: FileList) => {
+    const textureExts = [".png", ".jpg", ".jpeg", ".tga", ".bmp", ".tiff", ".tif"];
+    let fbxFile: File | null = null;
+    const textureFiles: File[] = [];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const name = file.name.toLowerCase();
+      if (name.endsWith(".fbx")) {
+        fbxFile = file;
+      } else if (textureExts.some((ext) => name.endsWith(ext))) {
+        textureFiles.push(file);
+      }
+    }
+    return { fbxFile, textureFiles };
+  };
+
   // Handle file selection
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      const file = files[0];
-      if (file.name.toLowerCase().endsWith(".fbx")) {
-        setSelectedFile(file);
-        loadModel(file);
+      const { fbxFile, textureFiles } = separateFiles(files);
+      if (textureFiles.length > 0) {
+        registerTextureFiles(textureFiles);
+      }
+      if (fbxFile) {
+        setSelectedFile(fbxFile);
+        loadModel(fbxFile);
       } else {
-        setError("Please select an FBX file");
+        setError("Please select an FBX file (texture files can be included alongside)");
       }
     }
   };
@@ -286,12 +343,17 @@ export default function IconGeneratorPage() {
     e.preventDefault();
     const files = e.dataTransfer.files;
     if (files && files.length > 0) {
-      const file = files[0];
-      if (file.name.toLowerCase().endsWith(".fbx")) {
-        setSelectedFile(file);
-        loadModel(file);
+      const { fbxFile, textureFiles } = separateFiles(files);
+      if (textureFiles.length > 0) {
+        registerTextureFiles(textureFiles);
+      }
+      if (fbxFile) {
+        setSelectedFile(fbxFile);
+        loadModel(fbxFile);
+      } else if (textureFiles.length > 0) {
+        // Only texture files dropped - that's fine, just register them
       } else {
-        setError("Please drop an FBX file");
+        setError("Please drop an FBX file (texture files can be included alongside)");
       }
     }
   }, [loadModel]);
@@ -756,7 +818,7 @@ export default function IconGeneratorPage() {
         // Load model with a LoadingManager to track async texture loading
         const arrayBuffer = await queuedFile.file.arrayBuffer();
 
-        const loadManager = new THREE.LoadingManager();
+        const loadManager = createTextureLoadingManager();
         let resourcesLoading = false;
         const resourcesReady = new Promise<void>((resolve) => {
           loadManager.onStart = () => { resourcesLoading = true; };
@@ -1099,13 +1161,14 @@ export default function IconGeneratorPage() {
             {!selectedFile && (
               <div className="absolute inset-0 flex flex-col items-center justify-center border-2 border-dashed border-gray-300 m-4 rounded-xl">
                 <CubeIcon className="w-16 h-16 text-gray-300 mb-4" />
-                <p className="text-slate-600 font-medium mb-2">Drop FBX file here</p>
+                <p className="text-slate-600 font-medium mb-2">Drop FBX + texture files here</p>
                 <p className="text-slate-400 text-sm mb-4">or</p>
                 <label className="px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 cursor-pointer">
                   Browse Files
                   <input
                     type="file"
-                    accept=".fbx"
+                    accept=".fbx,.png,.jpg,.jpeg,.tga,.bmp"
+                    multiple
                     onChange={handleFileSelect}
                     className="hidden"
                   />
@@ -1326,9 +1389,15 @@ export default function IconGeneratorPage() {
             Add Files
             <input
               type="file"
-              accept=".fbx"
+              accept=".fbx,.png,.jpg,.jpeg,.tga,.bmp"
               multiple
-              onChange={(e) => e.target.files && addFilesToQueue(e.target.files)}
+              onChange={(e) => {
+                if (e.target.files) {
+                  const { textureFiles } = separateFiles(e.target.files);
+                  if (textureFiles.length > 0) registerTextureFiles(textureFiles);
+                  addFilesToQueue(e.target.files);
+                }
+              }}
               className="hidden"
             />
           </label>
