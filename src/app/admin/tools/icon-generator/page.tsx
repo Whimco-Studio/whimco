@@ -417,6 +417,10 @@ export default function IconGeneratorPage() {
   const createTextureLoadingManager = () => {
     const manager = new THREE.LoadingManager();
     manager.setURLModifier((url: string) => {
+      // Pass through blob URLs and data URIs (these are embedded textures already resolved by FBXLoader)
+      if (url.startsWith("blob:") || url.startsWith("data:")) {
+        return url;
+      }
       // Extract just the filename from the URL (handles full paths, relative paths, encoded names)
       const decoded = decodeURIComponent(url);
       const filename = decoded.split(/[\\/]/).pop()?.toLowerCase() || "";
