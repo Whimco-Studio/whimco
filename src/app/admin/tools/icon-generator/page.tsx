@@ -884,6 +884,7 @@ export default function IconGeneratorPage() {
     const trimmedSourceData = tmpCtx.getImageData(bounds.minX, bounds.minY, bounds.width, bounds.height);
 
     const previews: { name: string; preview: string }[] = [];
+    const canvasMap = new Map<string, HTMLCanvasElement>();
 
     for (const config of VARIANT_CONFIG) {
       const workCanvas = document.createElement("canvas");
@@ -916,31 +917,23 @@ export default function IconGeneratorPage() {
         workCtx.drawImage(baseCanvas, bounds.minX, bounds.minY, bounds.width, bounds.height, 0, 0, bounds.width, bounds.height);
       }
 
+      canvasMap.set(config.name, workCanvas);
       previews.push({ name: config.name, preview: workCanvas.toDataURL("image/png") });
     }
 
     // Composite preview: WhiteExtruded + NoOutline on black background
-    const noOutline = previews.find((p) => p.name === "NoOutline");
-    const whiteExtruded = previews.find((p) => p.name === "WhiteExtruded");
-    if (noOutline && whiteExtruded) {
+    const noOutlineCanvas = canvasMap.get("NoOutline");
+    const whiteExtrudedCanvas = canvasMap.get("WhiteExtruded");
+    if (noOutlineCanvas && whiteExtrudedCanvas) {
       const compCanvas = document.createElement("canvas");
       compCanvas.width = bounds.width;
       compCanvas.height = bounds.height;
       const compCtx = compCanvas.getContext("2d")!;
 
-      // Black background
       compCtx.fillStyle = "#000000";
       compCtx.fillRect(0, 0, bounds.width, bounds.height);
-
-      // Draw WhiteExtruded first
-      const whiteImg = new Image();
-      whiteImg.src = whiteExtruded.preview;
-      compCtx.drawImage(whiteImg, 0, 0);
-
-      // Draw NoOutline on top
-      const modelImg = new Image();
-      modelImg.src = noOutline.preview;
-      compCtx.drawImage(modelImg, 0, 0);
+      compCtx.drawImage(whiteExtrudedCanvas, 0, 0);
+      compCtx.drawImage(noOutlineCanvas, 0, 0);
 
       previews.push({ name: "Combined", preview: compCanvas.toDataURL("image/png") });
     }
