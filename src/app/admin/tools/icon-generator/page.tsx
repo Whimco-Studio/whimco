@@ -919,6 +919,32 @@ export default function IconGeneratorPage() {
       previews.push({ name: config.name, preview: workCanvas.toDataURL("image/png") });
     }
 
+    // Composite preview: WhiteExtruded + NoOutline on black background
+    const noOutline = previews.find((p) => p.name === "NoOutline");
+    const whiteExtruded = previews.find((p) => p.name === "WhiteExtruded");
+    if (noOutline && whiteExtruded) {
+      const compCanvas = document.createElement("canvas");
+      compCanvas.width = bounds.width;
+      compCanvas.height = bounds.height;
+      const compCtx = compCanvas.getContext("2d")!;
+
+      // Black background
+      compCtx.fillStyle = "#000000";
+      compCtx.fillRect(0, 0, bounds.width, bounds.height);
+
+      // Draw WhiteExtruded first
+      const whiteImg = new Image();
+      whiteImg.src = whiteExtruded.preview;
+      compCtx.drawImage(whiteImg, 0, 0);
+
+      // Draw NoOutline on top
+      const modelImg = new Image();
+      modelImg.src = noOutline.preview;
+      compCtx.drawImage(modelImg, 0, 0);
+
+      previews.push({ name: "Combined", preview: compCanvas.toDataURL("image/png") });
+    }
+
     // Restore
     scene.background = originalBackground;
     if (grid) grid.visible = gridWasVisible;
@@ -2172,8 +2198,21 @@ export default function IconGeneratorPage() {
             ) : variants.length === 0 && previewVariants.length > 0 ? (
               <>
                 <p className="text-xs text-slate-400 text-center">Preview</p>
+                {/* Combined preview on top */}
+                {previewVariants.find((pv) => pv.name === "Combined") && (
+                  <div className="text-center">
+                    <img
+                      src={previewVariants.find((pv) => pv.name === "Combined")!.preview}
+                      alt="Combined"
+                      className="w-full aspect-square object-contain rounded-lg border border-gray-200"
+                      style={{ background: "#000000" }}
+                    />
+                    <p className="text-xs text-slate-500 mt-1">Combined</p>
+                  </div>
+                )}
+                {/* Individual variants below */}
                 <div className="grid grid-cols-2 gap-3">
-                  {previewVariants.map((pv) => {
+                  {previewVariants.filter((pv) => pv.name !== "Combined").map((pv) => {
                     const config = VARIANT_CONFIG.find((c) => c.name === pv.name);
                     return (
                       <div key={pv.name} className="text-center">
