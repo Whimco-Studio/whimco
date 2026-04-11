@@ -157,6 +157,8 @@ export default function IconGeneratorPage() {
 
   // Preview state (auto-generated thumbnails)
   const [previewVariants, setPreviewVariants] = useState<{ name: string; preview: string }[]>([]);
+  const [batchPreview, setBatchPreview] = useState<string | null>(null);
+  const [isGeneratingBatchPreview, setIsGeneratingBatchPreview] = useState(false);
 
   // Roblox upload state
   const [isUploadingToRoblox, setIsUploadingToRoblox] = useState(false);
@@ -746,6 +748,16 @@ export default function IconGeneratorPage() {
     });
   }, [strokeWidth, lightingMode]);
 
+  // Auto-refresh batch preview when relevant settings change or files are added
+  const pendingCount = fileQueue.filter((f) => f.status === "pending").length;
+  useEffect(() => {
+    if (pendingCount === 0 || isBatchProcessing) {
+      setBatchPreview(null);
+      return;
+    }
+    generateBatchPreview();
+  }, [pendingCount, batchAngle, strokeWidth, lightingMode]);
+
   // Helper: Wait for all texture images on a model to finish decoding
   const waitForTextures = async (object: THREE.Object3D) => {
     const promises: Promise<void>[] = [];
@@ -952,6 +964,148 @@ export default function IconGeneratorPage() {
     renderer.render(scene, camera);
 
     setPreviewVariants(previews);
+  };
+
+  // Generate a batch preview from the first queued file
+  const generateBatchPreview = async () => {
+    const firstPending = fileQueue.find((f) => f.status === "pending");
+    if (!firstPending || !sceneRef.current || !rendererRef.current || !cameraRef.current) return;
+    if (isGeneratingBatchPreview || isBatchProcessing) return;
+
+    setIsGeneratingBatchPreview(true);
+
+    const scene = sceneRef.current;
+    const renderer = rendererRef.current;
+    const camera = cameraRef.current;
+    const grid = gridRef.current;
+
+    // Save current model
+    const savedModel = modelRef.current;
+    if (savedModel) scene.remove(savedModel);
+
+    try {
+      const arrayBuffer = await firstPending.file.arrayBuffer();
+      const loadManager = createTextureLoadingManager();
+      let resourcesLoading = false;
+      const resourcesReady = new Promise<void>((resolve) => {
+        loadManager.onStart = () => { resourcesLoading = true; };
+        loadManager.onLoad = () => resolve();
+        loadManager.onError = () => resolve();
+      });
+
+      const fileLoader = new FBXLoader(loadManager);
+      const object = fileLoader.parse(arrayBuffer, "");
+
+      if (resourcesLoading) {
+        await Promise.race([
+          resourcesReady,
+          new Promise<void>((resolve) => setTimeout(resolve, 5000)),
+        ]);
+      }
+
+      // Center and scale
+      const box = new THREE.Box3().setFromObject(object);
+      const center = box.getCenter(new THREE.Vector3());
+      const size = box.getSize(new THREE.Vector3());
+      const maxDim = Math.max(size.x, size.y, size.z);
+      const objectScale = 100 / maxDim;
+      object.scale.multiplyScalar(objectScale);
+      object.position.sub(center.multiplyScalar(objectScale));
+      object.position.y = 0;
+
+      scene.add(object);
+      modelRef.current = object;
+
+      // Position camera at batch angle
+      const dir = new THREE.Vector3(
+        batchAngle.position[0], batchAngle.position[1], batchAngle.position[2]
+      ).normalize();
+      if (controlsRef.current) {
+        fitCameraToModel(camera, object, controlsRef.current, dir);
+      }
+
+      // Render and capture
+      const originalBackground = scene.background;
+      const gridWasVisible = grid?.visible ?? false;
+      if (grid) grid.visible = false;
+      scene.background = null;
+
+      renderer.render(scene, camera);
+
+      const baseCanvas = renderer.domElement;
+      const tmpCtx = document.createElement("canvas").getContext("2d")!;
+      tmpCtx.canvas.width = baseCanvas.width;
+      tmpCtx.canvas.height = baseCanvas.height;
+      tmpCtx.drawImage(baseCanvas, 0, 0);
+
+      const baseImageData = tmpCtx.getImageData(0, 0, baseCanvas.width, baseCanvas.height);
+      const bounds = getTrimBounds(baseImageData, strokeWidth + 2);
+      const trimmedSourceData = tmpCtx.getImageData(bounds.minX, bounds.minY, bounds.width, bounds.height);
+
+      const canvasMap = new Map<string, HTMLCanvasElement>();
+      for (const config of VARIANT_CONFIG) {
+        const workCanvas = document.createElement("canvas");
+        workCanvas.width = bounds.width;
+        workCanvas.height = bounds.height;
+        const workCtx = workCanvas.getContext("2d")!;
+
+        if (config.outlineColor) {
+          const sl = createStrokeLayer(trimmedSourceData, bounds.width, bounds.height, config.outlineColor, strokeWidth);
+          workCtx.putImageData(sl, 0, 0);
+        }
+        if (config.fillColor) {
+          const r = parseInt(config.fillColor.slice(1, 3), 16);
+          const g = parseInt(config.fillColor.slice(3, 5), 16);
+          const b = parseInt(config.fillColor.slice(5, 7), 16);
+          const fillData = workCtx.getImageData(0, 0, bounds.width, bounds.height);
+          for (let px = 0; px < trimmedSourceData.data.length; px += 4) {
+            if (trimmedSourceData.data[px + 3] > 0) {
+              fillData.data[px] = r;
+              fillData.data[px + 1] = g;
+              fillData.data[px + 2] = b;
+              fillData.data[px + 3] = 255;
+            }
+          }
+          workCtx.putImageData(fillData, 0, 0);
+        }
+        if (config.showModel) {
+          workCtx.drawImage(baseCanvas, bounds.minX, bounds.minY, bounds.width, bounds.height, 0, 0, bounds.width, bounds.height);
+        }
+        canvasMap.set(config.name, workCanvas);
+      }
+
+      // Composite
+      const noOutlineCanvas = canvasMap.get("NoOutline");
+      const whiteExtrudedCanvas = canvasMap.get("WhiteExtruded");
+      if (noOutlineCanvas && whiteExtrudedCanvas) {
+        const compCanvas = document.createElement("canvas");
+        compCanvas.width = bounds.width;
+        compCanvas.height = bounds.height;
+        const compCtx = compCanvas.getContext("2d")!;
+        compCtx.fillStyle = "#000000";
+        compCtx.fillRect(0, 0, bounds.width, bounds.height);
+        compCtx.drawImage(whiteExtrudedCanvas, 0, 0);
+        compCtx.drawImage(noOutlineCanvas, 0, 0);
+        setBatchPreview(compCanvas.toDataURL("image/png"));
+      }
+
+      // Restore
+      scene.background = originalBackground;
+      if (grid) grid.visible = gridWasVisible;
+      scene.remove(object);
+    } catch {
+      setBatchPreview(null);
+    }
+
+    // Restore original model
+    if (savedModel) {
+      scene.add(savedModel);
+      modelRef.current = savedModel;
+    } else {
+      modelRef.current = null;
+    }
+    renderer.render(scene, camera);
+    setIsGeneratingBatchPreview(false);
   };
 
   // Capture current view and generate variants
@@ -2378,27 +2532,54 @@ export default function IconGeneratorPage() {
           </label>
         </div>
 
-        {/* Batch Angle Selector */}
-        <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2 flex-wrap">
-          <span className="text-xs text-slate-500 mr-1">Angle:</span>
-          {CAMERA_ANGLES.map((angle) => (
-            <button
-              key={angle.name}
-              type="button"
-              onClick={() => {
-                setBatchAngle(angle);
-                snapToAngle(angle.position);
-              }}
-              className={`px-2 py-1 text-xs rounded-md transition-colors ${
-                batchAngle.name === angle.name
-                  ? "bg-purple-600 text-white"
-                  : "bg-gray-100 text-slate-600 hover:bg-gray-200"
-              }`}
-            >
-              {angle.icon} {angle.name}
-            </button>
-          ))}
+        {/* Batch Settings */}
+        <div className="px-4 py-3 border-b border-gray-100 space-y-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs text-slate-500 mr-1">Angle:</span>
+            {CAMERA_ANGLES.map((angle) => (
+              <button
+                key={angle.name}
+                type="button"
+                onClick={() => {
+                  setBatchAngle(angle);
+                  snapToAngle(angle.position);
+                }}
+                className={`px-2 py-1 text-xs rounded-md transition-colors ${
+                  batchAngle.name === angle.name
+                    ? "bg-purple-600 text-white"
+                    : "bg-gray-100 text-slate-600 hover:bg-gray-200"
+                }`}
+              >
+                {angle.icon} {angle.name}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-slate-500">Outline:</span>
+            <span className="text-xs font-medium text-purple-600">{strokeWidth}px</span>
+            <input
+              type="range"
+              min="1"
+              max="12"
+              value={strokeWidth}
+              onChange={(e) => setStrokeWidth(parseInt(e.target.value))}
+              className="flex-1 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-600"
+            />
+          </div>
         </div>
+
+        {/* Batch Preview */}
+        {batchPreview && !isBatchProcessing && (
+          <div className="px-4 py-3 border-b border-gray-100">
+            <p className="text-xs text-slate-400 text-center mb-2">Preview (first file)</p>
+            <img
+              src={batchPreview}
+              alt="Batch preview"
+              className="w-full max-w-[200px] mx-auto aspect-square object-contain rounded-lg border border-gray-200"
+              style={{ background: "#000000" }}
+            />
+          </div>
+        )}
 
         {fileQueue.length > 0 ? (
           <>
