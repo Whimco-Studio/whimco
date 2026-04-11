@@ -56,14 +56,10 @@ const CAMERA_ANGLES = [
   { name: "Left", position: [-150, 50, 0], icon: "⬅️" },
   { name: "Right", position: [150, 50, 0], icon: "➡️" },
   { name: "Top", position: [0, 200, 0.1], icon: "🔝" },
-  { name: "1/4 Front Left", position: [-60, 30, 130], icon: "↖️" },
-  { name: "1/4 Front Right", position: [60, 30, 130], icon: "↗️" },
-  { name: "1/4 Back Left", position: [-60, 30, -130], icon: "↙️" },
-  { name: "1/4 Back Right", position: [60, 30, -130], icon: "↘️" },
-  { name: "3/4 Front Left", position: [-100, 80, 100], icon: "↖️" },
-  { name: "3/4 Front Right", position: [100, 80, 100], icon: "↗️" },
-  { name: "3/4 Back Left", position: [-100, 80, -100], icon: "↙️" },
-  { name: "3/4 Back Right", position: [100, 80, -100], icon: "↘️" },
+  { name: "3/4 Front Left", position: [-100, 30, 100], icon: "↖️" },
+  { name: "3/4 Front Right", position: [100, 30, 100], icon: "↗️" },
+  { name: "3/4 Back Left", position: [-100, 30, -100], icon: "↙️" },
+  { name: "3/4 Back Right", position: [100, 30, -100], icon: "↘️" },
 ];
 
 const VARIANT_CONFIG = [
@@ -157,7 +153,7 @@ export default function IconGeneratorPage() {
   const [fileQueue, setFileQueue] = useState<QueuedFile[]>([]);
   const [isBatchProcessing, setIsBatchProcessing] = useState(false);
   const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 });
-  const [batchAngle, setBatchAngle] = useState(CAMERA_ANGLES[9]); // default: 3/4 Front Left
+  const [batchAngle, setBatchAngle] = useState(CAMERA_ANGLES[5]); // default: 3/4 Front Left
 
   // Roblox upload state
   const [isUploadingToRoblox, setIsUploadingToRoblox] = useState(false);
