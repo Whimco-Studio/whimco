@@ -1407,7 +1407,7 @@ export default function IconGeneratorPage() {
 
       return `<Item class="ImageLabel" referent="${makeReferent()}">
 				<Properties>
-					<Content name="Image"><url>rbxassetid://${imageId}</url></Content>
+					<Content name="Image"><url>rbxthumb://type=Asset&amp;id=${imageId}&amp;w=420&amp;h=420</url></Content>
 					<Color3 name="ImageColor3"><R>1</R><G>1</G><B>1</B></Color3>
 					<Vector2 name="ImageRectOffset"><X>0</X><Y>0</Y></Vector2>
 					<Vector2 name="ImageRectSize"><X>0</X><Y>0</Y></Vector2>
