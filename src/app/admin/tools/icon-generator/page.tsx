@@ -153,6 +153,7 @@ export default function IconGeneratorPage() {
   const [fileQueue, setFileQueue] = useState<QueuedFile[]>([]);
   const [isBatchProcessing, setIsBatchProcessing] = useState(false);
   const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 });
+  const [batchAngle, setBatchAngle] = useState(CAMERA_ANGLES[5]); // default: 3/4 Front Left
 
   // Roblox upload state
   const [isUploadingToRoblox, setIsUploadingToRoblox] = useState(false);
@@ -1059,6 +1060,7 @@ export default function IconGeneratorPage() {
     // Capture the current lighting mode at start of batch
     const batchLightingMode = lightingMode;
     const batchStrokeWidth = strokeWidth;
+    const batchCameraAngle = batchAngle.position;
 
     setIsBatchProcessing(true);
     setBatchProgress({ current: 0, total: fileQueue.length });
@@ -1217,9 +1219,9 @@ export default function IconGeneratorPage() {
             break;
         }
 
-        // Fit camera to model bounds
+        // Fit camera to model bounds using selected batch angle
         if (controlsRef.current) {
-          const dir = new THREE.Vector3(100, 80, 100).normalize();
+          const dir = new THREE.Vector3(batchCameraAngle[0], batchCameraAngle[1], batchCameraAngle[2]).normalize();
           fitCameraToModel(camera, object, controlsRef.current, dir);
         }
 
@@ -2199,6 +2201,25 @@ export default function IconGeneratorPage() {
               className="hidden"
             />
           </label>
+        </div>
+
+        {/* Batch Angle Selector */}
+        <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-slate-500 mr-1">Angle:</span>
+          {CAMERA_ANGLES.map((angle) => (
+            <button
+              key={angle.name}
+              type="button"
+              onClick={() => setBatchAngle(angle)}
+              className={`px-2 py-1 text-xs rounded-md transition-colors ${
+                batchAngle.name === angle.name
+                  ? "bg-purple-600 text-white"
+                  : "bg-gray-100 text-slate-600 hover:bg-gray-200"
+              }`}
+            >
+              {angle.icon} {angle.name}
+            </button>
+          ))}
         </div>
 
         {fileQueue.length > 0 ? (
