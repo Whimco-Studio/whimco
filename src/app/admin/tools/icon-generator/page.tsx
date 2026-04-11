@@ -738,6 +738,14 @@ export default function IconGeneratorPage() {
     applyAllMeshTextures(meshConfigsRef.current);
   }, []);
 
+  // Auto-refresh preview when stroke width or lighting mode changes
+  useEffect(() => {
+    if (!modelLoaded) return;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => generatePreview());
+    });
+  }, [strokeWidth, lightingMode]);
+
   // Helper: Wait for all texture images on a model to finish decoding
   const waitForTextures = async (object: THREE.Object3D) => {
     const promises: Promise<void>[] = [];
@@ -2191,37 +2199,19 @@ export default function IconGeneratorPage() {
             ) : variants.length === 0 && previewVariants.length > 0 ? (
               <>
                 <p className="text-xs text-slate-400 text-center">Preview</p>
-                {/* Combined preview on top */}
-                {previewVariants.find((pv) => pv.name === "Combined") && (
-                  <div className="text-center">
-                    <img
-                      src={previewVariants.find((pv) => pv.name === "Combined")!.preview}
-                      alt="Combined"
-                      className="w-full aspect-square object-contain rounded-lg border border-gray-200"
-                      style={{ background: "#000000" }}
-                    />
-                    <p className="text-xs text-slate-500 mt-1">Combined</p>
-                  </div>
-                )}
-                {/* Individual variants below */}
-                <div className="grid grid-cols-2 gap-3">
-                  {previewVariants.filter((pv) => pv.name !== "Combined").map((pv) => {
-                    const config = VARIANT_CONFIG.find((c) => c.name === pv.name);
-                    return (
-                      <div key={pv.name} className="text-center">
-                        <img
-                          src={pv.preview}
-                          alt={pv.name}
-                          className="w-full aspect-square object-contain rounded-lg border border-gray-200"
-                          style={{
-                            background: `repeating-conic-gradient(#e5e5e5 0% 25%, #ffffff 0% 50%) 50% / 16px 16px`
-                          }}
-                        />
-                        <p className="text-xs text-slate-500 mt-1">{config?.label || pv.name}</p>
-                      </div>
-                    );
-                  })}
-                </div>
+                {(() => {
+                  const combined = previewVariants.find((pv) => pv.name === "Combined");
+                  return combined ? (
+                    <div className="text-center">
+                      <img
+                        src={combined.preview}
+                        alt="Combined"
+                        className="w-full aspect-square object-contain rounded-lg border border-gray-200"
+                        style={{ background: "#000000" }}
+                      />
+                    </div>
+                  ) : null;
+                })()}
                 <p className="text-xs text-slate-400 text-center mt-2">Click Capture for full-resolution output</p>
               </>
             ) : (
