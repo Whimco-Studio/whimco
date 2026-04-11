@@ -1608,6 +1608,31 @@ export default function IconGeneratorPage() {
 			</Item>`;
     };
 
+    // Build Lua table for ModuleScript
+    const luaEntries = items.map((item) => {
+      const extruded = item.variants.find((v) => v.variantName === "WhiteExtruded");
+      const noOutline = item.variants.find((v) => v.variantName === "NoOutline");
+      if (!extruded || !noOutline) return "";
+      const aspectRatio = extruded.width / extruded.height;
+      return `\t${item.assetName} = {\n\t\tNoOutline = ${noOutline.robloxAssetId},\n\t\tWhiteExtruded = ${extruded.robloxAssetId},\n\t\tAspectRatio = ${aspectRatio},\n\t},`;
+    }).filter(Boolean).join("\n");
+
+    const moduleSource = `return {\n${luaEntries}\n}`;
+
+    const moduleScript = `<Item class="ModuleScript" referent="${makeReferent()}">
+				<Properties>
+					<Content name="LinkedSource"><null></null></Content>
+					<ProtectedString name="Source"><![CDATA[${moduleSource}]]></ProtectedString>
+					<string name="ScriptGuid">{${makeReferent()}}</string>
+					<BinaryString name="AttributesSerialize"></BinaryString>
+					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+					<bool name="DefinesCapabilities">false</bool>
+					<string name="Name">IconData</string>
+					<int64 name="SourceAssetId">-1</int64>
+					<BinaryString name="Tags"></BinaryString>
+				</Properties>
+			</Item>`;
+
     // Build items for each model
     const modelItems = items.map((item) => {
       const extruded = item.variants.find((v) => v.variantName === "WhiteExtruded");
@@ -1756,6 +1781,7 @@ export default function IconGeneratorPage() {
 			</Item>
 			${modelItems}
 		</Item>
+		${moduleScript}
 	</Item>
 </roblox>`;
   };
@@ -1849,18 +1875,39 @@ export default function IconGeneratorPage() {
       });
 
       const rbxmx = generateRbxmx(containerName, results);
-      const blob = new Blob([rbxmx], { type: "application/xml" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${containerName}.rbxmx`;
-      a.click();
-      URL.revokeObjectURL(url);
+      const rbxmxBlob = new Blob([rbxmx], { type: "application/xml" });
+      const rbxmxUrl = URL.createObjectURL(rbxmxBlob);
+      const rbxmxLink = document.createElement("a");
+      rbxmxLink.href = rbxmxUrl;
+      rbxmxLink.download = `${containerName}.rbxmx`;
+      rbxmxLink.click();
+      URL.revokeObjectURL(rbxmxUrl);
+
+      // Generate and download JSON
+      const jsonData: Record<string, { NoOutline: number; WhiteExtruded: number; AspectRatio: number }> = {};
+      for (const item of results) {
+        const noOutline = item.variants.find((v) => v.variantName === "NoOutline");
+        const extruded = item.variants.find((v) => v.variantName === "WhiteExtruded");
+        if (noOutline && extruded) {
+          jsonData[item.assetName] = {
+            NoOutline: parseInt(noOutline.robloxAssetId),
+            WhiteExtruded: parseInt(extruded.robloxAssetId),
+            AspectRatio: extruded.width / extruded.height,
+          };
+        }
+      }
+      const jsonBlob = new Blob([JSON.stringify(jsonData, null, 4)], { type: "application/json" });
+      const jsonUrl = URL.createObjectURL(jsonBlob);
+      const jsonLink = document.createElement("a");
+      jsonLink.href = jsonUrl;
+      jsonLink.download = `${containerName}.json`;
+      jsonLink.click();
+      URL.revokeObjectURL(jsonUrl);
 
       setRobloxUploadProgress({
         current: totalUploads,
         total: totalUploads,
-        label: `Done! ${totalUploads} images uploaded, RBXMX downloaded.`,
+        label: `Done! ${totalUploads} images uploaded, RBXMX + JSON downloaded.`,
       });
     } catch (err) {
       setRobloxUploadError(err instanceof Error ? err.message : "Upload failed");
