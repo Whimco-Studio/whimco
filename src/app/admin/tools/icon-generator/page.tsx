@@ -2210,7 +2210,10 @@ export default function IconGeneratorPage() {
             <button
               key={angle.name}
               type="button"
-              onClick={() => setBatchAngle(angle)}
+              onClick={() => {
+                setBatchAngle(angle);
+                snapToAngle(angle.position);
+              }}
               className={`px-2 py-1 text-xs rounded-md transition-colors ${
                 batchAngle.name === angle.name
                   ? "bg-purple-600 text-white"
