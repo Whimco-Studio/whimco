@@ -155,6 +155,9 @@ export default function IconGeneratorPage() {
   const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 });
   const [batchAngle, setBatchAngle] = useState(CAMERA_ANGLES[5]); // default: 3/4 Front Left
 
+  // Preview state (auto-generated thumbnails)
+  const [previewVariants, setPreviewVariants] = useState<{ name: string; preview: string }[]>([]);
+
   // Roblox upload state
   const [isUploadingToRoblox, setIsUploadingToRoblox] = useState(false);
   const [robloxUploadProgress, setRobloxUploadProgress] = useState({ current: 0, total: 0, label: "" });
@@ -529,6 +532,11 @@ export default function IconGeneratorPage() {
         const dir = new THREE.Vector3(100, 80, 100).normalize();
         fitCameraToModel(cameraRef.current, object, controlsRef.current, dir);
       }
+
+      // Auto-generate preview after a frame so the render is ready
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => generatePreview());
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load model");
     } finally {
@@ -627,6 +635,10 @@ export default function IconGeneratorPage() {
       controlsRef.current.target.set(0, 40, 0);
       controlsRef.current.update();
     }
+    // Refresh preview after the camera settles
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => generatePreview());
+    });
   };
 
   // Apply lighting mode
@@ -845,6 +857,76 @@ export default function IconGeneratorPage() {
     return strokeData;
   };
 
+  // Generate lightweight preview thumbnails (no blobs, just data URLs)
+  const generatePreview = () => {
+    if (!rendererRef.current || !sceneRef.current || !cameraRef.current || !modelRef.current) return;
+
+    const renderer = rendererRef.current;
+    const scene = sceneRef.current;
+    const camera = cameraRef.current;
+    const grid = gridRef.current;
+
+    const originalBackground = scene.background;
+    const gridWasVisible = grid?.visible ?? false;
+    if (grid) grid.visible = false;
+    scene.background = null;
+
+    renderer.render(scene, camera);
+
+    const baseCanvas = renderer.domElement;
+    const tmpCtx = document.createElement("canvas").getContext("2d")!;
+    tmpCtx.canvas.width = baseCanvas.width;
+    tmpCtx.canvas.height = baseCanvas.height;
+    tmpCtx.drawImage(baseCanvas, 0, 0);
+
+    const baseImageData = tmpCtx.getImageData(0, 0, baseCanvas.width, baseCanvas.height);
+    const bounds = getTrimBounds(baseImageData, strokeWidth + 2);
+    const trimmedSourceData = tmpCtx.getImageData(bounds.minX, bounds.minY, bounds.width, bounds.height);
+
+    const previews: { name: string; preview: string }[] = [];
+
+    for (const config of VARIANT_CONFIG) {
+      const workCanvas = document.createElement("canvas");
+      workCanvas.width = bounds.width;
+      workCanvas.height = bounds.height;
+      const workCtx = workCanvas.getContext("2d")!;
+
+      if (config.outlineColor) {
+        const strokeLayer = createStrokeLayer(trimmedSourceData, bounds.width, bounds.height, config.outlineColor, strokeWidth);
+        workCtx.putImageData(strokeLayer, 0, 0);
+      }
+
+      if (config.fillColor) {
+        const r = parseInt(config.fillColor.slice(1, 3), 16);
+        const g = parseInt(config.fillColor.slice(3, 5), 16);
+        const b = parseInt(config.fillColor.slice(5, 7), 16);
+        const fillData = workCtx.getImageData(0, 0, bounds.width, bounds.height);
+        for (let px = 0; px < trimmedSourceData.data.length; px += 4) {
+          if (trimmedSourceData.data[px + 3] > 0) {
+            fillData.data[px] = r;
+            fillData.data[px + 1] = g;
+            fillData.data[px + 2] = b;
+            fillData.data[px + 3] = 255;
+          }
+        }
+        workCtx.putImageData(fillData, 0, 0);
+      }
+
+      if (config.showModel) {
+        workCtx.drawImage(baseCanvas, bounds.minX, bounds.minY, bounds.width, bounds.height, 0, 0, bounds.width, bounds.height);
+      }
+
+      previews.push({ name: config.name, preview: workCanvas.toDataURL("image/png") });
+    }
+
+    // Restore
+    scene.background = originalBackground;
+    if (grid) grid.visible = gridWasVisible;
+    renderer.render(scene, camera);
+
+    setPreviewVariants(previews);
+  };
+
   // Capture current view and generate variants
   const captureVariants = async () => {
     if (!rendererRef.current || !sceneRef.current || !cameraRef.current || !modelRef.current) {
@@ -991,6 +1073,7 @@ export default function IconGeneratorPage() {
 
     console.log("[Single] === captureVariants DONE === variants:", capturedVariants.length);
     setVariants(capturedVariants);
+    setPreviewVariants([]);
     setIsCapturing(false);
   };
 
@@ -2080,12 +2163,35 @@ export default function IconGeneratorPage() {
           </div>
 
           <div className="p-4 space-y-3 max-h-[400px] overflow-y-auto">
-            {variants.length === 0 ? (
+            {variants.length === 0 && previewVariants.length === 0 ? (
               <div className="text-center py-8 text-slate-400">
                 <CameraIcon className="w-12 h-12 mx-auto mb-2 opacity-50" />
                 <p>No captures yet</p>
                 <p className="text-xs mt-1">Load an FBX and click Capture</p>
               </div>
+            ) : variants.length === 0 && previewVariants.length > 0 ? (
+              <>
+                <p className="text-xs text-slate-400 text-center">Preview</p>
+                <div className="grid grid-cols-2 gap-3">
+                  {previewVariants.map((pv) => {
+                    const config = VARIANT_CONFIG.find((c) => c.name === pv.name);
+                    return (
+                      <div key={pv.name} className="text-center">
+                        <img
+                          src={pv.preview}
+                          alt={pv.name}
+                          className="w-full aspect-square object-contain rounded-lg border border-gray-200"
+                          style={{
+                            background: `repeating-conic-gradient(#e5e5e5 0% 25%, #ffffff 0% 50%) 50% / 16px 16px`
+                          }}
+                        />
+                        <p className="text-xs text-slate-500 mt-1">{config?.label || pv.name}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-slate-400 text-center mt-2">Click Capture for full-resolution output</p>
+              </>
             ) : (
               variants.map((variant) => {
                 const config = VARIANT_CONFIG.find((c) => c.name === variant.name);
