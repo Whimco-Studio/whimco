@@ -1,6 +1,6 @@
 // Roblox Asset Types
 
-export type AssetType = "image" | "audio" | "model";
+export type AssetType = "image" | "audio" | "model" | "animation";
 export type AssetStatus = "pending" | "uploading" | "processing" | "completed" | "failed";
 export type DestinationType = "user" | "group";
 

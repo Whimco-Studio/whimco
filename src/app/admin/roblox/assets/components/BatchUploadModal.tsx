@@ -42,6 +42,7 @@ const ACCEPTED_FILES: Record<AssetType, string[]> = {
   image: [".png", ".jpg", ".jpeg", ".bmp", ".tga"],
   audio: [".mp3", ".ogg"],
   model: [".fbx"],
+  animation: [".fbx"],
 };
 
 const ACCEPT_STRING = Object.values(ACCEPTED_FILES).flat().join(",");
