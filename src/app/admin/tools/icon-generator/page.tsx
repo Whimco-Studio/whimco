@@ -1680,8 +1680,12 @@ export default function IconGeneratorPage() {
             roblox_user_id: config.default_destination_type === "user" ? config.roblox_user_id : undefined,
           });
 
+          if (asset.status === "failed") {
+            throw new Error(`Roblox upload failed for ${item.assetName}_${variant.name}: ${asset.error_message || "Unknown error"}`);
+          }
+
           if (!asset.roblox_asset_id) {
-            throw new Error(`Upload succeeded but no Roblox asset ID returned for ${item.assetName}_${variant.name}`);
+            throw new Error(`No Roblox asset ID returned for ${item.assetName}_${variant.name} (status: ${asset.status})`);
           }
 
           uploadedVariants.push({
