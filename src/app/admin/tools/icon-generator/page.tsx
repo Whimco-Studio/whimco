@@ -523,11 +523,10 @@ export default function IconGeneratorPage() {
       // Reset to standard lighting when loading new model
       setLightingMode("lit");
 
-      // Reset camera
+      // Fit camera to model
       if (cameraRef.current && controlsRef.current) {
-        cameraRef.current.position.set(100, 80, 100);
-        controlsRef.current.target.set(0, 40, 0);
-        controlsRef.current.update();
+        const dir = new THREE.Vector3(100, 80, 100).normalize();
+        fitCameraToModel(cameraRef.current, object, controlsRef.current, dir);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load model");
@@ -597,9 +596,32 @@ export default function IconGeneratorPage() {
     }
   }, [loadModel]);
 
+  // Fit camera to model bounds — keeps the same viewing direction but adjusts distance
+  const fitCameraToModel = (camera: THREE.PerspectiveCamera, model: THREE.Group, controls: OrbitControls, direction?: THREE.Vector3) => {
+    const box = new THREE.Box3().setFromObject(model);
+    const center = box.getCenter(new THREE.Vector3());
+    const sphere = new THREE.Sphere();
+    box.getBoundingSphere(sphere);
+
+    const fovRad = camera.fov * (Math.PI / 180);
+    const hFov = 2 * Math.atan(Math.tan(fovRad / 2) * camera.aspect);
+    const effectiveFov = Math.min(fovRad, hFov);
+
+    // Distance so the full bounding sphere fits in view, plus 15% padding
+    const distance = (sphere.radius / Math.sin(effectiveFov / 2)) * 1.15;
+
+    const dir = direction || camera.position.clone().sub(controls.target).normalize();
+    camera.position.copy(center).add(dir.multiplyScalar(distance));
+    controls.target.copy(center);
+    controls.update();
+  };
+
   // Snap camera to angle
   const snapToAngle = (position: number[]) => {
-    if (cameraRef.current && controlsRef.current) {
+    if (cameraRef.current && controlsRef.current && modelRef.current) {
+      const dir = new THREE.Vector3(position[0], position[1], position[2]).normalize();
+      fitCameraToModel(cameraRef.current, modelRef.current, controlsRef.current, dir);
+    } else if (cameraRef.current && controlsRef.current) {
       cameraRef.current.position.set(position[0], position[1], position[2]);
       controlsRef.current.target.set(0, 40, 0);
       controlsRef.current.update();
@@ -1195,10 +1217,11 @@ export default function IconGeneratorPage() {
             break;
         }
 
-        // Position camera
-        camera.position.set(100, 80, 100);
-        controlsRef.current?.target.set(0, 40, 0);
-        controlsRef.current?.update();
+        // Fit camera to model bounds
+        if (controlsRef.current) {
+          const dir = new THREE.Vector3(100, 80, 100).normalize();
+          fitCameraToModel(camera, object, controlsRef.current, dir);
+        }
 
         // Log material types after lighting applied
         const batchMatTypes: string[] = [];
