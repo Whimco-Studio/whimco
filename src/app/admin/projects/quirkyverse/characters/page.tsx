@@ -12,6 +12,7 @@ import {
   FilmIcon,
   PhotoIcon,
   ArrowUpTrayIcon,
+  ArrowDownTrayIcon,
   PlayIcon,
   PencilIcon,
   CameraIcon,
@@ -54,6 +55,8 @@ export default function QuirkyverseCharactersPage() {
   const [showIconEdit, setShowIconEdit] = useState(false);
   const [showIconGenerator, setShowIconGenerator] = useState(false);
   const [showAnimationExtractor, setShowAnimationExtractor] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportType, setExportType] = useState<"animations" | "icons">("animations");
 
   // Filter characters
   const filteredCharacters = useMemo(() => {
@@ -176,6 +179,26 @@ export default function QuirkyverseCharactersPage() {
           </div>
 
           <div className="flex gap-2">
+            <button
+              onClick={() => {
+                setExportType("animations");
+                setShowExportModal(true);
+              }}
+              className="flex items-center gap-2 px-4 py-2 bg-green-100 text-green-700 rounded-xl hover:bg-green-200 transition-colors"
+            >
+              <ArrowDownTrayIcon className="w-5 h-5" />
+              Export Animations
+            </button>
+            <button
+              onClick={() => {
+                setExportType("icons");
+                setShowExportModal(true);
+              }}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-xl hover:bg-blue-200 transition-colors"
+            >
+              <ArrowDownTrayIcon className="w-5 h-5" />
+              Export Icons
+            </button>
             <button
               onClick={() => setShowImportModal(true)}
               className="flex items-center gap-2 px-4 py-2 bg-purple-100 text-purple-700 rounded-xl hover:bg-purple-200 transition-colors"
@@ -324,6 +347,15 @@ export default function QuirkyverseCharactersPage() {
               prev ? { ...prev, animations } : null
             );
           }}
+        />
+      )}
+
+      {/* Export Modal */}
+      {showExportModal && (
+        <ExportModal
+          characters={filteredCharacters}
+          exportType={exportType}
+          onClose={() => setShowExportModal(false)}
         />
       )}
     </>
@@ -742,4 +774,173 @@ function ImportModal({
       </div>
     </div>
   );
+}
+
+function ExportModal({
+  characters,
+  exportType,
+  onClose,
+}: {
+  characters: QuirkyverseCharacter[];
+  exportType: "animations" | "icons";
+  onClose: () => void;
+}) {
+  const [copied, setCopied] = useState(false);
+  const [format, setFormat] = useState<"typescript" | "luau">("typescript");
+
+  const sorted = [...characters].sort((a, b) => a.name.localeCompare(b.name));
+
+  const generateOutput = () => {
+    if (exportType === "animations") {
+      return generateAnimationsExport(sorted, format);
+    } else {
+      return generateIconsExport(sorted, format);
+    }
+  };
+
+  const output = generateOutput();
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(output);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleDownload = () => {
+    const ext = format === "luau" ? "luau" : "ts";
+    const blob = new Blob([output], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${exportType}.${ext}`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+        <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-bold text-slate-700">
+              Export {exportType === "animations" ? "Animations" : "Icons"}
+            </h2>
+            <p className="text-sm text-slate-500 mt-1">
+              {sorted.length} characters
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <select
+              value={format}
+              onChange={(e) => setFormat(e.target.value as "typescript" | "luau")}
+              className="px-3 py-2 border border-gray-200 rounded-xl text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+            >
+              <option value="typescript">TypeScript</option>
+              <option value="luau">Luau</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="p-6 overflow-auto max-h-[60vh]">
+          <pre className="p-4 bg-gray-900 text-gray-100 rounded-xl text-xs font-mono overflow-auto whitespace-pre">
+            {output}
+          </pre>
+        </div>
+
+        <div className="p-6 border-t border-gray-100 flex justify-between">
+          <button
+            onClick={handleDownload}
+            className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-slate-700 rounded-xl hover:bg-gray-200 transition-colors"
+          >
+            <ArrowDownTrayIcon className="w-5 h-5" />
+            Download File
+          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-slate-600 hover:text-slate-800 transition-colors"
+            >
+              Close
+            </button>
+            <button
+              onClick={handleCopy}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors"
+            >
+              {copied ? (
+                <>
+                  <CheckIcon className="w-5 h-5" />
+                  Copied!
+                </>
+              ) : (
+                <>
+                  <ClipboardDocumentIcon className="w-5 h-5" />
+                  Copy to Clipboard
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function generateAnimationsExport(
+  characters: QuirkyverseCharacter[],
+  format: "typescript" | "luau"
+): string {
+  const lines: string[] = [];
+
+  if (format === "luau") {
+    lines.push("return {");
+  } else {
+    lines.push("export default {");
+  }
+
+  for (const char of characters) {
+    const anims = char.animations;
+    const keys = Object.keys(anims).filter((k) => anims[k]).sort();
+    if (keys.length === 0) continue;
+
+    lines.push(`\t${char.name}: {`);
+    for (const key of keys) {
+      lines.push(`\t\t${key}: ${anims[key]},`);
+    }
+    lines.push("\t},");
+  }
+
+  lines.push("}");
+  return lines.join("\n");
+}
+
+function generateIconsExport(
+  characters: QuirkyverseCharacter[],
+  format: "typescript" | "luau"
+): string {
+  const lines: string[] = [];
+
+  if (format === "luau") {
+    lines.push("return {");
+  } else {
+    lines.push("export default {");
+  }
+
+  for (const char of characters) {
+    const icons = char.icons;
+    // Output all keys in sorted order (asset IDs and aspect ratios together)
+    const keys = Object.keys(icons).filter((k) => icons[k] != null).sort();
+    if (keys.length === 0) continue;
+
+    lines.push(`\t${char.name}: {`);
+    for (const key of keys) {
+      lines.push(`\t\t${key}: ${icons[key]},`);
+    }
+    lines.push("\t},");
+  }
+
+  lines.push("}");
+  return lines.join("\n");
 }
