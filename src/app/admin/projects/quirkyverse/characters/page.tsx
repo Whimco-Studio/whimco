@@ -13,6 +13,7 @@ import {
   PhotoIcon,
   ArrowUpTrayIcon,
   ArrowDownTrayIcon,
+  ArrowPathIcon,
   PlayIcon,
   PencilIcon,
   CameraIcon,
@@ -33,6 +34,7 @@ import FBXPreviewModal from "./components/FBXPreviewModal";
 import IconEditModal from "./components/IconEditModal";
 import IconGeneratorModal from "./components/IconGeneratorModal";
 import AnimationExtractorModal from "./components/AnimationExtractorModal";
+import { quirkyverseApi } from "@/lib/api/quirkyverse";
 
 export default function QuirkyverseCharactersPage() {
   const {
@@ -57,6 +59,7 @@ export default function QuirkyverseCharactersPage() {
   const [showAnimationExtractor, setShowAnimationExtractor] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportType, setExportType] = useState<"animations" | "icons">("animations");
+  const [showSyncModal, setShowSyncModal] = useState(false);
 
   // Filter characters
   const filteredCharacters = useMemo(() => {
@@ -179,6 +182,13 @@ export default function QuirkyverseCharactersPage() {
           </div>
 
           <div className="flex gap-2">
+            <button
+              onClick={() => setShowSyncModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-orange-100 text-orange-700 rounded-xl hover:bg-orange-200 transition-colors"
+            >
+              <ArrowPathIcon className="w-5 h-5" />
+              Sync from Roblox
+            </button>
             <button
               onClick={() => {
                 setExportType("animations");
@@ -346,6 +356,17 @@ export default function QuirkyverseCharactersPage() {
             setSelectedCharacter((prev) =>
               prev ? { ...prev, animations } : null
             );
+          }}
+        />
+      )}
+
+      {/* Sync from Roblox Modal */}
+      {showSyncModal && (
+        <SyncModal
+          onClose={() => setShowSyncModal(false)}
+          onSynced={() => {
+            setShowSyncModal(false);
+            refresh();
           }}
         />
       )}
@@ -943,4 +964,190 @@ function generateIconsExport(
 
   lines.push("}");
   return lines.join("\n");
+}
+
+function SyncModal({
+  onClose,
+  onSynced,
+}: {
+  onClose: () => void;
+  onSynced: () => void;
+}) {
+  const [cookie, setCookie] = useState("");
+  const [groupId, setGroupId] = useState("10169730");
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [result, setResult] = useState<{
+    message: string;
+    totalAnimationsFound: number;
+    updated: Array<{
+      name: string;
+      animationsAdded: string[];
+      totalAnimations: number;
+    }>;
+    unmatchedAnimations: string[];
+  } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSync = async () => {
+    setError(null);
+    setResult(null);
+    setIsSyncing(true);
+
+    try {
+      const data = await quirkyverseApi.syncFromRoblox(cookie, groupId);
+      setResult(data);
+    } catch (err) {
+      const errorObj = err as Record<string, string>;
+      setError(errorObj?.error || errorObj?.detail || "Sync failed");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+        <div className="p-6 border-b border-gray-100">
+          <h2 className="text-xl font-bold text-slate-700">
+            Sync Animations from Roblox
+          </h2>
+          <p className="text-sm text-slate-500 mt-1">
+            Fetches animations from the Whimco group on Roblox, matches them
+            against your whitelisted creatures, and updates their asset IDs.
+          </p>
+        </div>
+
+        <div className="p-6 space-y-4">
+          {!result && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  .ROBLOSECURITY Cookie
+                </label>
+                <textarea
+                  value={cookie}
+                  onChange={(e) => setCookie(e.target.value)}
+                  placeholder="Paste your .ROBLOSECURITY cookie here (from browser DevTools → Application → Cookies)"
+                  className="w-full h-24 p-3 border border-gray-200 rounded-xl font-mono text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+                />
+                <p className="text-xs text-slate-400 mt-1">
+                  The cookie is not stored — only used for this sync request.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Group ID
+                </label>
+                <input
+                  type="text"
+                  value={groupId}
+                  onChange={(e) => setGroupId(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+                />
+              </div>
+            </>
+          )}
+
+          {error && (
+            <div className="p-3 bg-red-50 text-red-600 rounded-lg text-sm">
+              {error}
+            </div>
+          )}
+
+          {result && (
+            <div className="space-y-4">
+              <div className="p-4 bg-green-50 rounded-xl">
+                <p className="font-medium text-green-700">{result.message}</p>
+                <p className="text-sm text-green-600 mt-1">
+                  Found {result.totalAnimationsFound} total animations on Roblox
+                </p>
+              </div>
+
+              {result.updated.length > 0 && (
+                <div>
+                  <h4 className="font-medium text-slate-700 mb-2">
+                    Updated Characters ({result.updated.length})
+                  </h4>
+                  <div className="max-h-60 overflow-y-auto space-y-2">
+                    {result.updated.map((u) => (
+                      <div
+                        key={u.name}
+                        className="p-3 bg-gray-50 rounded-lg flex items-center justify-between"
+                      >
+                        <div>
+                          <p className="font-medium text-slate-700 text-sm">
+                            {u.name}
+                          </p>
+                          <p className="text-xs text-slate-500">
+                            +{u.animationsAdded.length} animations (
+                            {u.animationsAdded.join(", ")})
+                          </p>
+                        </div>
+                        <span className="text-xs font-mono text-slate-400">
+                          {u.totalAnimations} total
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {result.unmatchedAnimations.length > 0 && (
+                <div>
+                  <h4 className="font-medium text-slate-500 text-sm mb-1">
+                    Unmatched ({result.unmatchedAnimations.length})
+                  </h4>
+                  <p className="text-xs text-slate-400">
+                    {result.unmatchedAnimations.join(", ")}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="p-6 border-t border-gray-100 flex justify-end gap-3">
+          {result ? (
+            <button
+              onClick={onSynced}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors"
+            >
+              <CheckIcon className="w-5 h-5" />
+              Done
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={onClose}
+                className="px-4 py-2 text-slate-600 hover:text-slate-800 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSync}
+                disabled={isSyncing || !cookie.trim()}
+                className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-xl hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {isSyncing ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Syncing...
+                  </>
+                ) : (
+                  <>
+                    <ArrowPathIcon className="w-5 h-5" />
+                    Sync Animations
+                  </>
+                )}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }

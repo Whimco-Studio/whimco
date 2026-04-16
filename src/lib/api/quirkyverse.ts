@@ -200,4 +200,30 @@ export const quirkyverseApi = {
       }
     );
   },
+
+  /**
+   * Sync animations from Roblox Creator Hub.
+   * Fetches group animations, matches against whitelist, updates DB.
+   */
+  async syncFromRoblox(
+    cookie: string,
+    groupId?: string
+  ): Promise<{
+    message: string;
+    totalAnimationsFound: number;
+    updated: Array<{
+      name: string;
+      animationsAdded: string[];
+      totalAnimations: number;
+    }>;
+    unmatchedAnimations: string[];
+  }> {
+    return fetchWithAuth(
+      `${API_BASE_URL}/quirkyverse-characters/sync_from_roblox/`,
+      {
+        method: "POST",
+        body: JSON.stringify({ cookie, groupId: groupId || "10169730" }),
+      }
+    );
+  },
 };
