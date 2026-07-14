@@ -5,7 +5,7 @@ import React, {
 } from 'react';
 import Image from 'next/image';
 import {
-  INVITE_URL, SHOWCASE_API_URL, ShowcaseData, ShowcaseItem,
+  CATEGORY_LABELS, INVITE_URL, SHOWCASE_API_URL, ShowcaseData, ShowcaseItem,
   cleanCaption, xLink,
 } from './constants';
 
@@ -106,7 +106,9 @@ function GalleryCard({ item, onOpen }: { item: ShowcaseItem; onOpen: () => void 
         <div className="card-meta">
           <span className="card-author">by {item.author_name}</span>
           <span className="card-hearts">♥ {item.hearts.toLocaleString('en-US')}</span>
-          {item.tag && <span className="card-tag">#{item.tag}</span>}
+          {item.category && (
+            <span className="card-tag">{CATEGORY_LABELS[item.category] ?? item.category}</span>
+          )}
         </div>
       </button>
     </article>
@@ -143,7 +145,9 @@ function Lightbox({ item, onClose }: { item: ShowcaseItem; onClose: () => void }
         <div className="lightbox-meta">
           <span className="card-author">by {item.author_name}</span>
           <span className="card-hearts" aria-label={`${item.hearts} hearts`}>♥ {item.hearts.toLocaleString('en-US')}</span>
-          {item.tag && <span className="card-tag">#{item.tag}</span>}
+          {item.category && (
+            <span className="card-tag">{CATEGORY_LABELS[item.category] ?? item.category}</span>
+          )}
           {xLink(item.content) && (
             <a
               className="lightbox-source"
@@ -168,7 +172,7 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
   const [items, setItems] = useState<ShowcaseItem[]>(initialData?.items ?? []);
   const [page, setPage] = useState(initialData?.page ?? 1);
   const [pages, setPages] = useState(initialData?.pages ?? 1);
-  const [activeTag, setActiveTag] = useState('');
+  const [activeCategory, setActiveCategory] = useState('');
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState<ShowcaseItem | null>(null);
   const [statsStarted, setStatsStarted] = useState(false);
@@ -192,7 +196,7 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
   const galleryRef = useRef<HTMLDivElement>(null);
 
   const stats = initialData?.stats;
-  const tags = initialData?.tags ?? [];
+  const categories = initialData?.categories ?? [];
 
   // Start count-up when the stat strip is on screen.
   useEffect(() => {
@@ -215,11 +219,11 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
     el.style.setProperty('--my', `${e.clientY - rect.top}px`);
   }, []);
 
-  const fetchPage = useCallback(async (nextPage: number, tag: string, replace: boolean) => {
+  const fetchPage = useCallback(async (nextPage: number, category: string, replace: boolean) => {
     setLoading(true);
     try {
       const params = new URLSearchParams({ page: String(nextPage) });
-      if (tag) params.set('tag', tag);
+      if (category) params.set('category', category);
       const res = await fetch(`${SHOWCASE_API_URL}?${params}`);
       if (!res.ok) throw new Error(`showcase fetch ${res.status}`);
       const data: ShowcaseData = await res.json();
@@ -233,15 +237,15 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
     }
   }, []);
 
-  const pickTag = useCallback((tag: string) => {
-    setActiveTag(tag);
-    if (tag === '' && initialData) {
+  const pickCategory = useCallback((category: string) => {
+    setActiveCategory(category);
+    if (category === '' && initialData) {
       setItems(initialData.items);
       setPage(initialData.page);
       setPages(initialData.pages);
       return;
     }
-    fetchPage(1, tag, true);
+    fetchPage(1, category, true);
   }, [fetchPage, initialData]);
 
   return (
@@ -283,25 +287,25 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
           <span className="gallery-note">refreshes every 5 minutes</span>
         </div>
 
-        {tags.length > 0 && (
-          <div className="chips" role="group" aria-label="Filter by tag">
+        {categories.length > 0 && (
+          <div className="chips" role="group" aria-label="Filter by category">
             <button
               type="button"
-              className={`chip ${activeTag === '' ? 'chip-on' : ''}`}
-              aria-pressed={activeTag === ''}
-              onClick={() => pickTag('')}
+              className={`chip ${activeCategory === '' ? 'chip-on' : ''}`}
+              aria-pressed={activeCategory === ''}
+              onClick={() => pickCategory('')}
             >
               All
             </button>
-            {tags.map((t) => (
+            {categories.map((c) => (
               <button
-                key={t.tag}
+                key={c.category}
                 type="button"
-                className={`chip ${activeTag === t.tag ? 'chip-on' : ''}`}
-                aria-pressed={activeTag === t.tag}
-                onClick={() => pickTag(t.tag)}
+                className={`chip ${activeCategory === c.category ? 'chip-on' : ''}`}
+                aria-pressed={activeCategory === c.category}
+                onClick={() => pickCategory(c.category)}
               >
-                #{t.tag} <span className="chip-count">{t.count}</span>
+                {CATEGORY_LABELS[c.category] ?? c.category} <span className="chip-count">{c.count}</span>
               </button>
             ))}
           </div>
@@ -336,7 +340,7 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
               type="button"
               className="cta-ghost more-btn"
               disabled={loading}
-              onClick={() => fetchPage(page + 1, activeTag, false)}
+              onClick={() => fetchPage(page + 1, activeCategory, false)}
             >
               {loading ? 'Loading…' : 'Show more creations'}
             </button>

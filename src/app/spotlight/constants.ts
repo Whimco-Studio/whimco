@@ -34,9 +34,22 @@ export type ShowcaseItem = {
   author_name: string;
   content: string;
   tag: string;
+  category: string;
   hearts: number;
   created_at: string;
   media: ShowcaseMedia[];
+};
+
+export const CATEGORY_LABELS: Record<string, string> = {
+  gfx: 'GFX',
+  build: 'Builds',
+  ui: 'UI',
+  model: '3D Models',
+  animation: 'Animation',
+  clothing: 'Clothing',
+  clip: 'Videos',
+  scripting: 'Scripting',
+  audio: 'Audio',
 };
 
 export type ShowcaseStats = {
@@ -53,4 +66,5 @@ export type ShowcaseData = {
   total: number;
   stats: ShowcaseStats;
   tags: { tag: string; count: number }[];
+  categories: { category: string; count: number }[];
 };
