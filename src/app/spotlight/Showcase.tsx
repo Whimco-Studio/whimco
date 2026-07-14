@@ -85,8 +85,14 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
     }
   }, []);
 
-  const pickCategory = useCallback((category: string) => {
+  const pickCategory = useCallback((category: string, updateUrl = true) => {
     setActiveCategory(category);
+    if (updateUrl) {
+      const url = new URL(window.location.href);
+      if (category) url.searchParams.set('category', category);
+      else url.searchParams.delete('category');
+      window.history.replaceState(null, '', url);
+    }
     if (category === '' && initialData) {
       setItems(initialData.items);
       setPage(initialData.page);
@@ -95,6 +101,14 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
     }
     fetchPage(1, category, true);
   }, [fetchPage, initialData]);
+
+  // Shareable filtered views: /spotlight?category=ui applies the filter
+  // on load (and chip clicks keep the URL in sync above).
+  useEffect(() => {
+    const fromUrl = new URLSearchParams(window.location.search).get('category');
+    if (fromUrl) pickCategory(fromUrl, false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="showcase">
