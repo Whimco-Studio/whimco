@@ -68,4 +68,5 @@ export type ShowcaseData = {
   stats: ShowcaseStats;
   tags: { tag: string; count: number }[];
   categories: { category: string; count: number }[];
+  author?: { name: string; creations: number; hearts: number } | null;
 };
