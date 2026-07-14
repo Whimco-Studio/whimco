@@ -46,6 +46,7 @@ export const CATEGORY_LABELS: Record<string, string> = {
   ui: 'UI',
   model: '3D Models',
   animation: 'Animation',
+  vfx: 'VFX',
   clothing: 'Clothing',
   clip: 'Videos',
   scripting: 'Scripting',
