@@ -87,6 +87,32 @@ function CardMedia({ item }: { item: ShowcaseItem }) {
   return null;
 }
 
+function GalleryCard({ item, onOpen }: { item: ShowcaseItem; onOpen: () => void }) {
+  const caption = cleanCaption(item.content);
+  return (
+    <article className="card">
+      <button
+        type="button"
+        className="card-hit"
+        onClick={onOpen}
+        aria-label={`Open creation by ${item.author_name}`}
+      >
+        <CardMedia item={item} />
+        {caption && (
+          <p className={`card-caption ${item.media.length === 0 ? 'card-caption-only' : ''}`}>
+            {caption}
+          </p>
+        )}
+        <div className="card-meta">
+          <span className="card-author">by {item.author_name}</span>
+          <span className="card-hearts">♥ {item.hearts.toLocaleString('en-US')}</span>
+          {item.tag && <span className="card-tag">#{item.tag}</span>}
+        </div>
+      </button>
+    </article>
+  );
+}
+
 /* ------------------------------------------------------------------ */
 /* Lightbox                                                            */
 /* ------------------------------------------------------------------ */
@@ -146,6 +172,21 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState<ShowcaseItem | null>(null);
   const [statsStarted, setStatsStarted] = useState(false);
+  const [cols, setCols] = useState(4);
+
+  // Rank must read left-to-right, so items are dealt round-robin into
+  // real columns instead of CSS `columns` (which re-balances the whole
+  // set on every "load more" and pushes low-ranked items to the top of
+  // later columns).
+  useEffect(() => {
+    const compute = () => {
+      const w = window.innerWidth;
+      setCols(w < 640 ? 1 : w < 900 ? 2 : w < 1200 ? 3 : 4);
+    };
+    compute();
+    window.addEventListener('resize', compute);
+    return () => window.removeEventListener('resize', compute);
+  }, []);
 
   const statsRef = useRef<HTMLDivElement>(null);
   const galleryRef = useRef<HTMLDivElement>(null);
@@ -276,31 +317,15 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
           <div className="masonry-wrap" ref={galleryRef} onMouseMove={onGalleryMove}>
             <div className="beam-overlay" aria-hidden />
             <div className="masonry">
-              {items.map((item) => {
-                const caption = cleanCaption(item.content);
-                return (
-                  <article className="card" key={item.id}>
-                    <button
-                      type="button"
-                      className="card-hit"
-                      onClick={() => setSelected(item)}
-                      aria-label={`Open creation by ${item.author_name}`}
-                    >
-                      <CardMedia item={item} />
-                      {caption && (
-                        <p className={`card-caption ${item.media.length === 0 ? 'card-caption-only' : ''}`}>
-                          {caption}
-                        </p>
-                      )}
-                      <div className="card-meta">
-                        <span className="card-author">by {item.author_name}</span>
-                        <span className="card-hearts">♥ {item.hearts.toLocaleString('en-US')}</span>
-                        {item.tag && <span className="card-tag">#{item.tag}</span>}
-                      </div>
-                    </button>
-                  </article>
-                );
-              })}
+              {Array.from({ length: cols }, (_, c) => (
+                <div className="masonry-col" key={c}>
+                  {items
+                    .filter((_, i) => i % cols === c)
+                    .map((item) => (
+                      <GalleryCard key={item.id} item={item} onOpen={() => setSelected(item)} />
+                    ))}
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -550,12 +575,16 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
         }
 
         .showcase .masonry {
-          columns: 4 240px;
-          column-gap: 0.9rem;
+          display: flex;
+          gap: 0.9rem;
+          align-items: flex-start;
         }
-        .showcase .card {
-          break-inside: avoid;
-          margin-bottom: 0.9rem;
+        .showcase .masonry-col {
+          flex: 1;
+          min-width: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 0.9rem;
         }
         .showcase .card-hit {
           display: block;
@@ -736,7 +765,6 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
 
         @media (max-width: 640px) {
           .showcase .hero { padding-top: 7rem; }
-          .showcase .masonry { columns: 1; }
           .showcase .gallery-head { flex-direction: column; gap: 0.2rem; }
         }
       `}</style>
