@@ -12,10 +12,14 @@ export type ShowcaseMedia = {
 };
 
 const X_LINK_RE = /https?:\/\/(?:www\.)?(?:x|twitter|fxtwitter|vxtwitter)\.com\/[^\s]+/i;
+const X_STATUS_ID_RE = /(?:x|twitter|fxtwitter|vxtwitter)\.com\/[^/\s]+\/status\/(\d+)/i;
 const ANY_URL_RE = /https?:\/\/[^\s]+/gi;
 
-/** First X/Twitter link in a caption, for "view original post" links. */
+/** Canonical link to the original X post (works even when the shared URL
+    was an fxtwitter/vxtwitter mirror or had a placeholder username). */
 export function xLink(content: string): string | null {
+  const status = content.match(X_STATUS_ID_RE);
+  if (status) return `https://x.com/i/status/${status[1]}`;
   const m = content.match(X_LINK_RE);
   return m ? m[0] : null;
 }

@@ -39,6 +39,9 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: 'Spotlight — Post Once, Broadcast Everywhere | Whimco',
     description,
+    // video.twimg.com 403s any request carrying a foreign Referer, so the
+    // whole page must send none for inline X video playback to work.
+    referrer: 'no-referrer',
     openGraph: {
       title: 'Spotlight — Post Once, Broadcast Everywhere',
       description,
