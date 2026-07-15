@@ -29,6 +29,15 @@ export function cleanCaption(content: string): string {
   return content.replace(ANY_URL_RE, '').replace(/\s{2,}/g, ' ').trim();
 }
 
+/** /spotlight/@<name> — the @ marks creator portfolios so future static
+    routes under /spotlight never collide with usernames. */
+export function parseUsername(raw: string): string | null {
+  const decoded = decodeURIComponent(raw);
+  if (!decoded.startsWith('@')) return null;
+  const name = decoded.slice(1).trim();
+  return name.length > 0 && name.length <= 255 ? name : null;
+}
+
 export type ShowcaseItem = {
   id: number;
   author_name: string;

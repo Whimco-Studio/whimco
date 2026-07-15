@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { Bricolage_Grotesque, JetBrains_Mono } from 'next/font/google';
 import GlassNav from '../../components/GlassNav';
 import Portfolio from '../Portfolio';
-import { SHOWCASE_API_URL, ShowcaseData } from '../constants';
+import { parseUsername, SHOWCASE_API_URL, ShowcaseData } from '../constants';
 
 const display = Bricolage_Grotesque({
   subsets: ['latin'],
@@ -19,15 +19,6 @@ const mono = JetBrains_Mono({
 export const revalidate = 300;
 
 type Params = { params: { username: string } };
-
-/** /spotlight/@<name> — the @ marks creator portfolios so future static
-    routes under /spotlight never collide with usernames. */
-function parseUsername(raw: string): string | null {
-  const decoded = decodeURIComponent(raw);
-  if (!decoded.startsWith('@')) return null;
-  const name = decoded.slice(1).trim();
-  return name.length > 0 && name.length <= 255 ? name : null;
-}
 
 async function getPortfolio(name: string): Promise<ShowcaseData | null> {
   try {
@@ -55,11 +46,13 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
     title: `${canonical} — Spotlight Portfolio | Whimco`,
     description,
     referrer: 'no-referrer',
+    // og:image comes from opengraph-image.tsx — a live composite of the
+    // creator's top posts, so Discord/X embeds preview their actual work.
     openGraph: {
       title: `${canonical} — Spotlight Portfolio`,
       description,
-      images: ['/spotlight-logo.png'],
     },
+    twitter: { card: 'summary_large_image' },
   };
 }
 
