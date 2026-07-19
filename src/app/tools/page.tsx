@@ -43,7 +43,7 @@ const toolCategories: ToolCategory[] = [
         name: "Whimco Website",
         description: "The source code for this very website you're looking at.",
         type: "repo",
-        url: "https://github.com/whimco/whimco",
+        url: "https://github.com/Whimco-Studio/whimco",
         status: "available",
         tags: ["Next.js", "React", "TypeScript"],
       },
@@ -201,7 +201,7 @@ export default function ToolsPage() {
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <a
-                href="https://github.com/whimco"
+                href="https://github.com/Whimco-Studio"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-cyan-500 text-white font-semibold hover:bg-cyan-400 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg shadow-cyan-500/30"
