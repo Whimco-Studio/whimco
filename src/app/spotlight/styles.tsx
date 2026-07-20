@@ -396,6 +396,60 @@ export default function ShowcaseStyles() {
         color: var(--stext-dim);
       }
       .showcase .pf-sub b { color: var(--beam); font-weight: 700; }
+      .showcase .pf-name-row {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+      }
+      .showcase .pf-avatar {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        border: 2px solid var(--beam);
+      }
+      .showcase .pf-claimed {
+        font-family: var(--font-mono), monospace;
+        font-size: 0.62rem;
+        letter-spacing: 0.22em;
+        color: var(--beam);
+        border: 1px solid var(--beam);
+        border-radius: 999px;
+        padding: 0.3rem 0.7rem;
+        opacity: 0.9;
+      }
+      .showcase .pf-bio {
+        max-width: 560px;
+        font-size: 0.95rem;
+        line-height: 1.65;
+        color: var(--stext);
+        opacity: 0.85;
+      }
+      .showcase .pf-links {
+        display: flex;
+        gap: 1.4rem;
+        flex-wrap: wrap;
+        justify-content: center;
+        font-family: var(--font-mono), monospace;
+        font-size: 0.78rem;
+        letter-spacing: 0.08em;
+      }
+      .showcase .pf-links a { color: var(--beam); text-decoration: none; }
+      .showcase .pf-links a:hover { text-decoration: underline; }
+      .showcase .pf-contact {
+        font-family: var(--font-mono), monospace;
+        font-size: 0.75rem;
+        letter-spacing: 0.1em;
+        color: var(--stext-dim);
+      }
+      .showcase .pf-claim-cta {
+        font-family: var(--font-mono), monospace;
+        font-size: 0.72rem;
+        letter-spacing: 0.12em;
+        color: var(--stext-dim);
+      }
+      .showcase .pf-claim-cta a { color: var(--beam); }
 
       /* ---------------------------- lightbox -------------------- */
       .showcase .lightbox {

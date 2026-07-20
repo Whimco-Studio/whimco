@@ -4,7 +4,7 @@ import React, { useCallback, useState } from 'react';
 import GalleryGrid from './Gallery';
 import ShowcaseStyles from './styles';
 import {
-  INVITE_URL, SHOWCASE_API_URL, ShowcaseData, ShowcaseItem,
+  CLAIM_URL, INVITE_URL, SHOWCASE_API_URL, ShowcaseData, ShowcaseItem,
 } from './constants';
 
 export default function Portfolio({
@@ -16,6 +16,7 @@ export default function Portfolio({
   const [loading, setLoading] = useState(false);
 
   const author = initialData?.author;
+  const profile = initialData?.profile;
   const name = author?.name || username;
 
   const loadMore = useCallback(async () => {
@@ -39,12 +40,35 @@ export default function Portfolio({
     <div className="showcase">
       <header className="pf-head">
         <a className="pf-back" href="/spotlight">← THE SHOWCASE</a>
-        <h1 className="pf-name">{name}</h1>
+        <div className="pf-name-row">
+          {profile?.avatar_url && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img className="pf-avatar" src={profile.avatar_url} alt="" referrerPolicy="no-referrer" />
+          )}
+          <h1 className="pf-name">{name}</h1>
+          {profile && <span className="pf-claimed" title="This creator verified ownership via Discord">CLAIMED</span>}
+        </div>
         {author && (
           <p className="pf-sub">
             <b>{author.creations.toLocaleString('en-US')}</b> creation{author.creations === 1 ? '' : 's'} broadcast
             {' · '}
             <b>{author.hearts.toLocaleString('en-US')}</b> heart{author.hearts === 1 ? '' : 's'} from the network
+          </p>
+        )}
+        {profile?.bio && <p className="pf-bio">{profile.bio}</p>}
+        {profile && profile.links.length > 0 && (
+          <p className="pf-links">
+            {profile.links.map((l) => (
+              <a key={l.url} href={l.url} target="_blank" rel="nofollow noopener noreferrer">
+                {l.label} ↗
+              </a>
+            ))}
+          </p>
+        )}
+        {profile?.contact && <p className="pf-contact">{profile.contact}</p>}
+        {!profile && author && author.creations > 0 && (
+          <p className="pf-claim-cta">
+            Is this you? <a href={CLAIM_URL}>Claim this portfolio →</a>
           </p>
         )}
       </header>

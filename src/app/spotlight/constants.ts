@@ -69,6 +69,15 @@ export type ShowcaseStats = {
   hearts_given: number;
 };
 
+/** Claimed-portfolio profile block (author mode only; null when unclaimed). */
+export type ShowcaseProfile = {
+  username: string;
+  avatar_url: string | null;
+  bio: string;
+  links: { label: string; url: string }[];
+  contact: string;
+};
+
 export type ShowcaseData = {
   items: ShowcaseItem[];
   page: number;
@@ -78,4 +87,7 @@ export type ShowcaseData = {
   tags: { tag: string; count: number }[];
   categories: { category: string; count: number }[];
   author?: { name: string; creations: number; hearts: number } | null;
+  profile?: ShowcaseProfile | null;
 };
+
+export const CLAIM_URL = 'https://spotlight.whimco.com/claim';
