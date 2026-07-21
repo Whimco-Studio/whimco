@@ -17,6 +17,7 @@ function CardMedia({ item }: { item: ShowcaseItem }) {
         <video
           ref={videoRef}
           src={media.url}
+          referrerPolicy="no-referrer"
           poster={media.thumbnail || undefined}
           muted
           loop
@@ -34,7 +35,7 @@ function CardMedia({ item }: { item: ShowcaseItem }) {
       <div className="card-media">
         {/* Presigned S3 URLs rotate every revalidate — plain img, not
             next/image, so the optimizer cache never 403s on expiry. */}
-        <img src={media.url} alt={cleanCaption(item.content).slice(0, 80) || `Creation by ${item.author_name}`} loading="lazy" />
+        <img src={media.url} referrerPolicy="no-referrer" alt={cleanCaption(item.content).slice(0, 80) || `Creation by ${item.author_name}`} loading="lazy" />
         {item.media.length > 1 && (
           <span className="count-badge">+{item.media.length - 1}</span>
         )}
@@ -102,8 +103,8 @@ function Lightbox({ item, onClose }: { item: ShowcaseItem; onClose: () => void }
         <div className="lightbox-media">
           {item.media.map((m) => (
             m.content_type.startsWith('video/')
-              ? <video key={m.url} src={m.url} poster={m.thumbnail || undefined} controls playsInline />
-              : <img key={m.url} src={m.url} alt="" />
+              ? <video key={m.url} src={m.url} referrerPolicy="no-referrer" poster={m.thumbnail || undefined} controls playsInline />
+              : <img key={m.url} src={m.url} referrerPolicy="no-referrer" alt="" />
           ))}
         </div>
         {cleanCaption(item.content) && <p className="lightbox-caption">{cleanCaption(item.content)}</p>}

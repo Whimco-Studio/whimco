@@ -36,7 +36,7 @@ export default function SpotlightIntro() {
 				setShow(false);
 				return;
 			}
-			const audio = new Audio('/spotlight-strike.m4a');
+			const audio = new Audio('/spotlight-strike.mp3');
 			audio.volume = 0.55;
 			const timer = setTimeout(() => {
 				audio.play().then(
