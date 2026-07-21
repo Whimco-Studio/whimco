@@ -27,7 +27,9 @@ export default function SpotlightIntro() {
 
 	useEffect(() => {
 		try {
-			if (sessionStorage.getItem(SEEN_KEY)) {
+			// ?intro forces a replay — demo/testing hook.
+			const force = new URLSearchParams(location.search).has('intro');
+			if (!force && sessionStorage.getItem(SEEN_KEY)) {
 				setShow(false);
 				return;
 			}
@@ -64,7 +66,7 @@ export default function SpotlightIntro() {
 			</div>
 			<script
 				dangerouslySetInnerHTML={{
-					__html: `try{if(sessionStorage.getItem('${SEEN_KEY}')){var e=document.getElementById('si-stage');if(e)e.style.display='none'}}catch(e){}`,
+					__html: `try{if(location.search.indexOf('intro')<0&&sessionStorage.getItem('${SEEN_KEY}')){var e=document.getElementById('si-stage');if(e)e.style.display='none'}}catch(e){}`,
 				}}
 			/>
 			<style>{`
