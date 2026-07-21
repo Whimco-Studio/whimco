@@ -3,6 +3,7 @@ import { Bricolage_Grotesque, JetBrains_Mono } from 'next/font/google';
 import GlassNav from '../components/GlassNav';
 import Showcase from './Showcase';
 import HowItWorks from './HowItWorks';
+import SpotlightIntro from './SpotlightIntro';
 import { SHOWCASE_API_URL, ShowcaseData } from './constants';
 
 const display = Bricolage_Grotesque({
@@ -63,6 +64,7 @@ export default async function SpotlightPage() {
       style={{ background: '#0a0a0f', minHeight: '100vh' }}
     >
       <GlassNav />
+      <SpotlightIntro />
       <Showcase initialData={data} />
       <div
         style={{
