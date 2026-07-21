@@ -1,10 +1,11 @@
 /**
- * Spotlight-reveal intro: the page loads under darkness, a soft-edged
- * circle of light snaps on over the wordmark with a flicker — revealing
- * the real page through it — holds a beat, then irises open to full.
+ * Spotlight-reveal intro: the page loads under darkness, a soft radial
+ * gradient — transparent center feathering to black — flickers on over
+ * the wordmark, revealing the real page through it, then irises open.
  *
- * The "hole" is a transparent circle whose enormous soft box-shadow is the
- * darkness, so the reveal is genuine page content, not a glow overlay.
+ * The veil is one oversized div with a static radial-gradient background,
+ * animated only with transform: scale — fully compositor-driven (no
+ * per-frame gradient or shadow repaints), so the iris opens smoothly.
  *
  * Server component — pure CSS on a pointer-events-none overlay, so content
  * underneath renders and stays interactive from first paint. The inline
@@ -15,13 +16,13 @@ export default function SpotlightIntro() {
 	return (
 		<>
 			<div id="si-stage" aria-hidden="true">
-				<div className="si-hole" />
+				<div className="si-veil" />
 				<div className="si-blackout" />
 			</div>
 			<script
 				dangerouslySetInnerHTML={{
 					__html:
-						"try{if(sessionStorage.getItem('si-seen-3')){document.getElementById('si-stage').style.display='none'}else{sessionStorage.setItem('si-seen-3','1')}}catch(e){}",
+						"try{if(sessionStorage.getItem('si-seen-4')){document.getElementById('si-stage').style.display='none'}else{sessionStorage.setItem('si-seen-4','1')}}catch(e){}",
 				}}
 			/>
 			<style>{`
@@ -33,17 +34,22 @@ export default function SpotlightIntro() {
           overflow: hidden;
           animation: si-gone 0.01s linear 1.5s forwards;
         }
-        /* Transparent circle over the wordmark; its huge blurred shadow is
-           the darkness, so the page shows through the soft-edged hole. */
-        #si-stage .si-hole {
+        /* The darkness: transparent core over the wordmark, feathered edge,
+           solid black beyond. Oversized so its edges never enter the
+           viewport while the scale-up runs. */
+        #si-stage .si-veil {
           position: absolute;
           left: 50%;
           top: 27vh;
-          width: min(64vw, 380px);
-          aspect-ratio: 1;
-          border-radius: 50%;
+          width: 160vmax;
+          height: 160vmax;
           transform: translate(-50%, -50%) scale(1);
-          box-shadow: 0 0 90px 200vmax #050508;
+          will-change: transform;
+          background: radial-gradient(
+            circle,
+            transparent 0 150px,
+            #050508 330px
+          );
           animation: si-open 0.55s ease-in 0.9s forwards;
         }
         /* Full blackout on top that flickers off — the lamp catching.
@@ -63,10 +69,9 @@ export default function SpotlightIntro() {
           74% { opacity: 0; }
           100% { opacity: 0; }
         }
-        /* Iris opens: the hole grows until the darkness is pushed off
-           screen; the shadow blur scales with it, keeping the edge soft. */
+        /* Iris opens: pure transform scale, feathered edge grows with it. */
         @keyframes si-open {
-          to { transform: translate(-50%, -50%) scale(14); }
+          to { transform: translate(-50%, -50%) scale(10); }
         }
         @keyframes si-gone {
           to { opacity: 0; visibility: hidden; }
