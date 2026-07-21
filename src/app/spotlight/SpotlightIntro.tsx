@@ -39,7 +39,7 @@ export default function SpotlightIntro() {
 				return;
 			}
 			const audio = new Audio('/spotlight-strike.mp3');
-			audio.volume = 0.55;
+			audio.volume = 0.28;
 			const timer = setTimeout(() => {
 				audio.play().then(
 					() => console.debug('[spotlight-intro] sfx playing'),
