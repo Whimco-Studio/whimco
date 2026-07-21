@@ -1,18 +1,61 @@
+'use client';
+
 /**
  * Spotlight-reveal intro: the page loads under darkness, a soft radial
  * gradient — transparent center feathering to black — flickers on over
  * the wordmark, revealing the real page through it, then irises open.
+ * A stage-light switch SFX fires with the flicker.
+ *
+ * Client component: the effect owns the once-per-session check and the
+ * audio because it runs on BOTH full loads and App Router client-side
+ * navigations — an inline script only executes on the former, and the
+ * nav-click case is precisely where browsers allow audio (a user gesture
+ * already happened; fresh direct loads are autoplay-muted regardless).
+ * The parse-time script below remains as the no-flash guard so repeat
+ * visitors on a full load never see the dark overlay paint.
  *
  * The veil is one oversized div with a static radial-gradient background,
- * animated only with transform: scale — fully compositor-driven (no
- * per-frame gradient or shadow repaints), so the iris opens smoothly.
- *
- * Server component — pure CSS on a pointer-events-none overlay, so content
- * underneath renders and stays interactive from first paint. The inline
- * script runs during HTML parse and hides the overlay for repeat visitors
- * before anything is painted (no flash). Reduced-motion users never see it.
+ * animated only with transform: scale — fully compositor-driven, so the
+ * iris opens without repaint stutter. Reduced-motion users skip it all.
  */
+import { useEffect, useState } from 'react';
+
+const SEEN_KEY = 'si-seen-5';
+
 export default function SpotlightIntro() {
+	const [show, setShow] = useState(true);
+
+	useEffect(() => {
+		try {
+			if (sessionStorage.getItem(SEEN_KEY)) {
+				setShow(false);
+				return;
+			}
+			sessionStorage.setItem(SEEN_KEY, '1');
+			if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+				setShow(false);
+				return;
+			}
+			const audio = new Audio('/spotlight-strike.m4a');
+			audio.volume = 0.55;
+			const timer = setTimeout(() => {
+				audio.play().then(
+					() => console.debug('[spotlight-intro] sfx playing'),
+					(err) =>
+						console.debug(
+							'[spotlight-intro] sfx blocked by autoplay policy:',
+							err?.name,
+						),
+				);
+			}, 100);
+			return () => clearTimeout(timer);
+		} catch {
+			// Storage unavailable (some private modes): play it visually.
+		}
+	}, []);
+
+	if (!show) return null;
+
 	return (
 		<>
 			<div id="si-stage" aria-hidden="true">
@@ -21,12 +64,7 @@ export default function SpotlightIntro() {
 			</div>
 			<script
 				dangerouslySetInnerHTML={{
-					__html:
-						// Once per session; stage-light switch SFX synced to the
-						// flicker. Autoplay is browser-blocked on fresh loads (the
-						// catch swallows it) but fires for in-site navigations,
-						// where a user gesture already happened.
-						"try{if(sessionStorage.getItem('si-seen-4')){document.getElementById('si-stage').style.display='none'}else{sessionStorage.setItem('si-seen-4','1');if(!matchMedia('(prefers-reduced-motion: reduce)').matches){var a=new Audio('/spotlight-strike.m4a');a.volume=0.55;setTimeout(function(){a.play().catch(function(){})},100)}}}catch(e){}",
+					__html: `try{if(sessionStorage.getItem('${SEEN_KEY}')){var e=document.getElementById('si-stage');if(e)e.style.display='none'}}catch(e){}`,
 				}}
 			/>
 			<style>{`
