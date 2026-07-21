@@ -445,11 +445,30 @@ export default function ShowcaseStyles() {
       }
       .showcase .pf-claim-cta {
         font-family: var(--font-mono), monospace;
-        font-size: 0.72rem;
-        letter-spacing: 0.12em;
+        font-size: 0.74rem;
+        letter-spacing: 0.1em;
         color: var(--stext-dim);
+        display: flex;
+        align-items: center;
+        gap: 0.9rem;
+        flex-wrap: wrap;
+        justify-content: center;
       }
-      .showcase .pf-claim-cta a { color: var(--beam); }
+      .showcase .pf-claim-cta a {
+        display: inline-block;
+        color: var(--beam);
+        border: 1px solid var(--beam);
+        border-radius: 999px;
+        padding: 0.55rem 1.2rem;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-decoration: none;
+        transition: background 0.15s, color 0.15s;
+      }
+      .showcase .pf-claim-cta a:hover {
+        background: var(--beam);
+        color: #0a0a0f;
+      }
 
       /* ---------------------------- lightbox -------------------- */
       .showcase .lightbox {

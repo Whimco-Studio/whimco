@@ -68,7 +68,8 @@ export default function Portfolio({
         {profile?.contact && <p className="pf-contact">{profile.contact}</p>}
         {!profile && author && author.creations > 0 && (
           <p className="pf-claim-cta">
-            Is this you? <a href={CLAIM_URL}>Claim this portfolio →</a>
+            <span>Is this you?</span>
+            <a href={CLAIM_URL}>CLAIM THIS PORTFOLIO</a>
           </p>
         )}
       </header>
