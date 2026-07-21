@@ -1,10 +1,10 @@
 'use client';
 
 /**
- * Spotlight-reveal intro: the page loads under darkness, a soft radial
- * gradient — transparent center feathering to black — flickers on over
- * the wordmark, revealing the real page through it, then irises open.
- * A stage-light switch SFX fires with the flicker.
+ * Spotlight-reveal intro: the page loads under darkness, then a soft
+ * radial spotlight — transparent center feathering to black — cuts on
+ * hard over the wordmark, revealing the real page through it, holds a
+ * beat, and irises open. A stage-light switch SFX lands on the cut.
  *
  * Client component: the effect owns the once-per-session check and the
  * audio because it runs on BOTH full loads and App Router client-side
@@ -49,7 +49,7 @@ export default function SpotlightIntro() {
 							err?.name,
 						),
 				);
-			}, 100);
+			}, 150);
 			return () => clearTimeout(timer);
 		} catch {
 			// Storage unavailable (some private modes): play it visually.
@@ -76,7 +76,7 @@ export default function SpotlightIntro() {
           z-index: 300;
           pointer-events: none;
           overflow: hidden;
-          animation: si-gone 0.01s linear 1.5s forwards;
+          animation: si-gone 0.01s linear 1.3s forwards;
         }
         /* The darkness: transparent core over the wordmark, feathered edge,
            solid black beyond. Oversized so its edges never enter the
@@ -94,24 +94,18 @@ export default function SpotlightIntro() {
             transparent 0 150px,
             #050508 330px
           );
-          animation: si-open 0.55s ease-in 0.9s forwards;
+          animation: si-open 0.55s ease-in 0.7s forwards;
         }
-        /* Full blackout on top that flickers off — the lamp catching.
-           Each off-step momentarily reveals the spotlit circle below. */
+        /* Full blackout on top that cuts off in one hard step — the
+           spotlight snapping on. */
         #si-stage .si-blackout {
           position: absolute;
           inset: 0;
           background: #050508;
-          animation: si-flicker 0.5s steps(1, end) 0.1s forwards;
+          animation: si-cut 0.01s steps(1, end) 0.25s forwards;
         }
-        @keyframes si-flicker {
-          0% { opacity: 1; }
-          14% { opacity: 0.25; }
-          26% { opacity: 0.9; }
-          42% { opacity: 0.1; }
-          58% { opacity: 0.7; }
-          74% { opacity: 0; }
-          100% { opacity: 0; }
+        @keyframes si-cut {
+          to { opacity: 0; }
         }
         /* Iris opens: pure transform scale, feathered edge grows with it. */
         @keyframes si-open {
