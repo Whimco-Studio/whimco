@@ -22,7 +22,11 @@ export default function SpotlightIntro() {
 			<script
 				dangerouslySetInnerHTML={{
 					__html:
-						"try{if(sessionStorage.getItem('si-seen-4')){document.getElementById('si-stage').style.display='none'}else{sessionStorage.setItem('si-seen-4','1')}}catch(e){}",
+						// Once per session; stage-light switch SFX synced to the
+						// flicker. Autoplay is browser-blocked on fresh loads (the
+						// catch swallows it) but fires for in-site navigations,
+						// where a user gesture already happened.
+						"try{if(sessionStorage.getItem('si-seen-4')){document.getElementById('si-stage').style.display='none'}else{sessionStorage.setItem('si-seen-4','1');if(!matchMedia('(prefers-reduced-motion: reduce)').matches){var a=new Audio('/spotlight-strike.m4a');a.volume=0.55;setTimeout(function(){a.play().catch(function(){})},100)}}}catch(e){}",
 				}}
 			/>
 			<style>{`
