@@ -17,7 +17,6 @@ function CardMedia({ item }: { item: ShowcaseItem }) {
         <video
           ref={videoRef}
           src={media.url}
-          referrerPolicy="no-referrer"
           poster={media.thumbnail || undefined}
           muted
           loop
@@ -103,7 +102,7 @@ function Lightbox({ item, onClose }: { item: ShowcaseItem; onClose: () => void }
         <div className="lightbox-media">
           {item.media.map((m) => (
             m.content_type.startsWith('video/')
-              ? <video key={m.url} src={m.url} referrerPolicy="no-referrer" poster={m.thumbnail || undefined} controls playsInline />
+              ? <video key={m.url} src={m.url} poster={m.thumbnail || undefined} controls playsInline />
               : <img key={m.url} src={m.url} referrerPolicy="no-referrer" alt="" />
           ))}
         </div>

@@ -9,6 +9,11 @@ export const metadata: Metadata = {
 	// back to the per-deploy *.vercel.app URL, which sits behind deployment
 	// protection and 302s crawlers away from the image.
 	metadataBase: new URL("https://whimco.com"),
+	// Site-wide: twimg media in the Spotlight gallery 403s foreign
+	// referrers, and <video> has no referrerpolicy attribute — the
+	// document policy must already be no-referrer on whichever page the
+	// visitor entered from before navigating to the showcase.
+	referrer: "no-referrer",
 	title: "Whimco",
 	description: "Turning Whims into Wonders",
 };
