@@ -455,19 +455,38 @@ export default function ShowcaseStyles() {
         justify-content: center;
       }
       .showcase .pf-claim-cta a {
+        position: relative;
+        overflow: hidden;
         display: inline-block;
-        color: var(--beam);
-        border: 1px solid var(--beam);
+        color: #241a05;
+        background: linear-gradient(180deg, #ffe9b8 0%, var(--beam) 45%, #e8b95e 100%);
+        border: 1px solid #ffe9b8;
         border-radius: 999px;
-        padding: 0.55rem 1.2rem;
+        padding: 0.6rem 1.3rem;
         font-weight: 700;
         letter-spacing: 0.14em;
         text-decoration: none;
-        transition: background 0.15s, color 0.15s;
+        transition: box-shadow 0.2s, transform 0.2s;
+      }
+      /* Sheen that sweeps across on hover — the shine. */
+      .showcase .pf-claim-cta a::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -80%;
+        width: 50%;
+        height: 100%;
+        background: linear-gradient(105deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+        transform: skewX(-20deg);
+        transition: left 0.45s ease;
       }
       .showcase .pf-claim-cta a:hover {
-        background: var(--beam);
-        color: #0a0a0f;
+        transform: translateY(-1px);
+        box-shadow: 0 0 26px rgba(255, 217, 138, 0.45),
+          0 0 60px rgba(255, 217, 138, 0.18);
+      }
+      .showcase .pf-claim-cta a:hover::after {
+        left: 120%;
       }
 
       /* ---------------------------- lightbox -------------------- */
