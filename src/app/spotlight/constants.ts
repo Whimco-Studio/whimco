@@ -58,6 +58,7 @@ export const CATEGORY_LABELS: Record<string, string> = {
   vfx: 'VFX',
   clothing: 'Clothing',
   clip: 'Videos',
+  game: 'Games',
   scripting: 'Scripting',
   audio: 'Audio',
 };
