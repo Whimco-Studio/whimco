@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { Bricolage_Grotesque, JetBrains_Mono } from 'next/font/google';
 import GlassNav from '../../components/GlassNav';
 import Portfolio from '../Portfolio';
@@ -60,6 +60,13 @@ export default async function PortfolioPage({ params }: Params) {
   const name = parseUsername(params.username);
   if (!name) notFound();
   const data = await getPortfolio(name);
+  // Display names change on Discord; the API resolves any historical name
+  // to the creator's canonical one. Send stale-name URLs there (307, not
+  // 308 — a rename back would loop against a browser-cached permanent).
+  const canonical = data?.author?.name;
+  if (canonical && canonical !== name) {
+    redirect(`/spotlight/@${encodeURIComponent(canonical)}`);
+  }
   return (
     <div
       className={`${display.variable} ${mono.variable}`}
