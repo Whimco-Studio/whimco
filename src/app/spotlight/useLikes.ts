@@ -38,39 +38,38 @@ export default function useLikes(): Likes {
   }, []);
 
   const toggle = useCallback((item: ShowcaseItem) => {
+    if (!ready) return; // /me still in flight — a click now can't know signedIn
     if (!signedIn) {
       const next = encodeURIComponent(window.location.href);
       window.location.href = `${CLAIM_START_URL}?next=${next}`;
       return;
     }
     const wasLiked = liked.has(item.id);
-    setLiked((prev) => {
-      const nextSet = new Set(prev);
-      if (wasLiked) nextSet.delete(item.id); else nextSet.add(item.id);
-      return nextSet;
-    });
-    setCounts((prev) => ({
-      ...prev,
-      [item.id]: (prev[item.id] ?? item.hearts) + (wasLiked ? -1 : 1),
-    }));
+    const prevCount = counts[item.id] ?? item.hearts;
+    const apply = (nowLiked: boolean, hearts?: number) => {
+      setLiked((prev) => {
+        const nextSet = new Set(prev);
+        if (nowLiked) nextSet.add(item.id); else nextSet.delete(item.id);
+        return nextSet;
+      });
+      setCounts((prev) => ({
+        ...prev,
+        [item.id]: hearts ?? (prev[item.id] ?? item.hearts) + (nowLiked ? 1 : -1),
+      }));
+    };
+    apply(!wasLiked); // optimistic
     fetch(LIKE_URL, {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ item_id: item.id }),
     })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (!data) return;
-        setLiked((prev) => {
-          const nextSet = new Set(prev);
-          if (data.liked) nextSet.add(item.id); else nextSet.delete(item.id);
-          return nextSet;
-        });
-        setCounts((prev) => ({ ...prev, [item.id]: data.hearts }));
-      })
-      .catch(() => {});
-  }, [signedIn, liked]);
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then((data) => apply(Boolean(data.liked), data.hearts))
+      // A swallowed failure would leave a heart that looks saved but isn't —
+      // roll back so the user sees the like didn't stick.
+      .catch(() => apply(wasLiked, prevCount));
+  }, [ready, signedIn, liked, counts]);
 
   return {
     ready,
