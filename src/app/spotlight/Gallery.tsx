@@ -4,9 +4,33 @@ import React, {
   useCallback, useEffect, useRef, useState,
 } from 'react';
 import {
-  CATEGORY_LABELS, ShowcaseItem, cleanCaption, xLink,
+  CATEGORY_LABELS, ShowcaseItem, ShowcaseMedia, cleanCaption, xLink,
 } from './constants';
 import type { Likes } from './useLikes';
+
+/** Lightbox video: starts on open (the click is the gesture); if the
+    browser still refuses sound-on autoplay, retries muted. */
+function LightboxVideo({ media, auto }: { media: ShowcaseMedia; auto: boolean }) {
+  const ref = useRef<HTMLVideoElement>(null);
+  useEffect(() => {
+    const v = ref.current;
+    if (!v || !auto) return;
+    v.play().catch(() => {
+      v.muted = true;
+      v.play().catch(() => {});
+    });
+  }, [auto]);
+  return (
+    <video
+      ref={ref}
+      src={media.url}
+      poster={media.thumbnail || undefined}
+      controls
+      playsInline
+      autoPlay={auto}
+    />
+  );
+}
 
 function HeartButton({ item, likes }: { item: ShowcaseItem; likes?: Likes }) {
   if (!likes) {
@@ -120,9 +144,9 @@ function Lightbox({ item, onClose, likes }: { item: ShowcaseItem; onClose: () =>
       <div className="lightbox-inner" onClick={(e) => e.stopPropagation()}>
         <button type="button" className="lightbox-close" onClick={onClose} aria-label="Close">✕</button>
         <div className="lightbox-media">
-          {item.media.map((m) => (
+          {item.media.map((m, i) => (
             m.content_type.startsWith('video/')
-              ? <video key={m.url} src={m.url} poster={m.thumbnail || undefined} controls playsInline />
+              ? <LightboxVideo key={m.url} media={m} auto={i === 0} />
               : <img key={m.url} src={m.url} referrerPolicy="no-referrer" alt="" />
           ))}
         </div>
