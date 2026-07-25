@@ -337,6 +337,17 @@ export default function ShowcaseStyles() {
         font-weight: 600;
         flex-shrink: 0;
       }
+      .showcase button.heart-btn {
+        background: none;
+        border: none;
+        padding: 0;
+        font: inherit;
+        cursor: pointer;
+        transition: transform 0.12s ease;
+      }
+      .showcase button.heart-btn:hover { transform: scale(1.15); }
+      .showcase button.heart-btn:active { transform: scale(0.95); }
+      .showcase button.heart-btn.heart-on { color: var(--heart); }
       .showcase .card-tag {
         font-family: var(--font-mono), monospace;
         font-size: 0.65rem;

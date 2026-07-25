@@ -93,3 +93,11 @@ export type ShowcaseData = {
 };
 
 export const CLAIM_URL = 'https://spotlight.whimco.com/claim';
+
+/** Web likes: credentialed endpoints on the Spotlight backend. Same-site
+    with whimco.com, so the claim-flow session cookie rides along on
+    credentials: 'include' fetches. */
+export const SPOTLIGHT_ORIGIN = new URL(SHOWCASE_API_URL).origin;
+export const LIKE_URL = `${SPOTLIGHT_ORIGIN}/api/showcase/like`;
+export const ME_URL = `${SPOTLIGHT_ORIGIN}/api/showcase/me`;
+export const CLAIM_START_URL = `${SPOTLIGHT_ORIGIN}/claim/start`;

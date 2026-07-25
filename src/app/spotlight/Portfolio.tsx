@@ -3,6 +3,7 @@
 import React, { useCallback, useState } from 'react';
 import GalleryGrid from './Gallery';
 import ShowcaseStyles from './styles';
+import useLikes from './useLikes';
 import {
   CLAIM_URL, INVITE_URL, SHOWCASE_API_URL, ShowcaseData, ShowcaseItem,
 } from './constants';
@@ -14,6 +15,7 @@ export default function Portfolio({
   const [page, setPage] = useState(initialData?.page ?? 1);
   const [pages, setPages] = useState(initialData?.pages ?? 1);
   const [loading, setLoading] = useState(false);
+  const likes = useLikes();
 
   const author = initialData?.author;
   const profile = initialData?.profile;
@@ -77,6 +79,7 @@ export default function Portfolio({
       <section className="gallery-section" aria-label={`Creations by ${name}`}>
         <GalleryGrid
           items={items}
+          likes={likes}
           showAuthor={false}
           emptyText={initialData
             ? `No creations from ${name} in the showcase yet.`

@@ -6,6 +6,7 @@ import React, {
 import Image from 'next/image';
 import GalleryGrid from './Gallery';
 import ShowcaseStyles from './styles';
+import useLikes from './useLikes';
 import {
   CATEGORY_LABELS, INVITE_URL, SHOWCASE_API_URL, ShowcaseData, ShowcaseItem,
 } from './constants';
@@ -50,6 +51,7 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
   const [activeCategory, setActiveCategory] = useState('');
   const [loading, setLoading] = useState(false);
   const [statsStarted, setStatsStarted] = useState(false);
+  const likes = useLikes();
 
   const statsRef = useRef<HTMLDivElement>(null);
 
@@ -173,6 +175,7 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
 
         <GalleryGrid
           items={items}
+          likes={likes}
           showAuthor
           emptyText={initialData
             ? 'Nothing in the beam yet — creations appear here the moment they’re broadcast.'

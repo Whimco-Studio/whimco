@@ -6,6 +6,26 @@ import React, {
 import {
   CATEGORY_LABELS, ShowcaseItem, cleanCaption, xLink,
 } from './constants';
+import type { Likes } from './useLikes';
+
+function HeartButton({ item, likes }: { item: ShowcaseItem; likes?: Likes }) {
+  if (!likes) {
+    return <span className="card-hearts">♥ {item.hearts.toLocaleString('en-US')}</span>;
+  }
+  const on = likes.isLiked(item.id);
+  return (
+    <button
+      type="button"
+      className={`card-hearts heart-btn ${on ? 'heart-on' : ''}`}
+      aria-pressed={on}
+      aria-label={on ? 'Remove your heart' : 'Heart this creation'}
+      title={likes.signedIn ? undefined : 'Sign in with Discord to heart'}
+      onClick={(e) => { e.stopPropagation(); likes.toggle(item); }}
+    >
+      {on ? '♥' : '♡'} {likes.hearts(item).toLocaleString('en-US')}
+    </button>
+  );
+}
 
 function CardMedia({ item }: { item: ShowcaseItem }) {
   const media = item.media[0];
@@ -45,8 +65,8 @@ function CardMedia({ item }: { item: ShowcaseItem }) {
 }
 
 function GalleryCard({
-  item, onOpen, showAuthor,
-}: { item: ShowcaseItem; onOpen: () => void; showAuthor: boolean }) {
+  item, onOpen, showAuthor, likes,
+}: { item: ShowcaseItem; onOpen: () => void; showAuthor: boolean; likes?: Likes }) {
   const caption = cleanCaption(item.content);
   return (
     <article className="card">
@@ -75,7 +95,7 @@ function GalleryCard({
         ) : (
           <span className="card-author">{new Date(item.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</span>
         )}
-        <span className="card-hearts">♥ {item.hearts.toLocaleString('en-US')}</span>
+        <HeartButton item={item} likes={likes} />
         {item.category && (
           <span className="card-tag">{CATEGORY_LABELS[item.category] ?? item.category}</span>
         )}
@@ -84,7 +104,7 @@ function GalleryCard({
   );
 }
 
-function Lightbox({ item, onClose }: { item: ShowcaseItem; onClose: () => void }) {
+function Lightbox({ item, onClose, likes }: { item: ShowcaseItem; onClose: () => void; likes?: Likes }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     document.addEventListener('keydown', onKey);
@@ -111,7 +131,7 @@ function Lightbox({ item, onClose }: { item: ShowcaseItem; onClose: () => void }
           <a className="card-author" href={`/spotlight/@${encodeURIComponent(item.author_name)}`}>
             by {item.author_name}
           </a>
-          <span className="card-hearts" aria-label={`${item.hearts} hearts`}>♥ {item.hearts.toLocaleString('en-US')}</span>
+          <HeartButton item={item} likes={likes} />
           {item.category && (
             <span className="card-tag">{CATEGORY_LABELS[item.category] ?? item.category}</span>
           )}
@@ -134,7 +154,7 @@ function Lightbox({ item, onClose }: { item: ShowcaseItem; onClose: () => void }
 /** Round-robin masonry + beam overlay + lightbox. Presentational: the
     parent owns items/pagination state. */
 export default function GalleryGrid({
-  items, emptyText, showAuthor = true, canLoadMore = false, loading = false, onLoadMore,
+  items, emptyText, showAuthor = true, canLoadMore = false, loading = false, onLoadMore, likes,
 }: {
   items: ShowcaseItem[];
   emptyText: string;
@@ -142,6 +162,7 @@ export default function GalleryGrid({
   canLoadMore?: boolean;
   loading?: boolean;
   onLoadMore?: () => void;
+  likes?: Likes;
 }) {
   const [selected, setSelected] = useState<ShowcaseItem | null>(null);
   const [cols, setCols] = useState(4);
@@ -185,6 +206,7 @@ export default function GalleryGrid({
                       key={item.id}
                       item={item}
                       showAuthor={showAuthor}
+                      likes={likes}
                       onOpen={() => setSelected(item)}
                     />
                   ))}
@@ -207,7 +229,7 @@ export default function GalleryGrid({
         </div>
       )}
 
-      {selected && <Lightbox item={selected} onClose={() => setSelected(null)} />}
+      {selected && <Lightbox item={selected} likes={likes} onClose={() => setSelected(null)} />}
     </>
   );
 }
