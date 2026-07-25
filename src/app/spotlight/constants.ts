@@ -51,7 +51,7 @@ export type ShowcaseItem = {
 
 export const CATEGORY_LABELS: Record<string, string> = {
   gfx: 'GFX',
-  concept: 'Concept Art',
+  '2d': '2D Art',
   build: 'Builds',
   ui: 'UI',
   model: '3D Models',
