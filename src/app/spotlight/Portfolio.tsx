@@ -68,7 +68,12 @@ export default function Portfolio({
           </p>
         )}
         {profile?.contact && <p className="pf-contact">{profile.contact}</p>}
-        {!profile && author && author.creations > 0 && (
+        {/* Shown even at zero creations: the welcome DM sends first-time
+            creators straight here, and the showcase API and this page's ISR
+            each cache for 5 minutes, so their first creation has not landed
+            yet. Gating on creations > 0 hid the claim from exactly the people
+            it was written for. */}
+        {!profile && author && (
           <p className="pf-claim-cta">
             <span>Is this you?</span>
             <a href={CLAIM_URL}>CLAIM THIS PORTFOLIO</a>
