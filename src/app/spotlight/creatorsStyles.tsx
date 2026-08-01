@@ -127,8 +127,10 @@ export default function CreatorsStyles() {
         white-space: nowrap;
         min-width: 0;
       }
+      /* Larger than the name it follows: 2 of 36 cards carry one, so at
+         name-size it reads as punctuation rather than a mark. */
       .showcase .cr-seal {
-        font-size: 0.98rem;
+        font-size: 1.5rem;
         flex-shrink: 0;
       }
       .showcase .cr-stats {

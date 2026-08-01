@@ -41,6 +41,9 @@ export function parseUsername(raw: string): string | null {
 export type ShowcaseItem = {
   id: number;
   author_name: string;
+  /** Author has claimed their portfolio through Discord. Optional so a
+      cached response from before the field existed still parses. */
+  author_claimed?: boolean;
   content: string;
   tag: string;
   category: string;
