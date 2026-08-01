@@ -146,7 +146,10 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
       <section className="gallery-section" aria-label="Creations broadcast by Spotlight">
         <div className="gallery-head">
           <h2 className="gallery-title">The showcase</h2>
-          <span className="gallery-note">refreshes every 5 minutes</span>
+          <span className="gallery-head-right">
+            <a className="gallery-link" href="/spotlight/creators">BROWSE CREATORS →</a>
+            <span className="gallery-note">refreshes every 5 minutes</span>
+          </span>
         </div>
 
         {categories.length > 0 && (

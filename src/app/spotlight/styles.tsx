@@ -176,6 +176,27 @@ export default function ShowcaseStyles() {
         font-size: clamp(1.4rem, 2.6vw, 2rem);
         margin: 0;
       }
+      .showcase .gallery-head-right {
+        display: flex;
+        align-items: baseline;
+        gap: 1.1rem;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+      .showcase .gallery-link {
+        font-family: var(--font-mono), monospace;
+        font-size: 0.68rem;
+        letter-spacing: 0.16em;
+        color: var(--beam);
+        text-decoration: none;
+        white-space: nowrap;
+        border-bottom: 1px solid transparent;
+        transition: border-color 0.18s ease;
+      }
+      .showcase .gallery-link:hover,
+      .showcase .gallery-link:focus-visible {
+        border-bottom-color: var(--beam);
+      }
       .showcase .gallery-note {
         font-family: var(--font-mono), monospace;
         font-size: 0.68rem;
