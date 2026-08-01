@@ -94,6 +94,29 @@ export type ShowcaseData = {
 
 export const CLAIM_URL = 'https://spotlight.whimco.com/claim';
 
+/** The creator directory: the network browsed as people, not creations. */
+export const CREATORS_API_URL = SHOWCASE_API_URL.replace(
+  '/api/showcase/', '/api/creators/',
+);
+
+export type Creator = {
+  name: string;
+  creations: number;
+  hearts: number;
+  claimed: boolean;
+  avatar_url: string | null;
+  bio: string;
+  /** Up to 3 of their best-hearted images, used as the card's cover. */
+  covers: string[];
+};
+
+export type CreatorsData = {
+  creators: Creator[];
+  page: number;
+  pages: number;
+  total: number;
+};
+
 /** Web likes: credentialed endpoints on the Spotlight backend. Same-site
     with whimco.com, so the claim-flow session cookie rides along on
     credentials: 'include' fetches. */
