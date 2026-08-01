@@ -48,7 +48,32 @@ export default function Portfolio({
             <img className="pf-avatar" src={profile.avatar_url} alt="" referrerPolicy="no-referrer" />
           )}
           <h1 className="pf-name">{name}</h1>
-          {profile && <span className="pf-claimed" title="This creator verified ownership via Discord">CLAIMED</span>}
+          {profile && (
+            <span
+              className="pf-verified"
+              role="img"
+              aria-label="Verified creator, ownership confirmed via Discord"
+              title="This creator verified ownership via Discord"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <defs>
+                  <linearGradient id="pf-verified-gold" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#ffe9b8" />
+                    <stop offset="45%" stopColor="#ffd98a" />
+                    <stop offset="100%" stopColor="#e8b95e" />
+                  </linearGradient>
+                </defs>
+                <path
+                  fill="url(#pf-verified-gold)"
+                  d="M12 1l2.4 2.1 3.1-.5 1.2 2.9 2.9 1.2-.5 3.1L23 12l-2.1 2.4.5 3.1-2.9 1.2-1.2 2.9-3.1-.5L12 23l-2.4-2.1-3.1.5-1.2-2.9L2.4 17.3l.5-3.1L1 12l2.1-2.4-.5-3.1 2.9-1.2 1.2-2.9 3.1.5L12 1z"
+                />
+                <path
+                  fill="#0a0a0f"
+                  d="M10.6 16.1l-3.5-3.5 1.5-1.5 2 2 4.9-4.9 1.5 1.5z"
+                />
+              </svg>
+            </span>
+          )}
         </div>
         {author && (
           <p className="pf-sub">

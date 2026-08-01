@@ -420,15 +420,19 @@ export default function ShowcaseStyles() {
         border-radius: 50%;
         border: 2px solid var(--beam);
       }
-      .showcase .pf-claimed {
-        font-family: var(--font-mono), monospace;
-        font-size: 0.62rem;
-        letter-spacing: 0.22em;
-        color: var(--beam);
-        border: 1px solid var(--beam);
-        border-radius: 999px;
-        padding: 0.3rem 0.7rem;
-        opacity: 0.9;
+      /* Scaled in em so the seal tracks the name's clamp() instead of
+         needing its own breakpoints. */
+      .showcase .pf-verified {
+        display: inline-flex;
+        align-items: center;
+        line-height: 0;
+        font-size: clamp(2.2rem, 6vw, 4.2rem);
+      }
+      .showcase .pf-verified svg {
+        width: 0.62em;
+        height: 0.62em;
+        display: block;
+        filter: drop-shadow(0 0 0.14em rgba(255, 217, 138, 0.4));
       }
       .showcase .pf-bio {
         max-width: 560px;
