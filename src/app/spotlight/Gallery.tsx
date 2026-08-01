@@ -6,6 +6,7 @@ import React, {
 import {
   CATEGORY_LABELS, ShowcaseItem, ShowcaseMedia, cleanCaption, xLink,
 } from './constants';
+import VerifiedSeal from './VerifiedSeal';
 import type { Likes } from './useLikes';
 
 /** Lightbox video: starts on open (the click is the gesture); if the
@@ -115,6 +116,7 @@ function GalleryCard({
             title={`View ${item.author_name}'s portfolio`}
           >
             by {item.author_name}
+            {item.author_claimed && <VerifiedSeal className="card-seal" />}
           </a>
         ) : (
           <span className="card-author">{new Date(item.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</span>
@@ -154,6 +156,7 @@ function Lightbox({ item, onClose, likes }: { item: ShowcaseItem; onClose: () =>
         <div className="lightbox-meta">
           <a className="card-author" href={`/spotlight/@${encodeURIComponent(item.author_name)}`}>
             by {item.author_name}
+            {item.author_claimed && <VerifiedSeal className="card-seal" />}
           </a>
           <HeartButton item={item} likes={likes} />
           {item.category && (

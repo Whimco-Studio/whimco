@@ -41,6 +41,9 @@ export function parseUsername(raw: string): string | null {
 export type ShowcaseItem = {
   id: number;
   author_name: string;
+  /** Author has claimed their portfolio through Discord. Optional so a
+      cached response from before the field existed still parses. */
+  author_claimed?: boolean;
   content: string;
   tag: string;
   category: string;
@@ -93,6 +96,29 @@ export type ShowcaseData = {
 };
 
 export const CLAIM_URL = 'https://spotlight.whimco.com/claim';
+
+/** The creator directory: the network browsed as people, not creations. */
+export const CREATORS_API_URL = SHOWCASE_API_URL.replace(
+  '/api/showcase/', '/api/creators/',
+);
+
+export type Creator = {
+  name: string;
+  creations: number;
+  hearts: number;
+  claimed: boolean;
+  avatar_url: string | null;
+  bio: string;
+  /** Up to 3 of their best-hearted images, used as the card's cover. */
+  covers: string[];
+};
+
+export type CreatorsData = {
+  creators: Creator[];
+  page: number;
+  pages: number;
+  total: number;
+};
 
 /** Web likes: credentialed endpoints on the Spotlight backend. Same-site
     with whimco.com, so the claim-flow session cookie rides along on

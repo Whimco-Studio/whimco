@@ -176,6 +176,27 @@ export default function ShowcaseStyles() {
         font-size: clamp(1.4rem, 2.6vw, 2rem);
         margin: 0;
       }
+      .showcase .gallery-head-right {
+        display: flex;
+        align-items: baseline;
+        gap: 1.1rem;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+      .showcase .gallery-link {
+        font-family: var(--font-mono), monospace;
+        font-size: 0.68rem;
+        letter-spacing: 0.16em;
+        color: var(--beam);
+        text-decoration: none;
+        white-space: nowrap;
+        border-bottom: 1px solid transparent;
+        transition: border-color 0.18s ease;
+      }
+      .showcase .gallery-link:hover,
+      .showcase .gallery-link:focus-visible {
+        border-bottom-color: var(--beam);
+      }
       .showcase .gallery-note {
         font-family: var(--font-mono), monospace;
         font-size: 0.68rem;
@@ -332,6 +353,15 @@ export default function ShowcaseStyles() {
         color: var(--beam);
         text-decoration: underline;
       }
+      /* Sits inside the author link, which ellipsises a long name. Stays
+         gold on hover (the link recolours) and never shrinks away. */
+      .showcase .card-seal {
+        color: var(--beam);
+        font-size: 1em;
+        margin-left: 0.3em;
+        vertical-align: -0.14em;
+        flex-shrink: 0;
+      }
       .showcase .card-hearts {
         color: var(--heart);
         font-weight: 600;
@@ -420,20 +450,22 @@ export default function ShowcaseStyles() {
         border-radius: 50%;
         border: 2px solid var(--beam);
       }
-      /* Scaled in em so the seal tracks the name's clamp() instead of
-         needing its own breakpoints. */
-      .showcase .pf-verified {
+      /* Shared verified seal. Sized in em off its own font-size, so each
+         surface only overrides that one value and the seal tracks whatever
+         type it sits beside at every breakpoint. */
+      .showcase .sl-seal {
         display: inline-flex;
         align-items: center;
         line-height: 0;
-        font-size: clamp(2.2rem, 6vw, 4.2rem);
+        color: var(--beam);
       }
-      .showcase .pf-verified svg {
+      .showcase .sl-seal svg {
         width: 0.62em;
         height: 0.62em;
         display: block;
         filter: drop-shadow(0 0 0.14em rgba(255, 217, 138, 0.4));
       }
+      .showcase .pf-verified { font-size: clamp(2.2rem, 6vw, 4.2rem); }
       .showcase .pf-bio {
         max-width: 560px;
         font-size: 0.95rem;
