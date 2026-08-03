@@ -82,7 +82,19 @@ export default function CategoryTag({
         className={`tag-edit ${category ? '' : 'tag-edit-empty'}`}
         // The card is a click target that opens the lightbox, so every
         // interaction in here has to stop short of it.
-        onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
+        //
+        // Also claims focus for itself rather than trusting the mousedown
+        // that preceded this click: when this trigger is the one closing a
+        // different card's picker, that other instance's outside-mousedown
+        // handler already moved focus to its own trigger a moment earlier.
+        // This click handler runs after that, so focusing here wins the
+        // race and leaves focus on whichever trigger the picker that is
+        // actually open now belongs to.
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen((v) => !v);
+          triggerRef.current?.focus();
+        }}
         aria-haspopup="true"
         aria-expanded={open}
         title={category ? 'Change category' : 'Set a category'}
