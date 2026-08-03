@@ -268,7 +268,9 @@ export default function ShowcaseStyles() {
         background: var(--panel);
         border: 1px solid var(--edge);
         border-radius: 14px;
-        overflow: hidden;
+        /* No overflow: hidden here. The category picker opens upward from
+           the meta row and needs to escape this box, not be clipped by it.
+           Only the media needs its own corners clipped, see .card-media. */
         transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
       }
       .showcase .card:hover, .showcase .card:focus-within {
@@ -291,7 +293,15 @@ export default function ShowcaseStyles() {
         outline: 2px solid var(--beam);
         outline-offset: -2px;
       }
-      .showcase .card-media { position: relative; display: block; }
+      .showcase .card-media {
+        position: relative;
+        display: block;
+        /* Was the whole card's job. Moved here so only the media clips to
+           the rounded top corners, and the picker above the meta row is
+           free to render past the card's own box. */
+        overflow: hidden;
+        border-radius: 14px 14px 0 0;
+      }
       .showcase .card-media img,
       .showcase .card-media video {
         width: 100%;
