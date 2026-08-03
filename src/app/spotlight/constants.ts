@@ -55,6 +55,7 @@ export type ShowcaseItem = {
 export const CATEGORY_LABELS: Record<string, string> = {
   gfx: 'GFX',
   '2d': '2D Art',
+  logo: 'Logos',
   build: 'Builds',
   ui: 'UI',
   model: '3D Models',
@@ -127,3 +128,4 @@ export const SPOTLIGHT_ORIGIN = new URL(SHOWCASE_API_URL).origin;
 export const LIKE_URL = `${SPOTLIGHT_ORIGIN}/api/showcase/like`;
 export const ME_URL = `${SPOTLIGHT_ORIGIN}/api/showcase/me`;
 export const CLAIM_START_URL = `${SPOTLIGHT_ORIGIN}/claim/start`;
+export const RECATEGORIZE_URL = `${SPOTLIGHT_ORIGIN}/api/showcase/recategorize`;
