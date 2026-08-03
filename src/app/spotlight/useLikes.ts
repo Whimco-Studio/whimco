@@ -1,6 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import {
+  useCallback, useEffect, useRef, useState,
+} from 'react';
 import {
   CLAIM_START_URL, LIKE_URL, ME_URL, RECATEGORIZE_URL, ShowcaseItem,
 } from './constants';
@@ -32,6 +34,12 @@ export default function useLikes(): Likes {
   const [liked, setLiked] = useState<Set<number>>(new Set());
   const [counts, setCounts] = useState<Record<number, number>>({});
   const [categories, setCategories] = useState<Record<number, string>>({});
+  // Per-item write sequence, guarding against two overlapping recategorize
+  // calls landing out of order (fire one, then correct it before the first
+  // reply arrives). A ref, not state: a stale generation must not itself
+  // trigger a render, it only needs to be readable when the in-flight
+  // calls it's tracking resolve.
+  const categoryGen = useRef<Record<number, number>>({});
 
   useEffect(() => {
     let alive = true;
@@ -95,6 +103,12 @@ export default function useLikes(): Likes {
   const recategorize = useCallback(
     async (item: ShowcaseItem, category: string) => {
       const previous = categories[item.id] ?? item.category ?? '';
+      // Claim this write's slot before anything async happens, so a second
+      // call started while this one is in flight is visible the moment it
+      // starts, not just when it resolves.
+      const gen = (categoryGen.current[item.id] ?? 0) + 1;
+      categoryGen.current[item.id] = gen;
+      const isCurrent = () => categoryGen.current[item.id] === gen;
       setCategories((prev) => ({ ...prev, [item.id]: category })); // optimistic
       try {
         const r = await fetch(RECATEGORIZE_URL, {
@@ -105,11 +119,14 @@ export default function useLikes(): Likes {
         });
         if (!r.ok) throw new Error(String(r.status));
         const data = await r.json();
-        setCategories((prev) => ({ ...prev, [item.id]: data.category }));
+        // A newer call already owns this item's displayed value. Applying
+        // this reply now would overwrite it with a stale confirmation.
+        if (isCurrent()) setCategories((prev) => ({ ...prev, [item.id]: data.category }));
         return true;
       } catch {
-        // Roll back rather than leave a tag that looks saved and is not.
-        setCategories((prev) => ({ ...prev, [item.id]: previous }));
+        // Same guard on the failure path: rolling back here would stomp a
+        // later call's already-confirmed value with this call's stale one.
+        if (isCurrent()) setCategories((prev) => ({ ...prev, [item.id]: previous }));
         return false;
       }
     },
