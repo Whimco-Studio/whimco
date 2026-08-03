@@ -270,7 +270,8 @@ export default function ShowcaseStyles() {
         border-radius: 14px;
         /* No overflow: hidden here. The category picker opens upward from
            the meta row and needs to escape this box, not be clipped by it.
-           Only the media needs its own corners clipped, see .card-media. */
+           The clipping moved to .card-hit, which holds everything that
+           actually needs it. */
         transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
       }
       .showcase .card:hover, .showcase .card:focus-within {
@@ -288,6 +289,16 @@ export default function ShowcaseStyles() {
         padding: 0;
         color: inherit;
         font: inherit;
+        /* Was the whole card's job. It sits here rather than on
+           .card-media because a card can have no media at all:
+           views._media_urls drops entries whose presign fails, leaving a
+           caption-only card whose square .card-caption-only border-left
+           would otherwise poke past the card's rounded top corners.
+           .card-hit wraps the media and the caption both, so it clips
+           everything that needs clipping. The picker is in .card-meta, a
+           sibling of this, so it still escapes the card entirely. */
+        overflow: hidden;
+        border-radius: 14px 14px 0 0;
       }
       .showcase .card-hit:focus-visible {
         outline: 2px solid var(--beam);
@@ -296,11 +307,8 @@ export default function ShowcaseStyles() {
       .showcase .card-media {
         position: relative;
         display: block;
-        /* Was the whole card's job. Moved here so only the media clips to
-           the rounded top corners, and the picker above the meta row is
-           free to render past the card's own box. */
-        overflow: hidden;
-        border-radius: 14px 14px 0 0;
+        /* Clipping lives on .card-hit, the parent, so a card with no
+           media is clipped too. */
       }
       .showcase .card-media img,
       .showcase .card-media video {

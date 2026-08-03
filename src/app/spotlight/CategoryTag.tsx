@@ -48,17 +48,30 @@ export default function CategoryTag({
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        // The picker is the innermost dismissable layer, so Escape has to
+        // close it and go no further. Both this and Lightbox's own Escape
+        // handler sit on document, and listeners on one node fire in
+        // registration order, so a bubble-phase listener here would run
+        // second and the lightbox would close out from under the picker.
+        // Capture runs before every bubble listener on the same node
+        // whatever the mount order, which is the part that matters:
+        // stopping propagation from the bubble phase would still be too
+        // late. stopPropagation is enough because the lightbox's listener
+        // is on document too, not on an ancestor further out.
+        e.stopPropagation();
         setOpen(false);
         triggerRef.current?.focus();
       }
     };
     document.addEventListener('mousedown', onDown);
     document.addEventListener('focusin', onFocusIn);
-    document.addEventListener('keydown', onKey);
+    document.addEventListener('keydown', onKey, true);
     return () => {
       document.removeEventListener('mousedown', onDown);
       document.removeEventListener('focusin', onFocusIn);
-      document.removeEventListener('keydown', onKey);
+      // The capture flag is part of the listener's identity. Omitting it
+      // here would remove nothing and leave a handler behind per open.
+      document.removeEventListener('keydown', onKey, true);
     };
   }, [open]);
 
