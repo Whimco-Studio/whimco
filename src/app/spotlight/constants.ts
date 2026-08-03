@@ -52,6 +52,10 @@ export type ShowcaseItem = {
   media: ShowcaseMedia[];
 };
 
+/** Order mirrors the backend's CATEGORY_CHOICES. New categories are
+    appended, never inserted: the triage keyboard binds shortcuts to
+    these codes by position, so an insertion mid-list would silently
+    rebind every shortcut after it. */
 export const CATEGORY_LABELS: Record<string, string> = {
   gfx: 'GFX',
   '2d': '2D Art',
@@ -65,6 +69,7 @@ export const CATEGORY_LABELS: Record<string, string> = {
   game: 'Games',
   scripting: 'Scripting',
   audio: 'Audio',
+  logo: 'Logos',
 };
 
 export type ShowcaseStats = {
@@ -127,3 +132,4 @@ export const SPOTLIGHT_ORIGIN = new URL(SHOWCASE_API_URL).origin;
 export const LIKE_URL = `${SPOTLIGHT_ORIGIN}/api/showcase/like`;
 export const ME_URL = `${SPOTLIGHT_ORIGIN}/api/showcase/me`;
 export const CLAIM_START_URL = `${SPOTLIGHT_ORIGIN}/claim/start`;
+export const RECATEGORIZE_URL = `${SPOTLIGHT_ORIGIN}/api/showcase/recategorize`;

@@ -4,9 +4,10 @@ import React, {
   useCallback, useEffect, useRef, useState,
 } from 'react';
 import {
-  CATEGORY_LABELS, ShowcaseItem, ShowcaseMedia, cleanCaption, xLink,
+  ShowcaseItem, ShowcaseMedia, cleanCaption, xLink,
 } from './constants';
 import VerifiedSeal from './VerifiedSeal';
+import CategoryTag from './CategoryTag';
 import type { Likes } from './useLikes';
 
 /** Lightbox video: starts on open (the click is the gesture); if the
@@ -122,9 +123,7 @@ function GalleryCard({
           <span className="card-author">{new Date(item.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</span>
         )}
         <HeartButton item={item} likes={likes} />
-        {item.category && (
-          <span className="card-tag">{CATEGORY_LABELS[item.category] ?? item.category}</span>
-        )}
+        <CategoryTag item={item} likes={likes} />
       </div>
     </article>
   );
@@ -159,9 +158,7 @@ function Lightbox({ item, onClose, likes }: { item: ShowcaseItem; onClose: () =>
             {item.author_claimed && <VerifiedSeal className="card-seal" />}
           </a>
           <HeartButton item={item} likes={likes} />
-          {item.category && (
-            <span className="card-tag">{CATEGORY_LABELS[item.category] ?? item.category}</span>
-          )}
+          <CategoryTag item={item} likes={likes} />
           {xLink(item.content) && (
             <a
               className="lightbox-source"
