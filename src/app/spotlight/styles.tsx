@@ -385,6 +385,62 @@ export default function ShowcaseStyles() {
         flex-shrink: 0;
         margin-left: auto;
       }
+      .showcase .card-tag-editable {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+      }
+      .showcase .tag-edit {
+        font: inherit;
+        color: inherit;
+        background: none;
+        border: none;
+        padding: 0;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+      }
+      .showcase .tag-edit-empty { opacity: 0.45; }
+      /* On a card the pencil waits for hover, so twenty-four of them are
+         not competing with the work. In the lightbox there is one item on
+         screen, so it stays put. */
+      .showcase .card .tag-pencil { opacity: 0; transition: opacity 0.15s ease; }
+      .showcase .card:hover .tag-pencil,
+      .showcase .card:focus-within .tag-pencil,
+      .showcase .lightbox .tag-pencil { opacity: 0.7; }
+      .showcase .tag-edit:hover .tag-pencil { opacity: 1; }
+      .showcase .tag-failed { color: #f0a0a6; font-size: 0.6rem; }
+      .showcase .tag-picker {
+        position: absolute;
+        bottom: 100%;
+        right: 0;
+        margin-bottom: 0.35rem;
+        z-index: 30;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(5.5rem, 1fr));
+        gap: 0.15rem;
+        padding: 0.35rem;
+        background: #101018;
+        border: 1px solid var(--edge);
+        border-radius: 0.5rem;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+      }
+      .showcase .tag-option {
+        font: inherit;
+        font-size: 0.65rem;
+        text-align: left;
+        color: #c8c8dc;
+        background: none;
+        border: none;
+        border-radius: 0.3rem;
+        padding: 0.3rem 0.4rem;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      .showcase .tag-option:hover { background: #1c1c30; color: #fff; }
+      .showcase .tag-option-on { color: var(--beam); }
       .showcase .empty {
         border: 1px dashed var(--edge);
         border-radius: 14px;
