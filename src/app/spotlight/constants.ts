@@ -125,6 +125,29 @@ export type CreatorsData = {
   total: number;
 };
 
+/** The network directory: the same broadcast, viewed from where it lands
+    instead of who sends it. */
+export const NETWORK_API_URL = SHOWCASE_API_URL.replace(
+  '/api/showcase/', '/api/servers/',
+);
+
+export type NetworkServer = {
+  id: string;
+  name: string;
+  members: number;
+  online: number;
+  icon: string | null;
+  /** Only present when NETWORK_SHOW_CONTRIBUTION is enabled server side.
+      Off today, so nothing renders it yet. */
+  creations?: number;
+};
+
+export type NetworkData = {
+  servers: NetworkServer[];
+  total: number;
+  members: number;
+};
+
 /** Web likes: credentialed endpoints on the Spotlight backend. Same-site
     with whimco.com, so the claim-flow session cookie rides along on
     credentials: 'include' fetches. */
