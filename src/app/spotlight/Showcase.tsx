@@ -112,6 +112,24 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // A curator can retag an item from this gallery and the write lands in
+  // Postgres instantly, but the page they're looking at can still be up to
+  // ten minutes stale: five from the API cache, five more from ISR on top
+  // of it. isCurator itself is only known once the credentialed /me call
+  // resolves, so once it does, page one is pulled straight from the API
+  // (the same uncached path fetchPage already uses for filters and load
+  // more) and swapped in for whatever the server rendered. The ref caps it
+  // at one fetch per mount: activeCategory can keep changing afterward,
+  // and fetchPage above already owns those changes. A non-curator, or a
+  // curator whose /me call hasn't resolved yet, triggers nothing here.
+  const curatorRefetched = useRef(false);
+  useEffect(() => {
+    if (!likes.ready || !likes.isCurator || curatorRefetched.current) return;
+    curatorRefetched.current = true;
+    fetchPage(1, activeCategory, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [likes.ready, likes.isCurator]);
+
   return (
     <div className="showcase">
       <section className="hero">
