@@ -266,12 +266,48 @@ export default function NetworkStyles() {
       }
       .showcase .nt-hero-stat span { font-size: 0.6rem; }
 
+      /* Stats and the join link share the hero's right edge, so the
+         button reads as part of the same block rather than floating. */
+      .showcase .nt-hero-side {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 0.7rem;
+        flex-shrink: 0;
+      }
+      /* Solid rather than the outlined pill used elsewhere: this is the
+         page's only call to action, and every other card is inert. */
+      .showcase .nt-join {
+        font-family: var(--font-mono), monospace;
+        font-size: 0.62rem;
+        font-weight: 700;
+        letter-spacing: 0.2em;
+        color: #14141d;
+        background: var(--beam);
+        border-radius: 999px;
+        padding: 0.6rem 1.5rem;
+        text-decoration: none;
+        white-space: nowrap;
+        transition: filter 0.18s ease, transform 0.18s ease;
+      }
+      .showcase .nt-join:hover,
+      .showcase .nt-join:focus-visible {
+        filter: brightness(1.12);
+        transform: translateY(-1px);
+      }
+
       @media (max-width: 560px) {
         .showcase .nt-hero { flex-direction: column; align-items: flex-start; }
         .showcase .nt-hero-stat { text-align: left; }
+        .showcase .nt-hero-side { align-items: flex-start; width: 100%; }
       }
 
       @media (prefers-reduced-motion: reduce) {
+        .showcase .nt-join { transition: none; }
+        .showcase .nt-join:hover,
+        .showcase .nt-join:focus-visible { transform: none; }
         .showcase .nt-card { transition: none; }
         .showcase .nt-card:hover,
         .showcase .nt-hero:hover { transform: none; }

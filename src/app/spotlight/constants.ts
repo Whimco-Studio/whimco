@@ -1,6 +1,12 @@
 export const INVITE_URL =
   'https://discord.com/oauth2/authorize?client_id=1414683911404916876&permissions=326417640512&scope=bot%20applications.commands';
 
+/** The Spotlight Support server, linked from the network directory hero.
+    A non-expiring invite, deliberately: a link baked into a page outlives
+    any invite with a lifetime. This is the one server whose invite is
+    ours to publish, which is why no other card on that page links out. */
+export const SUPPORT_INVITE_URL = 'https://discord.gg/b6eDADvQzy';
+
 export const SHOWCASE_API_URL =
   process.env.NEXT_PUBLIC_SPOTLIGHT_API_URL ??
   'https://spotlight.whimco.com/api/showcase/';

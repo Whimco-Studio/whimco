@@ -1,6 +1,6 @@
 import NetworkStyles from './networkStyles';
 import ShowcaseStyles from './styles';
-import { NetworkData, NetworkServer } from './constants';
+import { NetworkData, NetworkServer, SUPPORT_INVITE_URL } from './constants';
 
 // Pinned first by the API's own sort too. Matched again here so the hero
 // still renders correctly if that ever changes upstream.
@@ -75,11 +75,24 @@ function HeroCard({ server }: { server: NetworkServer }) {
           Questions, bug reports, and the people who curate the showcase.
         </p>
       </div>
-      <p className="nt-hero-stat">
-        <b>{members.toLocaleString('en-US')}</b> members
-        <br />
-        <span>{online.toLocaleString('en-US')} online</span>
-      </p>
+      <div className="nt-hero-side">
+        <p className="nt-hero-stat">
+          <b>{members.toLocaleString('en-US')}</b> members
+          <br />
+          <span>{online.toLocaleString('en-US')} online</span>
+        </p>
+        {/* The only outbound link on the page. Every other card is an
+            <article> because sending traffic to communities that never
+            asked for it is not ours to do; this server is. */}
+        <a
+          className="nt-join"
+          href={SUPPORT_INVITE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          JOIN
+        </a>
+      </div>
     </article>
   );
 }
