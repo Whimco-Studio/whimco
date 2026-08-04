@@ -54,6 +54,11 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
   const likes = useLikes();
 
   const statsRef = useRef<HTMLDivElement>(null);
+  // Mirrors activeCategory for the curator retry loop further down, which
+  // spans multiple renders and needs whatever category is current at the
+  // moment each retry fires, not whatever was current when the loop
+  // started. Kept in sync inline in pickCategory, the only setter.
+  const activeCategoryRef = useRef(activeCategory);
 
   const stats = initialData?.stats;
   const categories = initialData?.categories ?? [];
@@ -79,10 +84,19 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
   // value, and only apply a response while it is still the newest
   // request. setLoading(false) stays unconditional in finally, so a
   // superseded request cannot strand the loading state on true.
+  //
+  // The return value tells a caller what happened, not just whether the
+  // network call succeeded. 'applied' means this response is on screen
+  // now. 'superseded' means a newer call already won before this one
+  // landed, its data may be perfectly fine, it was simply too late.
+  // 'failed' means the request itself errored. Only the curator mount
+  // refetch below reads this, to tell a loss worth trying again
+  // (superseded) apart from a loss that should not retry itself
+  // (failed).
   const fetchGen = useRef(0);
   const fetchPage = useCallback(async (
     nextPage: number, category: string, replace: boolean, silent = false,
-  ) => {
+  ): Promise<'applied' | 'superseded' | 'failed'> => {
     const gen = ++fetchGen.current;
     if (!silent) setLoading(true);
     try {
@@ -93,19 +107,21 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
       const data: ShowcaseData = await res.json();
       // A newer call already owns what's on screen; applying this reply
       // now would replace it with a stale, possibly mismatched answer.
-      if (fetchGen.current === gen) {
-        setItems((prev) => (replace ? data.items : [...prev, ...data.items]));
-        setPage(data.page);
-        setPages(data.pages);
-      }
+      if (fetchGen.current !== gen) return 'superseded';
+      setItems((prev) => (replace ? data.items : [...prev, ...data.items]));
+      setPage(data.page);
+      setPages(data.pages);
+      return 'applied';
     } catch {
       // Leave current items in place; the button stays available to retry.
+      return 'failed';
     } finally {
       if (!silent) setLoading(false);
     }
   }, []);
 
   const pickCategory = useCallback((category: string, updateUrl = true) => {
+    activeCategoryRef.current = category;
     setActiveCategory(category);
     if (updateUrl) {
       const url = new URL(window.location.href);
@@ -113,18 +129,13 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
       else url.searchParams.delete('category');
       window.history.replaceState(null, '', url);
     }
-    if (category === '' && initialData) {
-      // Bumps the generation even though nothing is fetched here, so a
-      // slower in-flight fetchPage call for the filter just left cannot
-      // land afterward and overwrite this reset with stale filtered data.
-      fetchGen.current += 1;
-      setItems(initialData.items);
-      setPage(initialData.page);
-      setPages(initialData.pages);
-      return;
-    }
+    // initialData is a snapshot from the moment the server rendered the
+    // page. Painting it straight back in on a reset to All used to skip
+    // the network, but that snapshot only gets staler the longer the tab
+    // stays open, for every visitor, not only curators, so All now asks
+    // fetchPage for a live page one exactly like every other filter does.
     fetchPage(1, category, true);
-  }, [fetchPage, initialData]);
+  }, [fetchPage]);
 
   // Shareable filtered views: /spotlight?category=ui applies the filter
   // on load (and chip clicks keep the URL in sync above).
@@ -140,21 +151,45 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
   // of it. isCurator itself is only known once the credentialed /me call
   // resolves, so once it does, page one is pulled straight from the API
   // (the same uncached path fetchPage already uses for filters and load
-  // more) and swapped in for whatever the server rendered. The ref caps it
-  // at one fetch per mount: activeCategory can keep changing afterward,
-  // and fetchPage above already owns those changes. A non-curator, or a
-  // curator whose /me call hasn't resolved yet, triggers nothing here.
-  // silent so this background swap can't flash "Loading…" on the load
-  // more button for a request nobody clicked.
-  const curatorRefetched = useRef(false);
+  // more) and swapped in for whatever the server rendered. A non-curator,
+  // or a curator whose /me call hasn't resolved yet, triggers nothing
+  // here. silent so this background swap can't flash "Loading…" on the
+  // load more button for a request nobody clicked.
+  //
+  // The ref guards against starting a second attempt chain, not against
+  // retrying within the one chain it starts: it is set the moment a chain
+  // begins, not once that chain finally lands, since ready/isCurator only
+  // ever flip true once and the thing worth preventing is two concurrent
+  // chains, not a chain that takes more than one try.
+  const curatorRefetchStarted = useRef(false);
   useEffect(() => {
-    if (!likes.ready || !likes.isCurator || curatorRefetched.current) return;
-    curatorRefetched.current = true;
+    if (!likes.ready || !likes.isCurator || curatorRefetchStarted.current) return;
+    curatorRefetchStarted.current = true;
     // A URL-driven filter (?category=) already gets a fresh fetch from the
     // effect above, through the same uncached fetchPage. A second request
     // here would be identical, just a wasted round trip, so skip it.
     if (new URLSearchParams(window.location.search).get('category')) return;
-    fetchPage(1, activeCategory, true, true);
+    let cancelled = false;
+    // A silent call here can lose the race to a chip click or "Show more"
+    // firing while it's in flight, both bump the same fetchGen. Losing
+    // does not mean the data was wrong, it means a different call for a
+    // different view won and applied first, and left alone, page one
+    // would stay on the stale snapshot for the rest of the visit with no
+    // error and no second chance. So a superseded attempt just asks
+    // again immediately, reading activeCategoryRef fresh each time in
+    // case the curator has since switched filters, so a retry can never
+    // land a stale, unfiltered answer over a filter they've since chosen.
+    // A genuine fetch failure does not retry: fetchPage's own catch block
+    // already has a contract for that, stale items stay up and the
+    // surface that failed stays available to retry by hand, and retrying
+    // it again here would just be a second, undeclared version of the
+    // same policy.
+    const attempt = async () => {
+      const outcome = await fetchPage(1, activeCategoryRef.current, true, true);
+      if (!cancelled && outcome === 'superseded') attempt();
+    };
+    attempt();
+    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [likes.ready, likes.isCurator]);
 
