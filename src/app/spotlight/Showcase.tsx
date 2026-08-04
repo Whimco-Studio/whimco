@@ -69,21 +69,39 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
     return () => obs.disconnect();
   }, []);
 
-  const fetchPage = useCallback(async (nextPage: number, category: string, replace: boolean) => {
-    setLoading(true);
+  // Request generation, guarding fetchPage the same way useLikes.ts's
+  // categoryGen guards recategorize. Two calls can be in flight together,
+  // a chip click while the curator's mount refetch is still out, "load
+  // more" fired twice, and without this whichever response lands last
+  // wins regardless of which was requested last: a filtered click could
+  // be overwritten by a slower, larger unfiltered response that was
+  // already stale by the time it landed. Bump on entry, capture the
+  // value, and only apply a response while it is still the newest
+  // request. setLoading(false) stays unconditional in finally, so a
+  // superseded request cannot strand the loading state on true.
+  const fetchGen = useRef(0);
+  const fetchPage = useCallback(async (
+    nextPage: number, category: string, replace: boolean, silent = false,
+  ) => {
+    const gen = ++fetchGen.current;
+    if (!silent) setLoading(true);
     try {
       const params = new URLSearchParams({ page: String(nextPage) });
       if (category) params.set('category', category);
       const res = await fetch(`${SHOWCASE_API_URL}?${params}`);
       if (!res.ok) throw new Error(`showcase fetch ${res.status}`);
       const data: ShowcaseData = await res.json();
-      setItems((prev) => (replace ? data.items : [...prev, ...data.items]));
-      setPage(data.page);
-      setPages(data.pages);
+      // A newer call already owns what's on screen; applying this reply
+      // now would replace it with a stale, possibly mismatched answer.
+      if (fetchGen.current === gen) {
+        setItems((prev) => (replace ? data.items : [...prev, ...data.items]));
+        setPage(data.page);
+        setPages(data.pages);
+      }
     } catch {
       // Leave current items in place; the button stays available to retry.
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
@@ -96,6 +114,10 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
       window.history.replaceState(null, '', url);
     }
     if (category === '' && initialData) {
+      // Bumps the generation even though nothing is fetched here, so a
+      // slower in-flight fetchPage call for the filter just left cannot
+      // land afterward and overwrite this reset with stale filtered data.
+      fetchGen.current += 1;
       setItems(initialData.items);
       setPage(initialData.page);
       setPages(initialData.pages);
@@ -122,11 +144,17 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
   // at one fetch per mount: activeCategory can keep changing afterward,
   // and fetchPage above already owns those changes. A non-curator, or a
   // curator whose /me call hasn't resolved yet, triggers nothing here.
+  // silent so this background swap can't flash "Loading…" on the load
+  // more button for a request nobody clicked.
   const curatorRefetched = useRef(false);
   useEffect(() => {
     if (!likes.ready || !likes.isCurator || curatorRefetched.current) return;
     curatorRefetched.current = true;
-    fetchPage(1, activeCategory, true);
+    // A URL-driven filter (?category=) already gets a fresh fetch from the
+    // effect above, through the same uncached fetchPage. A second request
+    // here would be identical, just a wasted round trip, so skip it.
+    if (new URLSearchParams(window.location.search).get('category')) return;
+    fetchPage(1, activeCategory, true, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [likes.ready, likes.isCurator]);
 
