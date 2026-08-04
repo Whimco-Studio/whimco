@@ -229,6 +229,10 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
           <h2 className="gallery-title">The showcase</h2>
           <span className="gallery-head-right">
             <a className="gallery-link" href="/spotlight/creators">BROWSE CREATORS →</a>
+            {/* The two halves of the same broadcast: who sends it, and
+                where it lands. The servers connected stat above counts
+                exactly what this page lists. */}
+            <a className="gallery-link" href="/spotlight/network">VIEW THE NETWORK →</a>
             <span className="gallery-note">refreshes every 5 minutes</span>
           </span>
         </div>
