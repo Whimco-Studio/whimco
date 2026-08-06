@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { Bricolage_Grotesque, JetBrains_Mono } from 'next/font/google';
 import GlassNav from '../components/GlassNav';
 import Showcase from './Showcase';
-import HowItWorks from './HowItWorks';
+import HowItWorksSimple from './HowItWorksSimple';
 import SpotlightIntro from './SpotlightIntro';
 import { SHOWCASE_API_URL, ShowcaseData } from './constants';
 
@@ -56,6 +56,22 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
+/** A real creation for the how-it-works loop, so it demonstrates the
+    product instead of diagramming it. Prefers a still: a video's poster
+    frame is already a plain image, and the loop is too small to play one
+    usefully. Returns null when nothing usable came back, which the
+    component renders as a gradient stand-in rather than a broken tile. */
+function pickSample(data: ShowcaseData | null) {
+  for (const item of data?.items ?? []) {
+    const media = item.media?.[0];
+    if (!media) continue;
+    const image = media.thumbnail
+      ?? (media.content_type?.startsWith('image/') ? media.url : null);
+    if (image) return { image, author: item.author_name };
+  }
+  return null;
+}
+
 export default async function SpotlightPage() {
   const data = await getShowcase();
   return (
@@ -85,7 +101,7 @@ export default async function SpotlightPage() {
           HOW IT WORKS
         </p>
       </div>
-      <HowItWorks />
+      <HowItWorksSimple stats={data?.stats ?? null} sample={pickSample(data)} />
     </div>
   );
 }
