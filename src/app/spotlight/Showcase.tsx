@@ -9,6 +9,7 @@ import ShowcaseStyles from './styles';
 import useLikes from './useLikes';
 import {
   CATEGORY_LABELS, INVITE_URL, SHOWCASE_API_URL, ShowcaseData, ShowcaseItem,
+  SortMode,
 } from './constants';
 
 function useCountUp(target: number, start: boolean, duration = 1400) {
@@ -49,6 +50,9 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
   const [page, setPage] = useState(initialData?.page ?? 1);
   const [pages, setPages] = useState(initialData?.pages ?? 1);
   const [activeCategory, setActiveCategory] = useState('');
+  // 'new' is the default the API also defaults to, so the server-rendered
+  // first paint and this initial state always agree.
+  const [sort, setSort] = useState<SortMode>('new');
   const [loading, setLoading] = useState(false);
   const [statsStarted, setStatsStarted] = useState(false);
   const likes = useLikes();
@@ -59,6 +63,11 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
   // moment each retry fires, not whatever was current when the loop
   // started. Kept in sync inline in pickCategory, the only setter.
   const activeCategoryRef = useRef(activeCategory);
+  // Same reason as activeCategoryRef: the curator retry loop below spans
+  // renders and must re-read whichever tab is current when each retry
+  // fires, or a retry can land a "new" page over a "top" one the visitor
+  // switched to while it was in flight.
+  const sortRef = useRef(sort);
 
   const stats = initialData?.stats;
   const categories = initialData?.categories ?? [];
@@ -95,13 +104,17 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
   // (failed).
   const fetchGen = useRef(0);
   const fetchPage = useCallback(async (
-    nextPage: number, category: string, replace: boolean, silent = false,
+    nextPage: number, category: string, mode: SortMode,
+    replace: boolean, silent = false,
   ): Promise<'applied' | 'superseded' | 'failed'> => {
     const gen = ++fetchGen.current;
     if (!silent) setLoading(true);
     try {
       const params = new URLSearchParams({ page: String(nextPage) });
       if (category) params.set('category', category);
+      // Only sent when it is not the default, so the common request keeps
+      // one cache key on the API side rather than splitting it in two.
+      if (mode !== 'new') params.set('sort', mode);
       const res = await fetch(`${SHOWCASE_API_URL}?${params}`);
       if (!res.ok) throw new Error(`showcase fetch ${res.status}`);
       const data: ShowcaseData = await res.json();
@@ -134,14 +147,42 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
     // the network, but that snapshot only gets staler the longer the tab
     // stays open, for every visitor, not only curators, so All now asks
     // fetchPage for a live page one exactly like every other filter does.
-    fetchPage(1, category, true);
+    fetchPage(1, category, sortRef.current, true);
   }, [fetchPage]);
 
-  // Shareable filtered views: /spotlight?category=ui applies the filter
-  // on load (and chip clicks keep the URL in sync above).
+  const pickSort = useCallback((mode: SortMode, updateUrl = true) => {
+    sortRef.current = mode;
+    setSort(mode);
+    if (updateUrl) {
+      const url = new URL(window.location.href);
+      if (mode !== 'new') url.searchParams.set('sort', mode);
+      else url.searchParams.delete('sort');
+      window.history.replaceState(null, '', url);
+    }
+    // Back to page one. Keeping the page number across a sort change
+    // would show page four of a completely different ordering.
+    fetchPage(1, activeCategoryRef.current, mode, true);
+  }, [fetchPage]);
+
+  // Shareable filtered views: /spotlight?category=ui&sort=top applies both
+  // on load (and the controls keep the URL in sync above).
   useEffect(() => {
-    const fromUrl = new URLSearchParams(window.location.search).get('category');
-    if (fromUrl) pickCategory(fromUrl, false);
+    const params = new URLSearchParams(window.location.search);
+    const fromUrl = params.get('category');
+    const sortFromUrl = params.get('sort');
+    // One fetch, not two. Setting both through their own pickers would
+    // fire a request each, and the second would race the first.
+    if (sortFromUrl === 'top') {
+      sortRef.current = 'top';
+      setSort('top');
+    }
+    if (fromUrl) {
+      activeCategoryRef.current = fromUrl;
+      setActiveCategory(fromUrl);
+    }
+    if (fromUrl || sortFromUrl === 'top') {
+      fetchPage(1, activeCategoryRef.current, sortRef.current, true);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -168,7 +209,8 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
     // A URL-driven filter (?category=) already gets a fresh fetch from the
     // effect above, through the same uncached fetchPage. A second request
     // here would be identical, just a wasted round trip, so skip it.
-    if (new URLSearchParams(window.location.search).get('category')) return;
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('category') || urlParams.get('sort')) return;
     let cancelled = false;
     // A silent call here can lose the race to a chip click or "Show more"
     // firing while it's in flight, both bump the same fetchGen. Losing
@@ -185,7 +227,9 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
     // it again here would just be a second, undeclared version of the
     // same policy.
     const attempt = async () => {
-      const outcome = await fetchPage(1, activeCategoryRef.current, true, true);
+      const outcome = await fetchPage(
+        1, activeCategoryRef.current, sortRef.current, true, true,
+      );
       if (!cancelled && outcome === 'superseded') attempt();
     };
     attempt();
@@ -205,7 +249,7 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
         <p className="sub">
           Spotlight carries creators&apos; posts from any #creations channel to showcase
           channels across every connected server. Everything below is real work,
-          shared by the network and ranked by hearts.
+          shared by the network, newest first.
         </p>
         <div className="cta-row">
           <a className="cta-primary" href={INVITE_URL} target="_blank" rel="noopener noreferrer">
@@ -235,6 +279,27 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
             <a className="gallery-link" href="/spotlight/network">VIEW THE NETWORK →</a>
             <span className="gallery-note">refreshes every 5 minutes</span>
           </span>
+        </div>
+
+        <div className="sort-tabs" role="tablist" aria-label="Sort creations">
+          <button
+            type="button"
+            role="tab"
+            className={`sort-tab ${sort === 'new' ? 'sort-tab-on' : ''}`}
+            aria-selected={sort === 'new'}
+            onClick={() => pickSort('new')}
+          >
+            New
+          </button>
+          <button
+            type="button"
+            role="tab"
+            className={`sort-tab ${sort === 'top' ? 'sort-tab-on' : ''}`}
+            aria-selected={sort === 'top'}
+            onClick={() => pickSort('top')}
+          >
+            Top this week
+          </button>
         </div>
 
         {categories.length > 0 && (
@@ -270,7 +335,7 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
             : 'The showcase is momentarily offline. The network is still broadcasting — check back shortly.'}
           canLoadMore={page < pages}
           loading={loading}
-          onLoadMore={() => fetchPage(page + 1, activeCategory, false)}
+          onLoadMore={() => fetchPage(page + 1, activeCategory, sort, false)}
         />
       </section>
 

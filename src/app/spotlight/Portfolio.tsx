@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import GalleryGrid from './Gallery';
 import ShowcaseStyles from './styles';
 import VerifiedSeal from './VerifiedSeal';
@@ -16,19 +16,28 @@ export default function Portfolio({
   const [page, setPage] = useState(initialData?.page ?? 1);
   const [pages, setPages] = useState(initialData?.pages ?? 1);
   const [loading, setLoading] = useState(false);
+  const [author, setAuthor] = useState(initialData?.author);
   const likes = useLikes();
 
-  const author = initialData?.author;
   const profile = initialData?.profile;
   const name = author?.name || username;
 
+  // Guards the two fetches below against each other, the same way
+  // Showcase.tsx guards its own. The mount refresh and a "show more"
+  // click can be in flight together, and without this whichever lands
+  // last wins regardless of which was asked for last: a page-one refresh
+  // landing after a page-two append would throw the appended page away.
+  const fetchGen = useRef(0);
+
   const loadMore = useCallback(async () => {
+    const gen = ++fetchGen.current;
     setLoading(true);
     try {
       const params = new URLSearchParams({ page: String(page + 1), author: username });
       const res = await fetch(`${SHOWCASE_API_URL}?${params}`);
       if (!res.ok) throw new Error(`portfolio fetch ${res.status}`);
       const data: ShowcaseData = await res.json();
+      if (fetchGen.current !== gen) return;
       setItems((prev) => [...prev, ...data.items]);
       setPage(data.page);
       setPages(data.pages);
@@ -38,6 +47,42 @@ export default function Portfolio({
       setLoading(false);
     }
   }, [page, username]);
+
+  // The page is rendered through ISR with a five minute window, and ISR
+  // serves the stale copy while it regenerates, so the request that
+  // trips the revalidation still gets the old page. For a creator that
+  // window lands exactly where it hurts: they post, open their own
+  // portfolio to check it arrived, and their newest work is not there.
+  //
+  // The API itself is already current within seconds, because every
+  // showcase write bumps the generation in its cache key. So this just
+  // asks for page one again on mount and swaps it in. Silent, with no
+  // spinner: nobody clicked anything, and a flash of "Loading" on a page
+  // that already has content reads as a fault rather than a refresh.
+  useEffect(() => {
+    const gen = ++fetchGen.current;
+    let cancelled = false;
+    (async () => {
+      try {
+        const params = new URLSearchParams({ page: '1', author: username });
+        const res = await fetch(`${SHOWCASE_API_URL}?${params}`);
+        if (!res.ok) return;
+        const data: ShowcaseData = await res.json();
+        // A "show more" that started after this one owns the list now;
+        // replacing it with page one would drop what they just loaded.
+        if (cancelled || fetchGen.current !== gen) return;
+        setItems(data.items);
+        setPage(data.page);
+        setPages(data.pages);
+        // The header counts go stale with the grid. Leaving them behind
+        // would show a creator four creations above five cards.
+        if (data.author) setAuthor(data.author);
+      } catch {
+        // Stale content beats blanking the page over a failed refresh.
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [username]);
 
   return (
     <div className="showcase">

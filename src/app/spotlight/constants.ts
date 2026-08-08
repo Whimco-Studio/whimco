@@ -94,11 +94,19 @@ export type ShowcaseProfile = {
   contact: string;
 };
 
+/** Gallery ordering. 'new' is newest first and the default; 'top' ranks by
+    hearts within a 7-day window. Top is deliberately not all-time: hearts
+    only accumulate, so an all-time ranking drifts older every day. */
+export type SortMode = 'new' | 'top';
+
 export type ShowcaseData = {
   items: ShowcaseItem[];
   page: number;
   pages: number;
   total: number;
+  /** Echoed back by the API, so an unrecognised ?sort is visible as the
+      default it fell back to rather than silently ignored. */
+  sort?: SortMode;
   stats: ShowcaseStats;
   tags: { tag: string; count: number }[];
   categories: { category: string; count: number }[];

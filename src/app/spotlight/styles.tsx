@@ -204,6 +204,36 @@ export default function ShowcaseStyles() {
         color: var(--stext-dim);
         white-space: nowrap;
       }
+      /* Sort tabs sit above the category chips and read as a different
+         kind of control on purpose: an underline rather than a pill, so
+         "which ordering" never looks like one more filter to combine. */
+      .showcase .sort-tabs {
+        display: flex;
+        gap: 1.4rem;
+        border-bottom: 1px solid var(--edge);
+        margin-bottom: 1.1rem;
+      }
+      .showcase .sort-tab {
+        font-family: var(--font-mono), monospace;
+        font-size: 0.78rem;
+        letter-spacing: 0.06em;
+        color: var(--stext-dim);
+        background: none;
+        border: none;
+        border-bottom: 2px solid transparent;
+        padding: 0 0 0.6rem;
+        margin-bottom: -1px;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: color 0.15s ease, border-color 0.15s ease;
+      }
+      .showcase .sort-tab:hover { color: var(--stext); }
+      .showcase .sort-tab-on {
+        color: var(--beam);
+        border-bottom-color: var(--beam);
+        font-weight: 700;
+      }
+
       .showcase .chips {
         display: flex;
         gap: 0.5rem;
