@@ -402,10 +402,18 @@ export default function ShowcaseStyles() {
         text-decoration: underline;
       }
       /* Sits inside the author link, which ellipsises a long name. Stays
-         gold on hover (the link recolours) and never shrinks away. */
+         gold on hover (the link recolours) and never shrinks away.
+
+         Sized in rem, not the 1em it used to inherit. The seal renders at
+         0.62em of its own font-size, so inheriting .card-meta's 0.72rem
+         drew it at about 7px: half the size of the same mark in the
+         creators directory and small enough to read as a speck of dust
+         next to the name. 1.3rem puts it at roughly 13px, a little taller
+         than the 11.5px text beside it, which is where a badge wants to
+         sit. It stays under the meta row's line box, so nothing reflows. */
       .showcase .card-seal {
         color: var(--beam);
-        font-size: 1em;
+        font-size: 1.3rem;
         margin-left: 0.3em;
         vertical-align: -0.14em;
         flex-shrink: 0;
