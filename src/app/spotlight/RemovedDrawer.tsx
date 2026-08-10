@@ -17,13 +17,18 @@ import type { Likes } from './useLikes';
     seeing it, so the drawer must not put it back in front of them on
     every visit. */
 export default function RemovedDrawer({
-  username, likes, onRestored,
+  username, likes, onRestored, reloadToken = 0,
 }: {
   username: string;
   likes: Likes;
   /** Fired after a restore so the portfolio can pull the creation back
       into its grid without a reload. */
   onRestored?: () => void;
+  /** Bumped by the parent whenever a creation is removed from the grid.
+      Without it the drawer only ever reflects what was already removed
+      when the page loaded: the card would disappear and nothing would
+      say where it went, leaving no way back short of a reload. */
+  reloadToken?: number;
 }) {
   const [items, setItems] = useState<ShowcaseItem[]>([]);
   const [open, setOpen] = useState(false);
@@ -48,7 +53,7 @@ export default function RemovedDrawer({
   useEffect(() => {
     if (!likes.ready || !likes.signedIn) return;
     load();
-  }, [likes.ready, likes.signedIn, load]);
+  }, [likes.ready, likes.signedIn, load, reloadToken]);
 
   const restore = async (item: ShowcaseItem) => {
     setBusy(item.id);

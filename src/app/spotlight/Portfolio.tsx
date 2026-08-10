@@ -18,6 +18,7 @@ export default function Portfolio({
   const [pages, setPages] = useState(initialData?.pages ?? 1);
   const [loading, setLoading] = useState(false);
   const [author, setAuthor] = useState(initialData?.author);
+  const [removedToken, setRemovedToken] = useState(0);
   const likes = useLikes();
 
   const profile = initialData?.profile;
@@ -89,6 +90,9 @@ export default function Portfolio({
   const onRemoved = useCallback((id: number) => {
     setItems((prev) => prev.filter((i) => i.id !== id));
     refresh();
+    // And tell the drawer to re-read, or the card would simply vanish
+    // with nothing saying where it went.
+    setRemovedToken((n) => n + 1);
   }, [refresh]);
 
   return (
@@ -148,7 +152,12 @@ export default function Portfolio({
           onRemoved={onRemoved}
         />
 
-        <RemovedDrawer username={username} likes={likes} onRestored={refresh} />
+        <RemovedDrawer
+          username={username}
+          likes={likes}
+          onRestored={refresh}
+          reloadToken={removedToken}
+        />
 
         <div className="cta-row" style={{ marginTop: '3.5rem' }}>
           <a className="cta-primary" href={INVITE_URL} target="_blank" rel="noopener noreferrer">
