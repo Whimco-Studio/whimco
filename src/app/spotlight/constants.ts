@@ -170,3 +170,8 @@ export const LIKE_URL = `${SPOTLIGHT_ORIGIN}/api/showcase/like`;
 export const ME_URL = `${SPOTLIGHT_ORIGIN}/api/showcase/me`;
 export const CLAIM_START_URL = `${SPOTLIGHT_ORIGIN}/claim/start`;
 export const RECATEGORIZE_URL = `${SPOTLIGHT_ORIGIN}/api/showcase/recategorize`;
+/** A creator taking their own work off whimco.com, and their drawer of
+    what they have taken off. Gallery only: the Discord copies already
+    broadcast to member servers stay where they are. */
+export const REMOVE_URL = `${SPOTLIGHT_ORIGIN}/api/showcase/remove`;
+export const REMOVED_URL = `${SPOTLIGHT_ORIGIN}/api/showcase/removed`;

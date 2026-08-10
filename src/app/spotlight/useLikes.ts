@@ -4,7 +4,7 @@ import {
   useCallback, useEffect, useRef, useState,
 } from 'react';
 import {
-  CLAIM_START_URL, LIKE_URL, ME_URL, RECATEGORIZE_URL, ShowcaseItem,
+  CLAIM_START_URL, LIKE_URL, ME_URL, RECATEGORIZE_URL, REMOVE_URL, ShowcaseItem,
 } from './constants';
 
 export type Likes = {
@@ -16,6 +16,11 @@ export type Likes = {
   toggle: (item: ShowcaseItem) => void;
   categoryOf: (item: ShowcaseItem) => string;
   recategorize: (item: ShowcaseItem, category: string) => Promise<boolean>;
+  /** Whether this creation belongs to the person reading the page. */
+  isMine: (id: number) => boolean;
+  /** Take one of your own creations off whimco.com, or put it back.
+      Gallery only: the Discord copies stay live. */
+  setRemoved: (item: ShowcaseItem, removed: boolean) => Promise<boolean>;
 };
 
 /** Viewer state for the gallery: heart state, and whether this visitor
@@ -32,6 +37,7 @@ export default function useLikes(): Likes {
   const [signedIn, setSignedIn] = useState(false);
   const [isCurator, setIsCurator] = useState(false);
   const [liked, setLiked] = useState<Set<number>>(new Set());
+  const [own, setOwn] = useState<Set<number>>(new Set());
   const [counts, setCounts] = useState<Record<number, number>>({});
   const [categories, setCategories] = useState<Record<number, string>>({});
   // Per-item write sequence, guarding against two overlapping recategorize
@@ -50,6 +56,7 @@ export default function useLikes(): Likes {
         setSignedIn(Boolean(data.signed_in));
         setIsCurator(Boolean(data.is_curator));
         setLiked(new Set<number>(data.liked_item_ids ?? []));
+        setOwn(new Set<number>(data.own_item_ids ?? []));
       })
       .catch(() => {})
       .finally(() => { if (alive) setReady(true); });
@@ -89,6 +96,42 @@ export default function useLikes(): Likes {
       // roll back so the user sees the like didn't stick.
       .catch(() => apply(wasLiked, prevCount));
   }, [ready, signedIn, liked, counts]);
+
+  /** Take one of your own creations off whimco.com, or restore it.
+      Resolves false when the write did not land, so the caller can roll
+      its optimistic update back and say so.
+
+      Not optimistic here, unlike toggle: the caller removes the card from
+      its own list, and there is no shared count to keep in step. The
+      ownership set is updated on success so a restore from the drawer
+      brings the remove control back with the card. */
+  const setRemoved = useCallback(
+    async (item: ShowcaseItem, removed: boolean) => {
+      if (!signedIn) {
+        const next = encodeURIComponent(window.location.href);
+        window.location.href = `${CLAIM_START_URL}?next=${next}`;
+        return false;
+      }
+      try {
+        const r = await fetch(REMOVE_URL, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ item_id: item.id, removed }),
+        });
+        if (!r.ok) throw new Error(String(r.status));
+        setOwn((prev) => {
+          const nextSet = new Set(prev);
+          if (removed) nextSet.delete(item.id); else nextSet.add(item.id);
+          return nextSet;
+        });
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    [signedIn],
+  );
 
   // A local override wins over the item's server-rendered category, so a
   // reassignment shows immediately. The gallery payload is cached five
@@ -145,5 +188,7 @@ export default function useLikes(): Likes {
     toggle,
     categoryOf,
     recategorize,
+    isMine: useCallback((id: number) => own.has(id), [own]),
+    setRemoved,
   };
 }

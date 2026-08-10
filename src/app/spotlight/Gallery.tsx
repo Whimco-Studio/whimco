@@ -53,6 +53,70 @@ function HeartButton({ item, likes }: { item: ShowcaseItem; likes?: Likes }) {
   );
 }
 
+/** Remove control, shown only on your own creations.
+
+    Two presses, not a modal or a confirm(): the first arms it and the
+    second commits, and it disarms itself after a few seconds or when
+    focus leaves. Same guard shape as /flagged. That suits an action this
+    reversible, and it keeps a mis-aimed click on a dense card grid from
+    being the whole interaction.
+
+    Removal is whimco.com only. The copy says so, because a creator who
+    reads "remove" as "unsend across 60 servers" would be wrong in a way
+    they might not discover for days. */
+function RemoveButton({
+  item, likes, onRemoved,
+}: { item: ShowcaseItem; likes?: Likes; onRemoved?: (id: number) => void }) {
+  const [armed, setArmed] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
+
+  if (!likes?.isMine(item.id)) return null;
+
+  const disarm = () => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = null;
+    setArmed(false);
+  };
+
+  const press = async () => {
+    if (busy) return;
+    if (!armed) {
+      setFailed(false);
+      setArmed(true);
+      timer.current = setTimeout(() => setArmed(false), 4000);
+      return;
+    }
+    disarm();
+    setBusy(true);
+    const ok = await likes.setRemoved(item, true);
+    setBusy(false);
+    if (ok) onRemoved?.(item.id); else setFailed(true);
+  };
+
+  return (
+    <span className="card-remove-wrap">
+      <button
+        type="button"
+        className={`card-remove ${armed ? 'card-remove-armed' : ''}`}
+        // The card behind this is a click target that opens the lightbox.
+        onClick={(e) => { e.stopPropagation(); press(); }}
+        onBlur={disarm}
+        disabled={busy}
+        title={armed
+          ? 'Press again to take this off whimco.com'
+          : 'Remove this from whimco.com. Copies already shared in Discord stay.'}
+      >
+        {armed ? 'Remove?' : '✕'}
+      </button>
+      {failed && <span className="tag-failed" role="alert">not removed</span>}
+    </span>
+  );
+}
+
 function CardMedia({ item }: { item: ShowcaseItem }) {
   const media = item.media[0];
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -91,8 +155,11 @@ function CardMedia({ item }: { item: ShowcaseItem }) {
 }
 
 function GalleryCard({
-  item, onOpen, showAuthor, likes,
-}: { item: ShowcaseItem; onOpen: () => void; showAuthor: boolean; likes?: Likes }) {
+  item, onOpen, showAuthor, likes, onRemoved,
+}: {
+  item: ShowcaseItem; onOpen: () => void; showAuthor: boolean;
+  likes?: Likes; onRemoved?: (id: number) => void;
+}) {
   const caption = cleanCaption(item.content);
   return (
     <article className="card">
@@ -124,12 +191,18 @@ function GalleryCard({
         )}
         <HeartButton item={item} likes={likes} />
         <CategoryTag item={item} likes={likes} />
+        <RemoveButton item={item} likes={likes} onRemoved={onRemoved} />
       </div>
     </article>
   );
 }
 
-function Lightbox({ item, onClose, likes }: { item: ShowcaseItem; onClose: () => void; likes?: Likes }) {
+function Lightbox({
+  item, onClose, likes, onRemoved,
+}: {
+  item: ShowcaseItem; onClose: () => void;
+  likes?: Likes; onRemoved?: (id: number) => void;
+}) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     document.addEventListener('keydown', onKey);
@@ -159,6 +232,7 @@ function Lightbox({ item, onClose, likes }: { item: ShowcaseItem; onClose: () =>
           </a>
           <HeartButton item={item} likes={likes} />
           <CategoryTag item={item} likes={likes} />
+          <RemoveButton item={item} likes={likes} onRemoved={onRemoved} />
           {xLink(item.content) && (
             <a
               className="lightbox-source"
@@ -178,7 +252,8 @@ function Lightbox({ item, onClose, likes }: { item: ShowcaseItem; onClose: () =>
 /** Round-robin masonry + beam overlay + lightbox. Presentational: the
     parent owns items/pagination state. */
 export default function GalleryGrid({
-  items, emptyText, showAuthor = true, canLoadMore = false, loading = false, onLoadMore, likes,
+  items, emptyText, showAuthor = true, canLoadMore = false, loading = false,
+  onLoadMore, likes, onRemoved,
 }: {
   items: ShowcaseItem[];
   emptyText: string;
@@ -187,6 +262,9 @@ export default function GalleryGrid({
   loading?: boolean;
   onLoadMore?: () => void;
   likes?: Likes;
+  /** Called with the id after one of the viewer's own creations is
+      removed, so the parent that owns the list can drop the card. */
+  onRemoved?: (id: number) => void;
 }) {
   const [selected, setSelected] = useState<ShowcaseItem | null>(null);
   const [cols, setCols] = useState(4);
@@ -231,6 +309,7 @@ export default function GalleryGrid({
                       item={item}
                       showAuthor={showAuthor}
                       likes={likes}
+                      onRemoved={onRemoved}
                       onOpen={() => setSelected(item)}
                     />
                   ))}
@@ -253,7 +332,17 @@ export default function GalleryGrid({
         </div>
       )}
 
-      {selected && <Lightbox item={selected} likes={likes} onClose={() => setSelected(null)} />}
+      {selected && (
+        <Lightbox
+          item={selected}
+          likes={likes}
+          onClose={() => setSelected(null)}
+          // Closing first: leaving the lightbox open over a creation that
+          // is no longer in the grid behind it reads as the removal
+          // having failed.
+          onRemoved={(id) => { setSelected(null); onRemoved?.(id); }}
+        />
+      )}
     </>
   );
 }

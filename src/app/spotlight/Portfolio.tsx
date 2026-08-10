@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import GalleryGrid from './Gallery';
+import RemovedDrawer from './RemovedDrawer';
 import ShowcaseStyles from './styles';
 import VerifiedSeal from './VerifiedSeal';
 import useLikes from './useLikes';
@@ -59,30 +60,36 @@ export default function Portfolio({
   // asks for page one again on mount and swaps it in. Silent, with no
   // spinner: nobody clicked anything, and a flash of "Loading" on a page
   // that already has content reads as a fault rather than a refresh.
-  useEffect(() => {
+  const refresh = useCallback(async () => {
     const gen = ++fetchGen.current;
-    let cancelled = false;
-    (async () => {
-      try {
-        const params = new URLSearchParams({ page: '1', author: username });
-        const res = await fetch(`${SHOWCASE_API_URL}?${params}`);
-        if (!res.ok) return;
-        const data: ShowcaseData = await res.json();
-        // A "show more" that started after this one owns the list now;
-        // replacing it with page one would drop what they just loaded.
-        if (cancelled || fetchGen.current !== gen) return;
-        setItems(data.items);
-        setPage(data.page);
-        setPages(data.pages);
-        // The header counts go stale with the grid. Leaving them behind
-        // would show a creator four creations above five cards.
-        if (data.author) setAuthor(data.author);
-      } catch {
-        // Stale content beats blanking the page over a failed refresh.
-      }
-    })();
-    return () => { cancelled = true; };
+    try {
+      const params = new URLSearchParams({ page: '1', author: username });
+      const res = await fetch(`${SHOWCASE_API_URL}?${params}`);
+      if (!res.ok) return;
+      const data: ShowcaseData = await res.json();
+      // A "show more" that started after this one owns the list now;
+      // replacing it with page one would drop what they just loaded.
+      if (fetchGen.current !== gen) return;
+      setItems(data.items);
+      setPage(data.page);
+      setPages(data.pages);
+      // The header counts go stale with the grid. Leaving them behind
+      // would show a creator four creations above five cards.
+      if (data.author) setAuthor(data.author);
+    } catch {
+      // Stale content beats blanking the page over a failed refresh.
+    }
   }, [username]);
+
+  useEffect(() => { refresh(); }, [refresh]);
+
+  /** A creation the owner just took down. The card goes immediately, then
+      the refresh corrects the header counts, which are computed server
+      side and would otherwise still claim the creation this just removed. */
+  const onRemoved = useCallback((id: number) => {
+    setItems((prev) => prev.filter((i) => i.id !== id));
+    refresh();
+  }, [refresh]);
 
   return (
     <div className="showcase">
@@ -138,7 +145,10 @@ export default function Portfolio({
           canLoadMore={page < pages}
           loading={loading}
           onLoadMore={loadMore}
+          onRemoved={onRemoved}
         />
+
+        <RemovedDrawer username={username} likes={likes} onRestored={refresh} />
 
         <div className="cta-row" style={{ marginTop: '3.5rem' }}>
           <a className="cta-primary" href={INVITE_URL} target="_blank" rel="noopener noreferrer">

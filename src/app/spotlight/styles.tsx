@@ -468,6 +468,97 @@ export default function ShowcaseStyles() {
       .showcase .lightbox .tag-pencil { opacity: 0.7; }
       .showcase .tag-edit:hover .tag-pencil { opacity: 1; }
       .showcase .tag-failed { color: #f0a0a6; font-size: 0.6rem; }
+
+      /* Remove control, on your own creations only. Quiet until the card
+         is hovered or focused, the same way the curator pencil is: it is
+         destructive, and a permanently lit ✕ on every one of your cards
+         makes your own portfolio read as a management screen. Always
+         visible in the lightbox, where there is no hover to reveal it and
+         one creation has the whole viewport. */
+      .showcase .card-remove-wrap {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        margin-left: auto;
+      }
+      .showcase .card-remove {
+        background: none;
+        border: 0;
+        padding: 0 0.15rem;
+        cursor: pointer;
+        font: inherit;
+        font-size: 0.68rem;
+        line-height: 1;
+        color: var(--stext-dim);
+        opacity: 0;
+        transition: opacity 0.15s ease, color 0.15s ease;
+      }
+      .showcase .card:hover .card-remove,
+      .showcase .card:focus-within .card-remove,
+      .showcase .lightbox .card-remove { opacity: 0.65; }
+      .showcase .card-remove:hover { opacity: 1; color: #f0a0a6; }
+      .showcase .card-remove:disabled { cursor: default; opacity: 0.4; }
+      /* Armed: reads as a word, not a glyph, so the second press is a
+         deliberate answer to a question rather than a repeat of a click. */
+      .showcase .card-remove-armed,
+      .showcase .card:hover .card-remove-armed,
+      .showcase .lightbox .card-remove-armed {
+        opacity: 1;
+        color: #f0a0a6;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        font-size: 0.6rem;
+      }
+
+      /* The removed drawer: collapsed by default. A creator who removed
+         something meant to stop seeing it. */
+      .showcase .pf-removed {
+        margin-top: 2.5rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.07);
+        padding-top: 1rem;
+      }
+      .showcase .pf-removed-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        background: none;
+        border: 0;
+        padding: 0.2rem 0;
+        cursor: pointer;
+        font: inherit;
+        font-size: 0.72rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--stext-dim);
+      }
+      .showcase .pf-removed-toggle:hover { color: var(--beam); }
+      .showcase .pf-removed-chev { font-size: 0.6rem; }
+      .showcase .pf-removed-note {
+        margin: 0.6rem 0 1.1rem;
+        max-width: 46ch;
+        font-size: 0.72rem;
+        line-height: 1.55;
+        color: var(--stext-dim);
+      }
+      .showcase .pf-removed-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+        gap: 1.4rem;
+      }
+      .showcase .pf-removed-row {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        /* Removed work reads as set aside rather than shown. Restoring
+           returns it to full strength, so the difference is legible. */
+        opacity: 0.72;
+      }
+      .showcase .pf-removed-row:hover { opacity: 1; }
+      .showcase .pf-restore {
+        align-self: flex-start;
+        font-size: 0.66rem;
+        padding: 0.3rem 0.8rem;
+      }
       .showcase .tag-picker {
         position: absolute;
         bottom: 100%;
