@@ -498,6 +498,16 @@ export default function ShowcaseStyles() {
       .showcase .lightbox .card-remove { opacity: 0.65; }
       .showcase .card-remove:hover { opacity: 1; color: #f0a0a6; }
       .showcase .card-remove:disabled { cursor: default; opacity: 0.4; }
+      /* A phone has no hover to reveal it with, so the reasoning above
+         inverts: on touch the control was not subtle, it was absent. The
+         only way to reach it was to open a creation and find it in the
+         lightbox, which nobody would think to do. Shown persistently
+         here, which costs the restraint above on the devices that cannot
+         afford it. Safe to leave lit because the first press only arms
+         it. */
+      @media (hover: none) {
+        .showcase .card-remove { opacity: 0.65; }
+      }
       /* Armed: reads as a word, not a glyph, so the second press is a
          deliberate answer to a question rather than a repeat of a click. */
       .showcase .card-remove-armed,
