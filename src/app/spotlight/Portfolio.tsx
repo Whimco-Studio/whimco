@@ -19,10 +19,20 @@ import {
     invitation, which nobody agreed to by claiming a portfolio.
 
     Copying is the thing people actually want anyway: reaching a creator
-    means pasting the handle into Discord's own search. Copies
-    profile.username, the handle Discord gives us and refreshes on each
-    login, rather than the free-text contact line, which is whatever the
-    creator typed and is often an email. */
+    means pasting the handle into Discord's own search. Never the free-text
+    contact line, which is whatever the creator typed and is often an email.
+
+    Shown for unclaimed creators too. Their handle is author_name, captured
+    from str(message.author) when the bot broadcast the post, which is the
+    username rather than the display name: all 170 claimed creators with
+    items have an author_name identical to the username OAuth reports, so
+    the two fields are the same thing arriving by different routes. A
+    claimed profile still wins where we have one, because that copy is
+    refreshed on every login and an unclaimed one is frozen at post time.
+
+    This publishes nothing new either way. The handle is already the page
+    title and the byline under every card; the button copies what is
+    on screen. The Discord user id stays out of the payload. */
 function DiscordHandle({ handle }: { handle: string }) {
   const [state, setState] = useState<'idle' | 'copied' | 'failed'>('idle');
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -72,6 +82,18 @@ export default function Portfolio({
 
   const profile = initialData?.profile;
   const name = author?.name || username;
+  // A claimed profile is authoritative on its own, since that username
+  // comes from OAuth and gets refreshed on every login, and a creator whose
+  // first post has not landed yet still has one.
+  //
+  // Unclaimed, the handle is only as good as a post we have actually seen,
+  // so it needs a visible creation behind it. The API answers every author
+  // query with a block naming whoever was asked for, zeroed when nobody
+  // matched, so testing that the block exists would put a copy button for a
+  // handle nobody holds on /spotlight/@anything-at-all.
+  const handle = profile?.username
+    || (author && author.creations > 0 ? author.name : '')
+    || '';
 
   // Guards the two fetches below against each other, the same way
   // Showcase.tsx guards its own. The mount refresh and a "show more"
@@ -166,16 +188,16 @@ export default function Portfolio({
         {profile?.bio && <p className="pf-bio">{profile.bio}</p>}
         {/* The handle joins the link row rather than getting a row of its
             own, so it reads as one more way to reach this person. Which
-            means the row now renders for a claimed creator who added no
-            links at all. */}
-        {profile && (profile.links.length > 0 || !!profile.username) && (
+            means the row now renders for a creator with no links, and for
+            an unclaimed one who has no profile block at all. */}
+        {(!!handle || !!profile?.links.length) && (
           <p className="pf-links">
-            {profile.links.map((l) => (
+            {(profile?.links ?? []).map((l) => (
               <a key={l.url} href={l.url} target="_blank" rel="nofollow noopener noreferrer">
                 {l.label} ↗
               </a>
             ))}
-            {!!profile.username && <DiscordHandle handle={profile.username} />}
+            {!!handle && <DiscordHandle handle={handle} />}
           </p>
         )}
         {profile?.contact && <p className="pf-contact">{profile.contact}</p>}
