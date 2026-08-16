@@ -144,7 +144,19 @@ function CardMedia({ item }: { item: ShowcaseItem }) {
       <div className="card-media">
         {/* Presigned S3 URLs rotate every revalidate — plain img, not
             next/image, so the optimizer cache never 403s on expiry. */}
-        <img src={media.url} referrerPolicy="no-referrer" alt={cleanCaption(item.content).slice(0, 80) || `Creation by ${item.author_name}`} loading="lazy" />
+        <img
+          src={media.url}
+          referrerPolicy="no-referrer"
+          alt={cleanCaption(item.content).slice(0, 80) || `Creation by ${item.author_name}`}
+          loading="lazy"
+          // X-hosted media is linked, not mirrored, so it 404s the moment
+          // the creator deletes their post. The liveness sweep retires
+          // those items, but it needs two sightings hours apart, and in
+          // that window an unhandled failure paints the alt text across
+          // the card at full size, which reads as a broken site rather
+          // than a withdrawn creation.
+          onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }}
+        />
         {item.media.length > 1 && (
           <span className="count-badge">+{item.media.length - 1}</span>
         )}
@@ -221,7 +233,15 @@ function Lightbox({
           {item.media.map((m, i) => (
             m.content_type.startsWith('video/')
               ? <LightboxVideo key={m.url} media={m} auto={i === 0} />
-              : <img key={m.url} src={m.url} referrerPolicy="no-referrer" alt="" />
+              : (
+                <img
+                  key={m.url}
+                  src={m.url}
+                  referrerPolicy="no-referrer"
+                  alt=""
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                />
+              )
           ))}
         </div>
         {cleanCaption(item.content) && <p className="lightbox-caption">{cleanCaption(item.content)}</p>}
