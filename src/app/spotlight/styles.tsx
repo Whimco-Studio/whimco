@@ -697,6 +697,31 @@ export default function ShowcaseStyles() {
       }
       .showcase .pf-links a { color: var(--beam); text-decoration: none; }
       .showcase .pf-links a:hover { text-decoration: underline; }
+      /* Reaching a creator is most of what this page is for, so the handle
+         sits in the link row and inherits its type. A button rather than an
+         anchor because it copies instead of navigating. */
+      .showcase .pf-copy-wrap {
+        display: inline-flex;
+        align-items: baseline;
+        gap: 0.5rem;
+      }
+      .showcase .pf-copy {
+        background: none;
+        border: 0;
+        padding: 0;
+        cursor: pointer;
+        font: inherit;
+        letter-spacing: inherit;
+        color: var(--beam);
+      }
+      .showcase .pf-copy:hover { text-decoration: underline; }
+      .showcase .pf-copy-done { color: var(--stext); }
+      /* One click selects the whole handle, since this fallback exists for
+         exactly the viewer whose browser refused to copy for them. */
+      .showcase .pf-copy-fail {
+        color: var(--stext-dim);
+        user-select: all;
+      }
       .showcase .pf-contact {
         font-family: var(--font-mono), monospace;
         font-size: 0.75rem;

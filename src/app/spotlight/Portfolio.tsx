@@ -10,6 +10,55 @@ import {
   CLAIM_URL, INVITE_URL, SHOWCASE_API_URL, ShowcaseData, ShowcaseItem,
 } from './constants';
 
+/** The creator's Discord handle, click to copy.
+
+    Deliberately not a link. Discord has no public profile page, and
+    discord.com/users/<id> only resolves into a popout for a viewer already
+    signed in on that device, so most clicks would land on a login wall.
+    Linking would also mean publishing the Discord snowflake as an
+    invitation, which nobody agreed to by claiming a portfolio.
+
+    Copying is the thing people actually want anyway: reaching a creator
+    means pasting the handle into Discord's own search. Copies
+    profile.username, the handle Discord gives us and refreshes on each
+    login, rather than the free-text contact line, which is whatever the
+    creator typed and is often an email. */
+function DiscordHandle({ handle }: { handle: string }) {
+  const [state, setState] = useState<'idle' | 'copied' | 'failed'>('idle');
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
+
+  const copy = async () => {
+    if (timer.current) clearTimeout(timer.current);
+    try {
+      await navigator.clipboard.writeText(handle);
+      setState('copied');
+    } catch {
+      // No clipboard permission, or an insecure context. Falling back to
+      // the handle in selectable text, because a button that silently does
+      // nothing reads as broken and leaves them no way to reach anyone.
+      setState('failed');
+    }
+    timer.current = setTimeout(() => setState('idle'), 2000);
+  };
+
+  return (
+    <span className="pf-copy-wrap">
+      <button
+        type="button"
+        className={`pf-copy ${state === 'copied' ? 'pf-copy-done' : ''}`}
+        onClick={copy}
+        title={`Copy ${handle} to your clipboard`}
+        aria-live="polite"
+      >
+        {state === 'copied' ? 'Copied ✓' : 'Discord ⧉'}
+      </button>
+      {state === 'failed' && <span className="pf-copy-fail">{handle}</span>}
+    </span>
+  );
+}
+
 export default function Portfolio({
   username, initialData,
 }: { username: string; initialData: ShowcaseData | null }) {
@@ -115,13 +164,18 @@ export default function Portfolio({
           </p>
         )}
         {profile?.bio && <p className="pf-bio">{profile.bio}</p>}
-        {profile && profile.links.length > 0 && (
+        {/* The handle joins the link row rather than getting a row of its
+            own, so it reads as one more way to reach this person. Which
+            means the row now renders for a claimed creator who added no
+            links at all. */}
+        {profile && (profile.links.length > 0 || !!profile.username) && (
           <p className="pf-links">
             {profile.links.map((l) => (
               <a key={l.url} href={l.url} target="_blank" rel="nofollow noopener noreferrer">
                 {l.label} ↗
               </a>
             ))}
+            {!!profile.username && <DiscordHandle handle={profile.username} />}
           </p>
         )}
         {profile?.contact && <p className="pf-contact">{profile.contact}</p>}
