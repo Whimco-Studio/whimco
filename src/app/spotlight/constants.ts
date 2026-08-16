@@ -128,8 +128,14 @@ export type Creator = {
   claimed: boolean;
   avatar_url: string | null;
   bio: string;
+  /** Free text the creator typed; blank unless they claimed and filled it. */
+  contact: string;
   /** Up to 3 of their best-hearted images, used as the card's cover. */
   covers: string[];
+  /** Their whole body of work by discipline, as {code: [creations, hearts]},
+      never just the filtered slice. "10 of 10" and "10 of 40" are the same
+      creator under a UI filter without the denominator. */
+  cats: Record<string, [number, number]>;
 };
 
 export type CreatorsData = {
@@ -137,6 +143,12 @@ export type CreatorsData = {
   page: number;
   pages: number;
   total: number;
+  /** Echoed back, so an unrecognised code is visible as the unfiltered
+      directory it fell back to rather than silently ignored. */
+  category?: string;
+  /** Creators per discipline across the whole network, not the filtered
+      set, so choosing a chip cannot collapse the row to that one chip. */
+  categories?: { category: string; creators: number }[];
 };
 
 /** The network directory: the same broadcast, viewed from where it lands

@@ -142,6 +142,71 @@ export default function CreatorsStyles() {
       }
       .showcase .cr-stats b { color: var(--beam); font-weight: 700; }
 
+      /* The discipline row is the feed's chip row, which is built to scroll
+         full bleed. Here it sits inside a centred header instead. */
+      .showcase .cr-head .chips {
+        justify-content: center;
+        flex-wrap: wrap;
+        max-width: 900px;
+        padding: 0;
+      }
+
+      .showcase .cr-spec {
+        font-family: var(--font-mono), monospace;
+        font-size: 0.68rem;
+        letter-spacing: 0.08em;
+        color: var(--stext-dim);
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+        flex-wrap: wrap;
+      }
+      .showcase .cr-spec b { color: var(--stext); font-weight: 700; }
+      .showcase .cr-spec-strong b { color: var(--beam); }
+      .showcase .cr-spec-tag {
+        font-size: 0.55rem;
+        letter-spacing: 0.16em;
+        color: var(--beam);
+        border: 1px solid var(--beam-dim);
+        border-radius: 999px;
+        padding: 0.1rem 0.45rem;
+      }
+
+      /* Two lines, because the cards are a grid and an unbounded bio would
+         desynchronise their heights the way an unclipped name would. */
+      .showcase .cr-bio {
+        font-size: 0.76rem;
+        line-height: 1.5;
+        color: var(--stext);
+        opacity: 0.75;
+        margin: 0;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+
+      .showcase .cr-contact {
+        font-family: var(--font-mono), monospace;
+        font-size: 0.62rem;
+        letter-spacing: 0.06em;
+        color: var(--stext-dim);
+        margin: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .showcase .cr-empty {
+        text-align: center;
+        font-family: var(--font-mono), monospace;
+        font-size: 0.78rem;
+        letter-spacing: 0.1em;
+        color: var(--stext-dim);
+        padding: 2rem 1.5rem 4rem;
+      }
+
       .showcase .cr-more {
         display: flex;
         justify-content: center;
