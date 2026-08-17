@@ -7,8 +7,9 @@ import Image from 'next/image';
 import GalleryGrid from './Gallery';
 import ShowcaseStyles from './styles';
 import useLikes from './useLikes';
+import useInviteUrl from './useInviteUrl';
 import {
-  CATEGORY_LABELS, INVITE_URL, SHOWCASE_API_URL, ShowcaseData, ShowcaseItem,
+  CATEGORY_LABELS, SHOWCASE_API_URL, ShowcaseData, ShowcaseItem,
   SortMode, creationsIn,
 } from './constants';
 
@@ -58,6 +59,7 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
   const [loading, setLoading] = useState(false);
   const [statsStarted, setStatsStarted] = useState(false);
   const likes = useLikes();
+  const inviteUrl = useInviteUrl();
 
   const statsRef = useRef<HTMLDivElement>(null);
   // Mirrors activeCategory for the curator retry loop further down, which
@@ -275,7 +277,12 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
           shared by the network, newest first.
         </p>
         <div className="cta-row">
-          <a className="cta-primary" href={INVITE_URL} target="_blank" rel="noopener noreferrer">
+          <a
+            className="cta-primary"
+            href={inviteUrl}
+            target="_blank"
+            rel="noopener noreferrer nofollow"
+          >
             Add Spotlight to Discord
           </a>
           <a className="cta-ghost" href="#how-it-works">See how it works ↓</a>

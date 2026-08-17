@@ -1,6 +1,6 @@
 'use client';
 
-import { INVITE_URL } from './constants';
+import useInviteUrl from './useInviteUrl';
 
 /** One eight-second loop replacing a ten-scene, sixty-four-second
  *  slideshow.
@@ -34,6 +34,7 @@ export default function HowItWorksSimple({
    *  the panels still render with a gradient stand-in. */
   sample?: { image: string; author: string } | null;
 }) {
+  const inviteUrl = useInviteUrl();
   const reach = stats?.member_reach
     ? stats.member_reach.toLocaleString('en-US')
     : null;
@@ -145,9 +146,12 @@ export default function HowItWorksSimple({
         </div>
         <a
           className="hiw-cta"
-          href={INVITE_URL}
+          href={inviteUrl}
           target="_blank"
-          rel="noopener noreferrer"
+          // nofollow so a crawler walking this page does not press the
+          // button. The counter behind it drops obvious agents anyway,
+          // and two defences cost nothing here.
+          rel="noopener noreferrer nofollow"
         >
           Add Spotlight to Discord
         </a>

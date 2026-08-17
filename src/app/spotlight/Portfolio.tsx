@@ -6,8 +6,9 @@ import RemovedDrawer from './RemovedDrawer';
 import ShowcaseStyles from './styles';
 import VerifiedSeal from './VerifiedSeal';
 import useLikes from './useLikes';
+import useInviteUrl from './useInviteUrl';
 import {
-  CLAIM_URL, INVITE_URL, SHOWCASE_API_URL, ShowcaseData, ShowcaseItem,
+  CLAIM_URL, SHOWCASE_API_URL, ShowcaseData, ShowcaseItem,
 } from './constants';
 
 /** The creator's Discord handle, click to copy.
@@ -79,6 +80,7 @@ export default function Portfolio({
   const [author, setAuthor] = useState(initialData?.author);
   const [removedToken, setRemovedToken] = useState(0);
   const likes = useLikes();
+  const inviteUrl = useInviteUrl();
 
   const profile = initialData?.profile;
   const name = author?.name || username;
@@ -245,7 +247,12 @@ export default function Portfolio({
         />
 
         <div className="cta-row" style={{ marginTop: '3.5rem' }}>
-          <a className="cta-primary" href={INVITE_URL} target="_blank" rel="noopener noreferrer">
+          <a
+            className="cta-primary"
+            href={inviteUrl}
+            target="_blank"
+            rel="noopener noreferrer nofollow"
+          >
             Share your work through Spotlight
           </a>
         </div>

@@ -1,5 +1,17 @@
-export const INVITE_URL =
-  'https://discord.com/oauth2/authorize?client_id=1414683911404916876&permissions=326417640512&scope=bot%20applications.commands';
+/** The install button, routed through a hop we own.
+
+    Everything past this redirect happens inside Discord and reports
+    nothing back, so the press is the last event anyone can see. It used
+    to be a raw discord.com/oauth2/authorize link, which meant the one
+    action the whole page exists to produce was the only one that left no
+    trace. Scopes and permissions now live in exactly one place, the
+    Spotlight repo's config/urls.py, so the two copies cannot drift.
+
+    The cost, stated plainly: an install now depends on
+    spotlight.whimco.com answering. That host already feeds every
+    creation on this page, so an outage that breaks the button is an
+    outage that already left the gallery empty. */
+export const INVITE_URL = 'https://spotlight.whimco.com/invite';
 
 /** The Spotlight Support server, linked from the network directory hero.
     A non-expiring invite, deliberately: a link baked into a page outlives
