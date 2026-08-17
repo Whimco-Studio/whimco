@@ -430,6 +430,16 @@ export default function ShowcaseStyles() {
         font: inherit;
         cursor: pointer;
         transition: transform 0.12s ease;
+        position: relative;
+      }
+      /* With the count hidden at zero the label is a single glyph, about
+         ten pixels of target on the state where pressing it matters most.
+         The halo grows the hit area without padding, so the meta row keeps
+         the exact spacing it had. */
+      .showcase button.heart-btn::after {
+        content: '';
+        position: absolute;
+        inset: -0.4rem;
       }
       .showcase button.heart-btn:hover { transform: scale(1.15); }
       .showcase button.heart-btn:active { transform: scale(0.95); }

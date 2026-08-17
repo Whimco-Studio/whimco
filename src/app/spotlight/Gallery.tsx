@@ -34,11 +34,22 @@ function LightboxVideo({ media, auto }: { media: ShowcaseMedia; auto: boolean })
   );
 }
 
+/** A zero is not a score, it is the absence of one, and a grid where every
+    card reads "0" says the network ignored all of it. So the glyph carries
+    the invitation on its own until there is a real number to show, and the
+    count appears the moment the first heart lands. The button stays a
+    button at zero: that is the state where being able to press it matters
+    most. Without a count to read, the aria-label is the whole label, which
+    is why it names the action rather than the total. */
 function HeartButton({ item, likes }: { item: ShowcaseItem; likes?: Likes }) {
   if (!likes) {
+    // Read-only (the removed drawer). A bare heart with no number and no
+    // press is just decoration, so at zero there is nothing worth drawing.
+    if (item.hearts < 1) return null;
     return <span className="card-hearts">♥ {item.hearts.toLocaleString('en-US')}</span>;
   }
   const on = likes.isLiked(item.id);
+  const count = likes.hearts(item);
   return (
     <button
       type="button"
@@ -48,7 +59,8 @@ function HeartButton({ item, likes }: { item: ShowcaseItem; likes?: Likes }) {
       title={likes.signedIn ? undefined : 'Sign in with Discord to heart'}
       onClick={(e) => { e.stopPropagation(); likes.toggle(item); }}
     >
-      {on ? '♥' : '♡'} {likes.hearts(item).toLocaleString('en-US')}
+      {on ? '♥' : '♡'}
+      {count > 0 ? ` ${count.toLocaleString('en-US')}` : ''}
     </button>
   );
 }
