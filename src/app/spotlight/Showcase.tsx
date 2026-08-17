@@ -9,7 +9,7 @@ import ShowcaseStyles from './styles';
 import useLikes from './useLikes';
 import {
   CATEGORY_LABELS, INVITE_URL, SHOWCASE_API_URL, ShowcaseData, ShowcaseItem,
-  SortMode,
+  SortMode, creationsIn,
 } from './constants';
 
 function useCountUp(target: number, start: boolean, duration = 1400) {
@@ -47,8 +47,10 @@ function Stat({ label, value, started }: { label: string; value: number; started
 
 export default function Showcase({ initialData }: { initialData: ShowcaseData | null }) {
   const [items, setItems] = useState<ShowcaseItem[]>(initialData?.items ?? []);
-  const [page, setPage] = useState(initialData?.page ?? 1);
-  const [pages, setPages] = useState(initialData?.pages ?? 1);
+  // How many creations exist in the current view, which is the number the
+  // link through to /spotlight/gallery promises. This page shows one page
+  // and stops, so it holds no page counter of its own any more.
+  const [total, setTotal] = useState(initialData?.total ?? 0);
   const [activeCategory, setActiveCategory] = useState('');
   // 'new' is the default the API also defaults to, so the server-rendered
   // first paint and this initial state always agree.
@@ -83,16 +85,16 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
     return () => obs.disconnect();
   }, []);
 
-  // Request generation, guarding fetchPage the same way useLikes.ts's
+  // Request generation, guarding loadView the same way useLikes.ts's
   // categoryGen guards recategorize. Two calls can be in flight together,
-  // a chip click while the curator's mount refetch is still out, "load
-  // more" fired twice, and without this whichever response lands last
-  // wins regardless of which was requested last: a filtered click could
-  // be overwritten by a slower, larger unfiltered response that was
-  // already stale by the time it landed. Bump on entry, capture the
-  // value, and only apply a response while it is still the newest
-  // request. setLoading(false) stays unconditional in finally, so a
-  // superseded request cannot strand the loading state on true.
+  // a chip click while the curator's mount refetch is still out, and
+  // without this whichever response lands last wins regardless of which
+  // was requested last: a filtered click could be overwritten by a
+  // slower, larger unfiltered response that was already stale by the time
+  // it landed. Bump on entry, capture the value, and only apply a
+  // response while it is still the newest request. setLoading(false)
+  // stays unconditional in finally, so a superseded request cannot strand
+  // the loading state on true.
   //
   // The return value tells a caller what happened, not just whether the
   // network call succeeded. 'applied' means this response is on screen
@@ -102,31 +104,35 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
   // refetch below reads this, to tell a loss worth trying again
   // (superseded) apart from a loss that should not retry itself
   // (failed).
+  //
+  // Always page one, and always a replacement. Depth belongs to
+  // /spotlight/gallery now: this section is a fixed-length slab of proof
+  // sitting above how-it-works, and it used to be able to grow to eighty
+  // screens and push that out of reach.
   const fetchGen = useRef(0);
-  const fetchPage = useCallback(async (
-    nextPage: number, category: string, mode: SortMode,
-    replace: boolean, silent = false,
+  const loadView = useCallback(async (
+    category: string, mode: SortMode, silent = false,
   ): Promise<'applied' | 'superseded' | 'failed'> => {
     const gen = ++fetchGen.current;
     if (!silent) setLoading(true);
     try {
-      const params = new URLSearchParams({ page: String(nextPage) });
+      const params = new URLSearchParams();
       if (category) params.set('category', category);
       // Only sent when it is not the default, so the common request keeps
       // one cache key on the API side rather than splitting it in two.
       if (mode !== 'new') params.set('sort', mode);
-      const res = await fetch(`${SHOWCASE_API_URL}?${params}`);
+      const query = params.toString();
+      const res = await fetch(query ? `${SHOWCASE_API_URL}?${query}` : SHOWCASE_API_URL);
       if (!res.ok) throw new Error(`showcase fetch ${res.status}`);
       const data: ShowcaseData = await res.json();
       // A newer call already owns what's on screen; applying this reply
       // now would replace it with a stale, possibly mismatched answer.
       if (fetchGen.current !== gen) return 'superseded';
-      setItems((prev) => (replace ? data.items : [...prev, ...data.items]));
-      setPage(data.page);
-      setPages(data.pages);
+      setItems(data.items);
+      setTotal(data.total);
       return 'applied';
     } catch {
-      // Leave current items in place; the button stays available to retry.
+      // Leave current items in place; the chips stay available to retry.
       return 'failed';
     } finally {
       if (!silent) setLoading(false);
@@ -146,9 +152,9 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
     // page. Painting it straight back in on a reset to All used to skip
     // the network, but that snapshot only gets staler the longer the tab
     // stays open, for every visitor, not only curators, so All now asks
-    // fetchPage for a live page one exactly like every other filter does.
-    fetchPage(1, category, sortRef.current, true);
-  }, [fetchPage]);
+    // loadView for a live page one exactly like every other filter does.
+    loadView(category, sortRef.current);
+  }, [loadView]);
 
   const pickSort = useCallback((mode: SortMode, updateUrl = true) => {
     sortRef.current = mode;
@@ -159,10 +165,8 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
       else url.searchParams.delete('sort');
       window.history.replaceState(null, '', url);
     }
-    // Back to page one. Keeping the page number across a sort change
-    // would show page four of a completely different ordering.
-    fetchPage(1, activeCategoryRef.current, mode, true);
-  }, [fetchPage]);
+    loadView(activeCategoryRef.current, mode);
+  }, [loadView]);
 
   // Shareable filtered views: /spotlight?category=ui&sort=top applies both
   // on load (and the controls keep the URL in sync above).
@@ -181,7 +185,7 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
       setActiveCategory(fromUrl);
     }
     if (fromUrl || sortFromUrl === 'top') {
-      fetchPage(1, activeCategoryRef.current, sortRef.current, true);
+      loadView(activeCategoryRef.current, sortRef.current);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -191,11 +195,11 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
   // ten minutes stale: five from the API cache, five more from ISR on top
   // of it. isCurator itself is only known once the credentialed /me call
   // resolves, so once it does, page one is pulled straight from the API
-  // (the same uncached path fetchPage already uses for filters and load
-  // more) and swapped in for whatever the server rendered. A non-curator,
-  // or a curator whose /me call hasn't resolved yet, triggers nothing
-  // here. silent so this background swap can't flash "Loading…" on the
-  // load more button for a request nobody clicked.
+  // (the same uncached path loadView already uses for filters) and
+  // swapped in for whatever the server rendered. A non-curator, or a
+  // curator whose /me call hasn't resolved yet, triggers nothing here.
+  // silent so this background swap can't put the section in a busy state
+  // for a request nobody asked for.
   //
   // The ref guards against starting a second attempt chain, not against
   // retrying within the one chain it starts: it is set the moment a chain
@@ -207,28 +211,27 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
     if (!likes.ready || !likes.isCurator || curatorRefetchStarted.current) return;
     curatorRefetchStarted.current = true;
     // A URL-driven filter (?category=) already gets a fresh fetch from the
-    // effect above, through the same uncached fetchPage. A second request
+    // effect above, through the same uncached loadView. A second request
     // here would be identical, just a wasted round trip, so skip it.
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('category') || urlParams.get('sort')) return;
     let cancelled = false;
-    // A silent call here can lose the race to a chip click or "Show more"
-    // firing while it's in flight, both bump the same fetchGen. Losing
-    // does not mean the data was wrong, it means a different call for a
-    // different view won and applied first, and left alone, page one
-    // would stay on the stale snapshot for the rest of the visit with no
-    // error and no second chance. So a superseded attempt just asks
-    // again immediately, reading activeCategoryRef fresh each time in
-    // case the curator has since switched filters, so a retry can never
-    // land a stale, unfiltered answer over a filter they've since chosen.
-    // A genuine fetch failure does not retry: fetchPage's own catch block
-    // already has a contract for that, stale items stay up and the
-    // surface that failed stays available to retry by hand, and retrying
-    // it again here would just be a second, undeclared version of the
-    // same policy.
+    // A silent call here can lose the race to a chip or sort click firing
+    // while it's in flight, both bump the same fetchGen. Losing does not
+    // mean the data was wrong, it means a different call for a different
+    // view won and applied first, and left alone, page one would stay on
+    // the stale snapshot for the rest of the visit with no error and no
+    // second chance. So a superseded attempt just asks again immediately,
+    // reading activeCategoryRef fresh each time in case the curator has
+    // since switched filters, so a retry can never land a stale,
+    // unfiltered answer over a filter they've since chosen. A genuine
+    // fetch failure does not retry: loadView's own catch block already
+    // has a contract for that, stale items stay up and the surface that
+    // failed stays available to retry by hand, and retrying it again here
+    // would just be a second, undeclared version of the same policy.
     const attempt = async () => {
-      const outcome = await fetchPage(
-        1, activeCategoryRef.current, sortRef.current, true, true,
+      const outcome = await loadView(
+        activeCategoryRef.current, sortRef.current, true,
       );
       if (!cancelled && outcome === 'superseded') attempt();
     };
@@ -236,6 +239,26 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [likes.ready, likes.isCurator]);
+
+  // The hop to /spotlight/gallery carries whatever is on screen, so a
+  // visitor who filtered to VFX and then asked for more arrives in VFX
+  // rather than back at the top of everything.
+  const galleryHref = (() => {
+    const p = new URLSearchParams();
+    if (activeCategory) p.set('category', activeCategory);
+    if (sort !== 'new') p.set('sort', sort);
+    const q = p.toString();
+    return q ? `/spotlight/gallery?${q}` : '/spotlight/gallery';
+  })();
+
+  const galleryLabel = (() => {
+    const phrase = `${total.toLocaleString('en-US')} ${creationsIn(total, activeCategory)}`;
+    // "all" would be a lie under Top this week, where the total counts a
+    // seven-day window rather than the whole gallery.
+    return sort === 'top'
+      ? `Browse this week’s ${phrase} →`
+      : `Browse all ${phrase} →`;
+  })();
 
   return (
     <div className="showcase">
@@ -268,10 +291,22 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
         )}
       </section>
 
-      <section className="gallery-section" aria-label="Creations broadcast by Spotlight">
+      {/* aria-busy is the only report of a filter fetch now that the load
+          more button is gone: chips replace the grid in place, and a
+          screen reader otherwise gets no signal that anything is
+          happening between the click and the new cards. */}
+      <section
+        className="gallery-section"
+        aria-label="Creations broadcast by Spotlight"
+        aria-busy={loading}
+      >
         <div className="gallery-head">
           <h2 className="gallery-title">The showcase</h2>
           <span className="gallery-head-right">
+            {/* Same destination as the link under the grid, for a visitor
+                who came to browse rather than to be convinced and should
+                not have to scroll a slab of proof to find the door. */}
+            <a className="gallery-link" href={galleryHref}>ALL CREATIONS →</a>
             <a className="gallery-link" href="/spotlight/creators">BROWSE CREATORS →</a>
             {/* The two halves of the same broadcast: who sends it, and
                 where it lands. The servers connected stat above counts
@@ -333,10 +368,23 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
           emptyText={initialData
             ? 'Nothing in the beam yet — creations appear here the moment they’re broadcast.'
             : 'The showcase is momentarily offline. The network is still broadcasting — check back shortly.'}
-          canLoadMore={page < pages}
-          loading={loading}
-          onLoadMore={() => fetchPage(page + 1, activeCategory, sort, false)}
         />
+
+        {/* Where "Show more creations" used to be, and the reason this
+            section stopped growing. Below it sit how-it-works and the
+            invite, and every press of that button pushed both further out
+            of reach: at 24 a page across 1,911 creations there were
+            seventy-nine presses available. Browsing and converting want
+            opposite page shapes, so they are two pages now. The count is
+            the honest version of "more", and it carries whatever filter
+            and ordering are on screen so nothing is lost in the hop. */}
+        {total > 0 && (
+          <div className="more-row">
+            <a className="cta-ghost more-btn" href={galleryHref}>
+              {galleryLabel}
+            </a>
+          </div>
+        )}
       </section>
 
       <ShowcaseStyles />

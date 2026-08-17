@@ -117,7 +117,7 @@ function RemoveButton({
   );
 }
 
-function CardMedia({ item }: { item: ShowcaseItem }) {
+function CardMedia({ item, deep }: { item: ShowcaseItem; deep: boolean }) {
   const media = item.media[0];
   const videoRef = useRef<HTMLVideoElement>(null);
   if (!media) return null;
@@ -131,7 +131,12 @@ function CardMedia({ item }: { item: ShowcaseItem }) {
           muted
           loop
           playsInline
-          preload="metadata"
+          // metadata opens a request per card the moment it mounts, which
+          // is fine for one page of 24 and not fine on a grid that keeps
+          // everything already scrolled past mounted. Images next to
+          // these carry loading="lazy" and cost nothing offscreen; only
+          // video needed telling. The poster still paints either way.
+          preload={deep ? 'none' : 'metadata'}
           onMouseEnter={() => videoRef.current?.play().catch(() => {})}
           onMouseLeave={() => videoRef.current?.pause()}
         />
@@ -167,10 +172,10 @@ function CardMedia({ item }: { item: ShowcaseItem }) {
 }
 
 function GalleryCard({
-  item, onOpen, showAuthor, likes, onRemoved,
+  item, onOpen, showAuthor, likes, onRemoved, deep,
 }: {
   item: ShowcaseItem; onOpen: () => void; showAuthor: boolean;
-  likes?: Likes; onRemoved?: (id: number) => void;
+  likes?: Likes; onRemoved?: (id: number) => void; deep: boolean;
 }) {
   const caption = cleanCaption(item.content);
   return (
@@ -181,7 +186,7 @@ function GalleryCard({
         onClick={onOpen}
         aria-label={`Open creation by ${item.author_name}`}
       >
-        <CardMedia item={item} />
+        <CardMedia item={item} deep={deep} />
         {caption && (
           <p className={`card-caption ${item.media.length === 0 ? 'card-caption-only' : ''}`}>
             {caption}
@@ -273,7 +278,7 @@ function Lightbox({
     parent owns items/pagination state. */
 export default function GalleryGrid({
   items, emptyText, showAuthor = true, canLoadMore = false, loading = false,
-  onLoadMore, likes, onRemoved,
+  onLoadMore, likes, onRemoved, deep = false,
 }: {
   items: ShowcaseItem[];
   emptyText: string;
@@ -285,6 +290,10 @@ export default function GalleryGrid({
   /** Called with the id after one of the viewer's own creations is
       removed, so the parent that owns the list can drop the card. */
   onRemoved?: (id: number) => void;
+  /** This grid can grow past one page and keeps everything mounted, so
+      cards must not each hold a network connection open. Set by
+      /spotlight/gallery, left off for the fixed-length grids. */
+  deep?: boolean;
 }) {
   const [selected, setSelected] = useState<ShowcaseItem | null>(null);
   const [cols, setCols] = useState(4);
@@ -330,6 +339,7 @@ export default function GalleryGrid({
                       showAuthor={showAuthor}
                       likes={likes}
                       onRemoved={onRemoved}
+                      deep={deep}
                       onOpen={() => setSelected(item)}
                     />
                   ))}

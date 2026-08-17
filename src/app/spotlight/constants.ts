@@ -78,6 +78,21 @@ export const CATEGORY_LABELS: Record<string, string> = {
   logo: 'Logos',
 };
 
+/** The noun phrase that follows a count of creations: "creations", or
+    "creations in 3D Models" under a filter.
+
+    Shared because three surfaces say this and they must agree: the
+    gallery's subtitle, the link across to it from the landing page, and
+    the line at the end of a filtered run. The category name is never
+    lowercased and never glued in front of the noun, because the labels
+    are display-cased ("UI", "GFX", "3D Models") and both "ui creations"
+    and "3D Models creations" read as mistakes. */
+export function creationsIn(total: number, category: string): string {
+  const noun = `creation${total === 1 ? '' : 's'}`;
+  const label = category ? (CATEGORY_LABELS[category] ?? category) : '';
+  return label ? `${noun} in ${label}` : noun;
+}
+
 export type ShowcaseStats = {
   member_reach: number;
   server_count: number;
