@@ -178,11 +178,20 @@ export default function Portfolio({
           <h1 className="pf-name">{name}</h1>
           {profile && <VerifiedSeal className="pf-verified" />}
         </div>
+        {/* The hearts clause drops out entirely at zero rather than reading
+            "0 hearts from the network", which sits under the creator's name
+            and says the network saw their work and passed. Same reason the
+            card hearts hide their count until there is one. A creator with no
+            hearts yet is simply a creator with creations. */}
         {author && (
           <p className="pf-sub">
             <b>{author.creations.toLocaleString('en-US')}</b> creation{author.creations === 1 ? '' : 's'} broadcast
-            {' · '}
-            <b>{author.hearts.toLocaleString('en-US')}</b> heart{author.hearts === 1 ? '' : 's'} from the network
+            {author.hearts > 0 && (
+              <>
+                {' · '}
+                <b>{author.hearts.toLocaleString('en-US')}</b> heart{author.hearts === 1 ? '' : 's'} from the network
+              </>
+            )}
           </p>
         )}
         {profile?.bio && <p className="pf-bio">{profile.bio}</p>}
