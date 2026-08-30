@@ -349,9 +349,8 @@ export default function FeedStream({ initialData }: { initialData: ShowcaseData 
           </p>
           <h1><span className="beamed">The Feed</span></h1>
           <p className="sub">
-            Every creation the network broadcasts, newest first, as it lands.
-            For browsing by category or digging through the archive, use{' '}
-            <a href="/spotlight/gallery">the gallery</a>.
+            Work from across the network, newest first.{' '}
+            <a href="/spotlight/gallery">Browse by category in the gallery</a>.
           </p>
         </header>
 
