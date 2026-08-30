@@ -314,6 +314,10 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
                 who came to browse rather than to be convinced and should
                 not have to scroll a slab of proof to find the door. */}
             <a className="gallery-link" href={galleryHref}>ALL CREATIONS →</a>
+            {/* The same creations ordered by arrival rather than by
+                category, for a visitor who wants to watch the network
+                work instead of search it. */}
+            <a className="gallery-link" href="/spotlight/feed">LIVE FEED →</a>
             <a className="gallery-link" href="/spotlight/creators">BROWSE CREATORS →</a>
             {/* The two halves of the same broadcast: who sends it, and
                 where it lands. The servers connected stat above counts
