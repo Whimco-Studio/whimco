@@ -673,6 +673,22 @@ export default function ShowcaseStyles() {
         border-radius: 50%;
         border: 2px solid var(--beam);
       }
+      /* Share lives in the lightbox meta row, beside the source link.
+         Its own copy rather than a shared rule: the feed's version is
+         scoped under .feedpage, which never wraps the gallery. */
+      .showcase .share-btn {
+        font-family: var(--font-mono), monospace;
+        font-size: 0.72rem;
+        color: var(--stext-dim);
+        background: none;
+        border: none;
+        padding: 0;
+        cursor: pointer;
+        transition: color 0.15s ease;
+      }
+      .showcase .share-btn:hover { color: var(--beam); }
+      .showcase .share-on { color: var(--beam); }
+
       /* Shared verified seal. Sized in em off its own font-size, so each
          surface only overrides that one value and the seal tracks whatever
          type it sits beside at every breakpoint. */

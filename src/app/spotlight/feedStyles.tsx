@@ -271,6 +271,68 @@ export default function FeedStyles() {
         to { border-color: var(--edge); box-shadow: none; }
       }
 
+      /* ------------------------------------------------ share */
+      .feedpage .share-btn {
+        font-family: var(--font-mono), monospace;
+        font-size: 0.68rem;
+        color: var(--stext-dim);
+        background: none;
+        border: none;
+        padding: 0;
+        cursor: pointer;
+        transition: color 0.15s ease;
+      }
+      .feedpage .share-btn:hover { color: var(--beam); }
+      .feedpage .share-on { color: var(--beam); }
+
+      /* -------------------------------------------- permalink */
+      .feedpage .permalink-head { padding-bottom: 1.4rem; }
+      .feedpage .permalink-head h1 {
+        display: flex;
+        align-items: center;
+        gap: 0.1em;
+        margin-bottom: 0.35rem;
+      }
+      .feedpage a.permalink-author { color: var(--stext); text-decoration: none; }
+      .feedpage a.permalink-author:hover { color: var(--beam); }
+      .feedpage .permalink {
+        background: var(--panel);
+        border: 1px solid var(--edge);
+        border-radius: 14px;
+        padding: 1rem;
+      }
+      /* One column, not the timeline's 2x2. A permalink is reached by
+         someone who wants to look at this creation, so every attachment
+         gets full width rather than a quarter of a square. */
+      .feedpage .permalink-media {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid var(--edge);
+        background: #08080c;
+      }
+      .feedpage .permalink-media img,
+      .feedpage .permalink-media video {
+        width: 100%;
+        max-height: 76vh;
+        object-fit: contain;
+        display: block;
+        background: #08080c;
+      }
+      .feedpage .permalink-caption {
+        margin: 0.9rem 0 0;
+        font-size: 0.95rem;
+        line-height: 1.6;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+      }
+      .feedpage .permalink-foot { margin-top: 0.9rem; }
+      .feedpage .permalink-share { margin-left: auto; }
+      .feedpage .note a { color: var(--beam); text-decoration: none; }
+      .feedpage .note a:hover { text-decoration: underline; }
+
       .feedpage .lightbox {
         position: fixed; inset: 0; z-index: 60;
         background: rgba(5, 5, 9, 0.94); backdrop-filter: blur(6px);

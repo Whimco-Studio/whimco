@@ -214,3 +214,34 @@ export const RECATEGORIZE_URL = `${SPOTLIGHT_ORIGIN}/api/showcase/recategorize`;
     broadcast to member servers stay where they are. */
 export const REMOVE_URL = `${SPOTLIGHT_ORIGIN}/api/showcase/remove`;
 export const REMOVED_URL = `${SPOTLIGHT_ORIGIN}/api/showcase/removed`;
+/** One creation by id. The gallery is paginated, so without this a link
+    to a single creation has to guess a page number; this is what lets a
+    permalink exist at all. */
+export const ITEM_URL = `${SPOTLIGHT_ORIGIN}/api/showcase/item`;
+
+/** The canonical URL for one creation. Every share button copies this,
+    and the gallery lightbox pushes it, so a creation has exactly one
+    address no matter which surface it was opened from. */
+export function postPath(id: number): string {
+  return `/spotlight/p/${id}`;
+}
+
+/** One creation, or null when the id is unknown, hidden, taken down by
+    its author, or belongs to a banned account. The backend refuses all
+    four identically and on purpose, so there is nothing here to tell
+    apart. */
+export async function fetchShowcaseItem(
+  id: string | number,
+  revalidate = 300,
+): Promise<ShowcaseItem | null> {
+  try {
+    const res = await fetch(`${ITEM_URL}?id=${encodeURIComponent(String(id))}`, {
+      next: { revalidate },
+    });
+    if (!res.ok) return null;
+    const data: { item?: ShowcaseItem } = await res.json();
+    return data.item ?? null;
+  } catch {
+    return null;
+  }
+}

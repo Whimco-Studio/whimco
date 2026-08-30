@@ -4,8 +4,9 @@ import React, {
   useCallback, useEffect, useRef, useState,
 } from 'react';
 import {
-  ShowcaseItem, ShowcaseMedia, cleanCaption, xLink,
+  ShowcaseItem, ShowcaseMedia, cleanCaption, postPath, xLink,
 } from './constants';
+import ShareButton from './ShareButton';
 import VerifiedSeal from './VerifiedSeal';
 import CategoryTag from './CategoryTag';
 import type { Likes } from './useLikes';
@@ -280,6 +281,7 @@ function Lightbox({
               View original post ↗
             </a>
           )}
+          <ShareButton id={item.id} authorName={item.author_name} />
         </div>
       </div>
     </div>
@@ -310,6 +312,30 @@ export default function GalleryGrid({
   const [selected, setSelected] = useState<ShowcaseItem | null>(null);
   const [cols, setCols] = useState(4);
   const galleryRef = useRef<HTMLDivElement>(null);
+
+  /* An open creation gets a URL, which is what makes the address bar a
+     share link and the back button a close button. Raw history rather
+     than the Next router on purpose: this is the same page under another
+     name, and routing to it would unmount the grid and refetch
+     everything behind the lightbox. */
+  const openItem = useCallback((item: ShowcaseItem) => {
+    setSelected(item);
+    window.history.pushState({ spotlightLightbox: true }, '', postPath(item.id));
+  }, []);
+
+  const closeItem = useCallback(() => {
+    setSelected(null);
+    // Only unwind an entry this component pushed. Someone who arrived
+    // with the lightbox already open would otherwise be walked off the
+    // gallery entirely by pressing close.
+    if (window.history.state?.spotlightLightbox) window.history.back();
+  }, []);
+
+  useEffect(() => {
+    const onPop = () => setSelected(null);
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
 
   // Rank must read left-to-right: items are dealt round-robin into real
   // columns instead of CSS `columns`, which re-balances on every append.
@@ -352,7 +378,7 @@ export default function GalleryGrid({
                       likes={likes}
                       onRemoved={onRemoved}
                       deep={deep}
-                      onOpen={() => setSelected(item)}
+                      onOpen={() => openItem(item)}
                     />
                   ))}
               </div>
@@ -378,11 +404,11 @@ export default function GalleryGrid({
         <Lightbox
           item={selected}
           likes={likes}
-          onClose={() => setSelected(null)}
+          onClose={closeItem}
           // Closing first: leaving the lightbox open over a creation that
           // is no longer in the grid behind it reads as the removal
           // having failed.
-          onRemoved={(id) => { setSelected(null); onRemoved?.(id); }}
+          onRemoved={(id) => { closeItem(); onRemoved?.(id); }}
         />
       )}
     </>

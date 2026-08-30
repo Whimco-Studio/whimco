@@ -2,15 +2,23 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import FeedStyles from './feedStyles';
+import ShareButton from './ShareButton';
 import VerifiedSeal from './VerifiedSeal';
 import {
   CATEGORY_LABELS, SHOWCASE_API_URL, ShowcaseData, ShowcaseItem, ShowcaseMedia,
-  cleanCaption, xLink,
+  cleanCaption, postPath, xLink,
 } from './constants';
 
 type Sort = 'new' | 'top';
 
 const POLL_MS = 30000;
+
+/* How far a ?post= link will page before it gives up and sends the reader
+   to the permalink instead. Ten pages is 240 creations, about a week of
+   network traffic; past that the feed is the wrong place to be looking
+   for one post and spinning through fifty requests to prove it helps
+   nobody. */
+const MAX_HUNT_PAGES = 10;
 
 /** Avatar tints drawn from the Spotlight palette rather than a rainbow:
     a column of initials should still read as one system. Hashed on the
@@ -106,7 +114,7 @@ function Post({ item, fresh, onOpen }: {
   const lone = shown.filter((m) => m.content_type?.startsWith('video')).length === 1;
 
   return (
-    <article className={`post${fresh ? ' fresh' : ''}`}>
+    <article className={`post${fresh ? ' fresh' : ''}`} data-post={item.id}>
       <a
         className="av"
         href={`/spotlight/@${encodeURIComponent(name)}`}
@@ -145,6 +153,11 @@ function Post({ item, fresh, onOpen }: {
           {item.category && (
             <span className="cat">{CATEGORY_LABELS[item.category] ?? item.category}</span>
           )}
+          <ShareButton
+            id={item.id}
+            authorName={name}
+            className={item.category ? '' : 'permalink-share'}
+          />
         </div>
       </div>
     </article>
@@ -310,6 +323,53 @@ export default function FeedStream({ initialData }: { initialData: ShowcaseData 
     io.observe(el);
     return () => io.disconnect();
   }, [loading, page, pages, sort, fetchPage]);
+
+  /* A ?post= link lands here rather than on the permalink when someone
+     wants the creation in context. The feed cannot jump to a page it
+     cannot compute, so it pages forward until the id shows up, then
+     scrolls to it and reuses the arrival flash to say which one it is.
+
+     Runs once. hunted guards against React 18 mounting effects twice in
+     development, which would otherwise fire two page walks at the API. */
+  const [target, setTarget] = useState<number | null>(null);
+  const hunted = useRef(false);
+
+  useEffect(() => {
+    if (hunted.current) return;
+    hunted.current = true;
+
+    const raw = new URLSearchParams(window.location.search).get('post');
+    if (!raw || !/^\d+$/.test(raw)) return;
+    const id = Number(raw);
+    setTarget(id);
+    if (seen.current.has(id)) return;
+
+    (async () => {
+      for (let p = 2; p <= MAX_HUNT_PAGES; p += 1) {
+        // Sequential on purpose. Firing ten requests at once to find
+        // something that is usually on page two is rude to a box that
+        // also serves the gallery.
+        await fetchPage(p, 'new', false);
+        setPage(p);
+        if (seen.current.has(id)) return;
+      }
+      // Past the cap the permalink is the honest answer: it always has
+      // the creation, and it is the page a share link points at anyway.
+      window.location.replace(postPath(id));
+    })();
+  }, [fetchPage]);
+
+  // Separate from the hunt because the element does not exist until the
+  // page holding it has rendered, which is one commit later than the
+  // fetch that found it.
+  useEffect(() => {
+    if (target === null) return;
+    const el = document.querySelector(`[data-post="${target}"]`);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setFreshIds(new Set([target]));
+    setTarget(null);
+  }, [target, items]);
 
   useEffect(() => {
     if (!lightbox) return undefined;
