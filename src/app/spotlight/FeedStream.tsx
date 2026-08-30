@@ -33,20 +33,58 @@ function ago(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-function Cell({ item, onOpen }: { item: ShowcaseMedia; onOpen: (url: string) => void }) {
-  const [dead, setDead] = useState(false);
+function VideoCell({ item, autoplay }: { item: ShowcaseMedia; autoplay: boolean }) {
+  const ref = useRef<HTMLVideoElement>(null);
 
-  if (item.content_type?.startsWith('video')) {
-    return (
-      <div className="cell">
-        {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-        <video controls preload="none" playsInline poster={item.thumbnail}>
-          <source src={item.url} type="video/mp4" />
-        </video>
-        <span className="badge">video</span>
-      </div>
+  /* Autoplay is gated on visibility rather than on mount. A timeline holds
+     two dozen posts, and starting every clip at once would pull tens of
+     megabytes and stall the page well before anyone scrolled to them.
+     Plays at half visible, pauses on the way out. */
+  useEffect(() => {
+    const el = ref.current;
+    if (!autoplay || !el) return undefined;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
+
+    // Set imperatively as well as by prop: React does not emit the muted
+    // attribute into server-rendered HTML, and an unmuted video is one a
+    // browser refuses to start on its own.
+    el.muted = true;
+
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) { el.pause(); return; }
+        // A rejected play() is ordinary here: a browser may still decline
+        // before the first interaction, and the poster frame is the right
+        // fallback, not an error worth surfacing.
+        el.play().catch(() => {});
+      },
+      { threshold: 0.5 },
     );
-  }
+    io.observe(el);
+    return () => io.disconnect();
+  }, [autoplay]);
+
+  return (
+    <div className="cell">
+      {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+      <video
+        ref={ref}
+        controls
+        playsInline
+        poster={item.thumbnail}
+        muted={autoplay}
+        loop={autoplay}
+        preload={autoplay ? 'metadata' : 'none'}
+      >
+        <source src={item.url} type="video/mp4" />
+      </video>
+      <span className="badge">{autoplay ? 'muted' : 'video'}</span>
+    </div>
+  );
+}
+
+function ImageCell({ item, onOpen }: { item: ShowcaseMedia; onOpen: (url: string) => void }) {
+  const [dead, setDead] = useState(false);
   if (dead) {
     return <div className="cell"><span className="dead">image unavailable</span></div>;
   }
@@ -57,6 +95,14 @@ function Cell({ item, onOpen }: { item: ShowcaseMedia; onOpen: (url: string) => 
   );
 }
 
+function Cell({ item, autoplay, onOpen }: {
+  item: ShowcaseMedia; autoplay: boolean; onOpen: (url: string) => void;
+}) {
+  return item.content_type?.startsWith('video')
+    ? <VideoCell item={item} autoplay={autoplay} />
+    : <ImageCell item={item} onOpen={onOpen} />;
+}
+
 function Post({ item, fresh, onOpen }: {
   item: ShowcaseItem; fresh: boolean; onOpen: (url: string) => void;
 }) {
@@ -65,6 +111,12 @@ function Post({ item, fresh, onOpen }: {
   const x = xLink(item.content || '');
   const shown = (item.media || []).slice(0, 4);
   const extra = (item.media || []).length - shown.length;
+  /* One video plays itself; two or more would talk over each other inside
+     a single card, so a post that carries several leaves them all parked
+     on their poster frames. Counted over what actually renders, not over
+     the whole array, since anything past the fourth item is not on screen
+     to compete. */
+  const lone = shown.filter((m) => m.content_type?.startsWith('video')).length === 1;
 
   return (
     <article className={`post${fresh ? ' fresh' : ''}`}>
@@ -88,7 +140,9 @@ function Post({ item, fresh, onOpen }: {
 
         {shown.length > 0 && (
           <div className={`media n${shown.length}`}>
-            {shown.map((m, i) => <Cell key={`${item.id}-${i}`} item={m} onOpen={onOpen} />)}
+            {shown.map((m, i) => (
+              <Cell key={`${item.id}-${i}`} item={m} autoplay={lone} onOpen={onOpen} />
+            ))}
             {extra > 0 && <span className="badge">+{extra}</span>}
           </div>
         )}
@@ -126,6 +180,7 @@ export default function FeedStream({ initialData }: { initialData: ShowcaseData 
   // Ids already on screen. A ref, not state: the poller reads it on a
   // timer and must not be the reason the timer is torn down and rebuilt.
   const seen = useRef<Set<number>>(new Set((initialData?.items ?? []).map((i) => i.id)));
+  const sentinel = useRef<HTMLDivElement>(null);
 
   const fetchPage = useCallback(async (nextPage: number, nextSort: Sort, replace: boolean) => {
     setLoading(true);
@@ -174,6 +229,27 @@ export default function FeedStream({ initialData }: { initialData: ShowcaseData 
     }, POLL_MS);
     return () => clearInterval(id);
   }, [auto, sort]);
+
+  /* Infinite scroll. The observer is rebuilt whenever page, pages or
+     loading changes, which is what keeps it from firing twice for the
+     same page: while a fetch is in flight there is nothing observed at
+     all, so a fast scroll cannot queue a second request for it.
+
+     600px of rootMargin means the next page is already arriving by the
+     time the last post is on screen, so the column grows without ever
+     showing the reader a floor. */
+  useEffect(() => {
+    const el = sentinel.current;
+    if (!el || loading || page >= pages) return undefined;
+    const io = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return;
+      const next = page + 1;
+      setPage(next);
+      fetchPage(next, sort, false);
+    }, { rootMargin: '600px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [loading, page, pages, sort, fetchPage]);
 
   useEffect(() => {
     if (!lightbox) return undefined;
@@ -287,15 +363,25 @@ export default function FeedStream({ initialData }: { initialData: ShowcaseData 
           </p>
         )}
 
-        {page < pages && (
+        <div ref={sentinel} aria-hidden="true" />
+
+        {page < pages && loading && <p className="note">loading more…</p>}
+
+        {/* The one case infinite scroll cannot recover from on its own:
+            the fetch failed, so there is nothing to trip the observer a
+            second time. A button is the way back. */}
+        {page < pages && !loading && !live && (
           <button
             type="button"
             className="more"
-            disabled={loading}
-            onClick={() => { const n = page + 1; setPage(n); fetchPage(n, sort, false); }}
+            onClick={() => fetchPage(page, sort, false)}
           >
-            {loading ? 'loading…' : 'show more'}
+            retry
           </button>
+        )}
+
+        {page >= pages && items.length > 0 && (
+          <p className="note">that is everything the network has broadcast</p>
         )}
       </div>
 
