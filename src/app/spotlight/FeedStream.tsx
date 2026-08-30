@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import FeedStyles from './feedStyles';
 import VerifiedSeal from './VerifiedSeal';
 import {
@@ -33,36 +33,23 @@ function ago(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
+/* Every autoplay-eligible video hands itself to one picker, which decides
+   which single clip is playing. Per-cell observers cannot do this: each
+   one only knows whether it is on screen, and on a tall window three of
+   them are, so three would play over each other. Registering upward is
+   what makes "the centre-most, and only that one" expressible at all. */
+type Register = (el: HTMLVideoElement) => () => void;
+const AutoplayContext = createContext<Register>(() => () => {});
+
 function VideoCell({ item, autoplay }: { item: ShowcaseMedia; autoplay: boolean }) {
   const ref = useRef<HTMLVideoElement>(null);
+  const register = useContext(AutoplayContext);
 
-  /* Autoplay is gated on visibility rather than on mount. A timeline holds
-     two dozen posts, and starting every clip at once would pull tens of
-     megabytes and stall the page well before anyone scrolled to them.
-     Plays at half visible, pauses on the way out. */
   useEffect(() => {
     const el = ref.current;
     if (!autoplay || !el) return undefined;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
-
-    // Set imperatively as well as by prop: React does not emit the muted
-    // attribute into server-rendered HTML, and an unmuted video is one a
-    // browser refuses to start on its own.
-    el.muted = true;
-
-    const io = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry.isIntersecting) { el.pause(); return; }
-        // A rejected play() is ordinary here: a browser may still decline
-        // before the first interaction, and the poster frame is the right
-        // fallback, not an error worth surfacing.
-        el.play().catch(() => {});
-      },
-      { threshold: 0.5 },
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, [autoplay]);
+    return register(el);
+  }, [autoplay, register]);
 
   return (
     <div className="cell">
@@ -181,6 +168,79 @@ export default function FeedStream({ initialData }: { initialData: ShowcaseData 
   // timer and must not be the reason the timer is torn down and rebuilt.
   const seen = useRef<Set<number>>(new Set((initialData?.items ?? []).map((i) => i.id)));
   const sentinel = useRef<HTMLDivElement>(null);
+  const videos = useRef<Set<HTMLVideoElement>>(new Set());
+  const repick = useRef<() => void>(() => {});
+
+  const register = useCallback<Register>((el) => {
+    videos.current.add(el);
+    repick.current();
+    return () => { videos.current.delete(el); repick.current(); };
+  }, []);
+
+  /* One video plays at a time: whichever sits nearest the middle of the
+     window. Measured on every scroll rather than by threshold, because
+     "is it half visible" cannot rank two clips that both are, and a tall
+     window routinely shows two.
+
+     The exception is a video the viewer unmuted. That is someone actually
+     watching, and scrolling a few pixels should not hand playback to a
+     silent clip that happens to have drifted closer to centre. */
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
+
+    let frame = 0;
+    const pick = () => {
+      frame = 0;
+      const all = Array.from(videos.current);
+
+      // Someone is listening to this one: leave it alone, and leave every
+      // other clip paused, until they scroll it entirely out of sight.
+      // Holding the claim any longer than that is just audio from nowhere.
+      const claimed = all.find((v) => !v.muted && !v.paused);
+      if (claimed) {
+        const box = claimed.getBoundingClientRect();
+        if (box.bottom > 0 && box.top < window.innerHeight) return;
+        claimed.pause();
+      }
+
+      const middle = window.innerHeight / 2;
+      let winner: HTMLVideoElement | null = null;
+      let closest = Infinity;
+      for (const el of all) {
+        const box = el.getBoundingClientRect();
+        if (box.bottom <= 0 || box.top >= window.innerHeight) continue;
+        const distance = Math.abs((box.top + box.bottom) / 2 - middle);
+        if (distance < closest) { closest = distance; winner = el; }
+      }
+
+      for (const el of all) {
+        if (el === winner) {
+          // Set imperatively as well as by prop: React does not emit the
+          // muted attribute into server-rendered HTML, and a browser will
+          // not start an unmuted video on its own.
+          el.muted = true;
+          // A rejected play() is ordinary, not an error worth surfacing:
+          // a browser may still decline before the first interaction, and
+          // the poster frame is the right thing to be left looking at.
+          if (el.paused) el.play().catch(() => {});
+        } else if (!el.paused) {
+          el.pause();
+        }
+      }
+    };
+
+    const schedule = () => { if (!frame) frame = requestAnimationFrame(pick); };
+    repick.current = schedule;
+    schedule();
+    window.addEventListener('scroll', schedule, { passive: true });
+    window.addEventListener('resize', schedule);
+    return () => {
+      if (frame) cancelAnimationFrame(frame);
+      repick.current = () => {};
+      window.removeEventListener('scroll', schedule);
+      window.removeEventListener('resize', schedule);
+    };
+  }, []);
 
   const fetchPage = useCallback(async (nextPage: number, nextSort: Sort, replace: boolean) => {
     setLoading(true);
@@ -344,16 +404,18 @@ export default function FeedStream({ initialData }: { initialData: ShowcaseData 
           </div>
         </div>
 
-        <div className="stream">
-          {shown.map((it) => (
-            <Post
-              key={it.id}
-              item={it}
-              fresh={freshIds.has(it.id)}
-              onOpen={setLightbox}
-            />
-          ))}
-        </div>
+        <AutoplayContext.Provider value={register}>
+          <div className="stream">
+            {shown.map((it) => (
+              <Post
+                key={it.id}
+                item={it}
+                fresh={freshIds.has(it.id)}
+                onOpen={setLightbox}
+              />
+            ))}
+          </div>
+        </AutoplayContext.Provider>
 
         {shown.length === 0 && (
           <p className="note">
