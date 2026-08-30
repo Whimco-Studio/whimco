@@ -9,17 +9,19 @@ type Props = {
   className?: string;
 };
 
-/** Copies a creation's permalink, or hands it to the OS share sheet.
+/** Copies a creation's permalink to the clipboard.
  *
- * navigator.share first where it exists, which on a phone is the sheet
- * that offers Discord directly. That is worth preferring: most of this
- * audience is sharing into a Discord server, and the sheet skips the
- * copy-then-paste round trip entirely.
+ * Always the clipboard, never navigator.share. The OS sheet looked like
+ * the richer option and is the wrong one here: it is a modal the reader
+ * did not ask for, it is absent on desktop where most of this gets used,
+ * and what it returns is unknowable, so the button could not honestly
+ * say whether anything happened. Copy is one predictable outcome the
+ * label can confirm.
  *
- * Clipboard is the fallback, and it needs a guard of its own:
- * navigator.clipboard is undefined on any page not served over HTTPS,
- * which includes every local dev server on plain http. Doing nothing
- * there would read as a broken button rather than an insecure context.
+ * navigator.clipboard still needs a guard. It is undefined outside a
+ * secure context, so anyone reaching a dev server by LAN IP over plain
+ * http has no clipboard, and saying "copy failed" is better than a
+ * button that silently does nothing.
  */
 export default function ShareButton({ id, authorName, className = '' }: Props) {
   const [state, setState] = useState<'idle' | 'copied' | 'failed'>('idle');
@@ -33,24 +35,13 @@ export default function ShareButton({ id, authorName, className = '' }: Props) {
     timer.current = setTimeout(() => setState('idle'), 2000);
   };
 
-  const share = async (e: React.MouseEvent) => {
+  const copy = async (e: React.MouseEvent) => {
     // The lightbox closes on any click that reaches it. Without this,
-    // sharing from inside the lightbox also dismisses the thing shared.
+    // copying from inside the lightbox also dismisses the thing copied.
     e.preventDefault();
     e.stopPropagation();
 
     const url = `${window.location.origin}${postPath(id)}`;
-
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: `Creation by ${authorName} on Spotlight`, url });
-        return;
-      } catch {
-        // Dismissing the sheet rejects, and so does a browser that
-        // advertises share but refuses this payload. Neither is worth
-        // saying out loud, so fall through to the clipboard either way.
-      }
-    }
 
     try {
       if (!navigator.clipboard) throw new Error('no clipboard');
@@ -69,8 +60,8 @@ export default function ShareButton({ id, authorName, className = '' }: Props) {
     <button
       type="button"
       className={`share-btn${state === 'copied' ? ' share-on' : ''} ${className}`.trim()}
-      onClick={share}
-      aria-label={`Share the creation by ${authorName}`}
+      onClick={copy}
+      aria-label={`Copy a link to the creation by ${authorName}`}
     >
       {label}
     </button>
