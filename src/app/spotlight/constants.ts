@@ -226,6 +226,49 @@ export function postPath(id: number): string {
   return `/spotlight/p/${id}`;
 }
 
+/** Absolute form of postPath, for the metadata Next does not resolve
+    against metadataBase (twitter:player and twitter:player:stream are
+    emitted verbatim). Hardcoded to the production origin for the same
+    reason metadataBase is: a preview deployment's URL sits behind
+    deployment protection and 302s crawlers away from the media. */
+export const SITE_ORIGIN = 'https://whimco.com';
+
+/** The stable address of a creation's video, which is not the address of
+    the file.
+
+    Discord stores the og:video URL it scraped and hands it to every
+    client that ever renders the embed, days or weeks later. Most of
+    Spotlight's clips live in our S3 bucket behind a presigned URL that
+    dies after 12 hours, so pointing Discord at the file directly
+    would give a video that plays this afternoon and 403s tomorrow. This
+    hop is ours and never expires; it redirects to whatever URL is
+    current at the moment somebody presses play. */
+export function postVideoPath(id: number): string {
+  return `/spotlight/p/${id}/video.mp4`;
+}
+
+/** The lead attachment Discord can play inline, or null.
+
+    video/mp4 only. Discord uploads also arrive as video/quicktime, and a
+    .mov in an HTML5 player is a black rectangle everywhere but Safari —
+    those fall through to the still card rather than embedding a player
+    that will not start. */
+export function playableVideo(item: ShowcaseItem): ShowcaseMedia | null {
+  return item.media.find((m) => m.content_type === 'video/mp4') ?? null;
+}
+
+/** Pixel size read out of an X video's own URL, which spells it out:
+    .../amplify_video/<id>/vid/avc1/2160x1080/<name>.mp4. Null for
+    anything else, including our S3 keys. */
+export function twimgVideoSize(url: string): { width: number; height: number } | null {
+  const m = url.match(/\/(\d{2,5})x(\d{2,5})\//);
+  if (!m) return null;
+  const width = Number(m[1]);
+  const height = Number(m[2]);
+  if (!width || !height) return null;
+  return { width, height };
+}
+
 /** One creation, or null when the id is unknown, hidden, taken down by
     its author, or belongs to a banned account. The backend refuses all
     four identically and on purpose, so there is nothing here to tell
