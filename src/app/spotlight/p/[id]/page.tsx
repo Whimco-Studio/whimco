@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { Bricolage_Grotesque, JetBrains_Mono } from 'next/font/google';
 import GlassNav from '../../../components/GlassNav';
@@ -97,21 +98,32 @@ export async function generateMetadata(
     // instead of the creation.
   };
 
+  // Only Discord is offered the video, and the reason is that the tags
+  // which make a clip play there make it disappear everywhere else.
+  //
+  // Discourse decides a link is a video from og:type alone
+  // (AllowlistedGenericOnebox#is_video? wants /^video[\/.]/ plus an mp4),
+  // and then renders a video onebox as onebox-placeholder-container, the
+  // grey "External Media" box, because the file is on a host it has not
+  // allowlisted and cannot rehost. So the Roblox DevForum went from a
+  // full card with the artwork to an empty rectangle. Discord needs the
+  // opposite: it types the embed from og:type, and an article embed has
+  // nowhere to put a player.
+  //
+  // One tag, two incompatible right answers, so it is answered per
+  // crawler. Nothing a person sees changes, the permalink still plays
+  // the clip in the page itself, and a user agent we do not recognise
+  // gets the card everything had before, which is the half that is
+  // never wrong.
   const video = playableVideo(item);
-  if (video) {
-    // Two in five creations lead with a clip, and every one of them used
-    // to unfurl in Discord as a frozen frame. These are the tags that
-    // make the embed an actual player. Both blocks, og:video and the
-    // twitter player, because the two sites whose clips demonstrably
-    // play inline in Discord (vxtwitter and Streamable) each ship both,
-    // and neither leans on og:video by itself.
-    //
-    // The cost is twitter:card, which stops being summary_large_image
-    // for these. X renders an unapproved player card as a bare link, so
-    // a clip shared to X unfurls worse than it did. Spotlight is a
-    // Discord product and these links are pasted into Discord; a working
-    // player there is worth a plainer card somewhere almost nobody
-    // posts them.
+  const wantsVideo = video
+    && /discordbot/i.test(headers().get('user-agent') || '');
+
+  if (video && wantsVideo) {
+    // Both blocks, og:video and the twitter player, because the two
+    // sites whose clips demonstrably play inline in Discord (vxtwitter
+    // and Streamable) each ship both and neither leans on og:video by
+    // itself.
     const size = twimgVideoSize(video.url)
       ?? (video.thumbnail ? await probeImageSize(video.thumbnail) : null)
       ?? { width: 1280, height: 720 };
