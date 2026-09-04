@@ -137,6 +137,17 @@ export default function PortfolioLayoutStyles() {
       .showcase .pl-hero-name {
         text-shadow: 0 2px 30px rgba(10, 10, 15, 0.65);
       }
+      /* Three classes deep on purpose. .showcase .pf-name and
+         .showcase .pl-hero-name are the same specificity, and the shared
+         stylesheet renders after this one, so a tie went to the smaller
+         size every time. Feature gives the name a whole screen to sit on,
+         and what reads as a title on a dark page reads as a subtitle on a
+         photograph. */
+      .showcase.pl-feature .pl-hero .pl-hero-name {
+        font-size: clamp(2.6rem, 6.6vw, 5.8rem);
+        letter-spacing: -0.045em;
+        line-height: 0.92;
+      }
 
       /* Left, not centred. A centred block floating in the middle of a
          full-bleed hero reads as a caption on somebody else's picture;
@@ -178,6 +189,36 @@ export default function PortfolioLayoutStyles() {
         text-decoration: none;
         border-color: var(--beam);
         color: var(--beam);
+      }
+      /* The creator's first link is the one they put first. Four
+         identical outlines make somebody read all four to find where to
+         go; one filled button answers it before they read anything. */
+      .showcase.pl-feature .pl-hero .pf-links a:first-child {
+        background: var(--stext);
+        border-color: var(--stext);
+        color: var(--ink, #0a0a0f);
+      }
+      .showcase.pl-feature .pl-hero .pf-links a:first-child:hover {
+        background: var(--beam);
+        border-color: var(--beam);
+        color: #0a0a0f;
+      }
+
+      /* The hero is one composition, so its parts sit closer together
+         than the stacked header they inherit from. */
+      .showcase.pl-feature .pl-hero { gap: 0.65rem; }
+      .showcase.pl-feature .pl-hero-body { gap: 0.65rem; }
+      .showcase.pl-feature .pl-hero .pf-links { margin-top: 0.35rem; }
+
+      /* 78rem with a gutter is right for a mixed feed, where the column
+         width is a reading measure and the page has other things on it.
+         A creator who chose one of these layouts is saying the work is
+         the page, and their wall was sitting in a box with 132px of
+         nothing down each side of a laptop screen. */
+      .showcase.pl-feature .gallery-section,
+      .showcase.pl-discipline .gallery-section {
+        max-width: none;
+        padding: 1.5rem clamp(10px, 1.4vw, 26px) 5rem;
       }
 
       /* A chosen layout is a creator saying the work should carry the
