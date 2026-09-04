@@ -18,7 +18,15 @@ const mono = JetBrains_Mono({
 
 export const revalidate = 300;
 
-type Params = { params: { username: string } };
+type Params = {
+  params: { username: string };
+  /** ?layout= and ?accent= render this portfolio in another arrangement
+      without saving anything, so the shape a creator would get can be
+      screenshotted from a real page with real work in it. Read on the
+      server, so the first paint is already the requested layout and a
+      screenshot never catches a swap. */
+  searchParams?: { layout?: string; accent?: string };
+};
 
 async function getPortfolio(name: string): Promise<ShowcaseData | null> {
   try {
@@ -33,7 +41,9 @@ async function getPortfolio(name: string): Promise<ShowcaseData | null> {
   }
 }
 
-export async function generateMetadata({ params }: Params): Promise<Metadata> {
+export async function generateMetadata(
+  { params, searchParams }: Params,
+): Promise<Metadata> {
   const name = parseUsername(params.username);
   if (!name) return { title: 'Spotlight | Whimco' };
   const data = await getPortfolio(name);
@@ -46,6 +56,12 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
     title: `${canonical} — Spotlight Portfolio | Whimco`,
     description,
     referrer: 'no-referrer',
+    // A preview is the same portfolio wearing another layout. Letting a
+    // crawler index one would put four more copies of a creator's page in
+    // search results, all outranking each other.
+    ...(params.username && (searchParams?.layout || searchParams?.accent)
+      ? { robots: { index: false, follow: true } }
+      : {}),
     // og:image comes from opengraph-image.tsx — a live composite of the
     // creator's top posts, so Discord/X embeds preview their actual work.
     openGraph: {
@@ -56,7 +72,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   };
 }
 
-export default async function PortfolioPage({ params }: Params) {
+export default async function PortfolioPage({ params, searchParams }: Params) {
   const name = parseUsername(params.username);
   if (!name) notFound();
   const data = await getPortfolio(name);
@@ -73,7 +89,12 @@ export default async function PortfolioPage({ params }: Params) {
       style={{ background: '#0a0a0f', minHeight: '100vh' }}
     >
       <GlassNav />
-      <Portfolio username={name} initialData={data} />
+      <Portfolio
+        username={name}
+        initialData={data}
+        previewLayout={searchParams?.layout}
+        previewAccent={searchParams?.accent}
+      />
     </div>
   );
 }

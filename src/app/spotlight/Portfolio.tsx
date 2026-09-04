@@ -15,8 +15,17 @@ import {
 } from './constants';
 
 export default function Portfolio({
-  username, initialData,
-}: { username: string; initialData: ShowcaseData | null }) {
+  username, initialData, previewLayout, previewAccent,
+}: {
+  username: string;
+  initialData: ShowcaseData | null;
+  /** From ?layout= and ?accent=. Renders another arrangement of this
+      portfolio without saving it, for screenshots and for showing a
+      creator what they would get. Both are coerced, so a nonsense value
+      renders the default rather than nothing. */
+  previewLayout?: string;
+  previewAccent?: string;
+}) {
   const [items, setItems] = useState<ShowcaseItem[]>(initialData?.items ?? []);
   const [page, setPage] = useState(initialData?.page ?? 1);
   const [pages, setPages] = useState(initialData?.pages ?? 1);
@@ -130,6 +139,18 @@ export default function Portfolio({
     accent: asAccent((isOwner && likes.appearance.accent) || profile?.accent),
   };
 
+  // A preview wins over what is stored but is never written. The editor,
+  // if the owner opens one, starts from what is on screen, so previewing
+  // a layout and then keeping it is one press rather than two choices.
+  const preview = {
+    layout: previewLayout ? asLayout(previewLayout) : null,
+    accent: previewAccent ? asAccent(previewAccent) : null,
+  };
+  const shown = {
+    layout: preview.layout ?? stored.layout,
+    accent: preview.accent ?? stored.accent,
+  };
+
   // Non-null while the customise bar is open. The page renders the draft,
   // so the preview is the portfolio itself rather than a thumbnail of it,
   // and closing without saving simply drops it.
@@ -142,8 +163,8 @@ export default function Portfolio({
   // have chosen one. Anything unrecognised falls back to classic, so a
   // layout the backend ships before this site can render it degrades
   // instead of blanking the page.
-  const layout = draft?.layout ?? stored.layout;
-  const accent = draft?.accent ?? stored.accent;
+  const layout = draft?.layout ?? shown.layout;
+  const accent = draft?.accent ?? shown.accent;
   const disciplines = useMemo(() => disciplinesOf(items), [items]);
   // Feature puts one piece behind the name, and the network's hearts pick
   // it. Newest breaks the tie, which matters more than it sounds: most
@@ -194,7 +215,7 @@ export default function Portfolio({
           <button
             type="button"
             className="pf-edit"
-            onClick={() => setDraft(stored)}
+            onClick={() => setDraft(shown)}
             title="Customise your portfolio"
             aria-label="Customise your portfolio"
           >
