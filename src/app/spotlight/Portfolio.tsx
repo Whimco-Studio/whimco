@@ -14,8 +14,17 @@ import {
   SHOWCASE_API_URL, ShowcaseData, ShowcaseItem,
 } from './constants';
 
+/** What a portfolio looks like: the two choices plus which creation
+    fills the fold. Carried together because the editor previews all
+    three at once and saves them in one write. */
+type Appearance = {
+  layout: PortfolioLayout;
+  accent: PortfolioAccent;
+  feature: number | null;
+};
+
 export default function Portfolio({
-  username, initialData, previewLayout, previewAccent,
+  username, initialData, previewLayout, previewAccent, previewFeature,
 }: {
   username: string;
   initialData: ShowcaseData | null;
@@ -25,6 +34,8 @@ export default function Portfolio({
       renders the default rather than nothing. */
   previewLayout?: string;
   previewAccent?: string;
+  /** From ?feature=, so a chosen fold can be screenshotted too. */
+  previewFeature?: string;
 }) {
   const [items, setItems] = useState<ShowcaseItem[]>(initialData?.items ?? []);
   const [page, setPage] = useState(initialData?.page ?? 1);
@@ -131,12 +142,12 @@ export default function Portfolio({
   // What the server has. /me is the fresher of the two and is only about
   // the reader, so it is trusted here and nowhere else: viewing somebody
   // else's portfolio while signed in must not paint it in your colours.
-  const [saved, setSaved] = useState<
-    { layout: PortfolioLayout; accent: PortfolioAccent } | null
-  >(null);
-  const stored = saved ?? {
+  const [saved, setSaved] = useState<Appearance | null>(null);
+  const stored: Appearance = saved ?? {
     layout: asLayout((isOwner && likes.appearance.layout) || profile?.layout),
     accent: asAccent((isOwner && likes.appearance.accent) || profile?.accent),
+    feature: (isOwner ? likes.appearance.feature : null)
+      ?? profile?.feature_item_id ?? null,
   };
 
   // A preview wins over what is stored but is never written. The editor,
@@ -145,18 +156,18 @@ export default function Portfolio({
   const preview = {
     layout: previewLayout ? asLayout(previewLayout) : null,
     accent: previewAccent ? asAccent(previewAccent) : null,
+    feature: Number(previewFeature) || null,
   };
-  const shown = {
+  const shown: Appearance = {
     layout: preview.layout ?? stored.layout,
     accent: preview.accent ?? stored.accent,
+    feature: preview.feature ?? stored.feature,
   };
 
   // Non-null while the customise bar is open. The page renders the draft,
   // so the preview is the portfolio itself rather than a thumbnail of it,
   // and closing without saving simply drops it.
-  const [draft, setDraft] = useState<
-    { layout: PortfolioLayout; accent: PortfolioAccent } | null
-  >(null);
+  const [draft, setDraft] = useState<Appearance | null>(null);
 
   // Only a claimed profile carries a layout, which is the same bar the
   // verified seal stands for: an unclaimed portfolio has nobody who could
@@ -165,18 +176,24 @@ export default function Portfolio({
   // instead of blanking the page.
   const layout = draft?.layout ?? shown.layout;
   const accent = draft?.accent ?? shown.accent;
+  const feature = draft ? draft.feature : shown.feature;
   const disciplines = useMemo(() => disciplinesOf(items), [items]);
   // Feature puts one piece behind the name, and the network's hearts pick
   // it. Newest breaks the tie, which matters more than it sounds: most
   // creations sit on the same low heart count, so in practice this is
   // "their best, and their most recent among equals".
-  const hero = useMemo(
-    () => [...items].sort(
+  const hero = useMemo(() => {
+    // The creator's own pick wins, when it is still here. An id that
+    // matches nothing loaded falls through to the hearts, which covers a
+    // creation they took down after choosing it and a page that has not
+    // loaded that far yet alike.
+    const chosen = feature ? items.find((i) => i.id === feature) : undefined;
+    if (chosen) return chosen;
+    return [...items].sort(
       (a, b) => b.hearts - a.hearts
         || Date.parse(b.created_at) - Date.parse(a.created_at),
-    )[0],
-    [items],
-  );
+    )[0];
+  }, [items, feature]);
 
   const gridProps = {
     likes,
@@ -293,6 +310,8 @@ export default function Portfolio({
         <PortfolioEditor
           layout={draft.layout}
           accent={draft.accent}
+          feature={draft.feature}
+          items={items}
           onPreview={setDraft}
           onClose={() => setDraft(null)}
           onSaved={(next) => { setSaved(next); setDraft(null); }}

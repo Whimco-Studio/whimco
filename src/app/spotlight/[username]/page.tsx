@@ -25,7 +25,7 @@ type Params = {
       screenshotted from a real page with real work in it. Read on the
       server, so the first paint is already the requested layout and a
       screenshot never catches a swap. */
-  searchParams?: { layout?: string; accent?: string };
+  searchParams?: { layout?: string; accent?: string; feature?: string };
 };
 
 async function getPortfolio(name: string): Promise<ShowcaseData | null> {
@@ -59,7 +59,8 @@ export async function generateMetadata(
     // A preview is the same portfolio wearing another layout. Letting a
     // crawler index one would put four more copies of a creator's page in
     // search results, all outranking each other.
-    ...(params.username && (searchParams?.layout || searchParams?.accent)
+    ...(params.username
+      && (searchParams?.layout || searchParams?.accent || searchParams?.feature)
       ? { robots: { index: false, follow: true } }
       : {}),
     // og:image comes from opengraph-image.tsx — a live composite of the
@@ -94,6 +95,7 @@ export default async function PortfolioPage({ params, searchParams }: Params) {
         initialData={data}
         previewLayout={searchParams?.layout}
         previewAccent={searchParams?.accent}
+        previewFeature={searchParams?.feature}
       />
     </div>
   );

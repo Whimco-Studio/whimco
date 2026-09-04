@@ -182,6 +182,9 @@ export type ShowcaseProfile = {
       asLayout() and asAccent(), never directly. */
   layout?: string;
   accent?: string;
+  /** Which creation fills the fold in the Feature layout. Null, or an id
+      that matches nothing currently loaded, means the hearts decide. */
+  feature_item_id?: number | null;
 };
 
 /** Gallery ordering. 'new' is newest first and the default; 'top' ranks by

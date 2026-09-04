@@ -19,7 +19,7 @@ export type Likes = {
   /** Their stored layout and accent, straight from /me rather than the
       public payload: that one is cached five minutes, so a creator who
       just saved would reopen the editor on their previous choice. */
-  appearance: { layout: string; accent: string };
+  appearance: { layout: string; accent: string; feature: number | null };
   isLiked: (id: number) => boolean;
   hearts: (item: ShowcaseItem) => number;
   toggle: (item: ShowcaseItem) => void;
@@ -46,7 +46,9 @@ export default function useLikes(): Likes {
   const [signedIn, setSignedIn] = useState(false);
   const [isCurator, setIsCurator] = useState(false);
   const [username, setUsername] = useState('');
-  const [appearance, setAppearance] = useState({ layout: '', accent: '' });
+  const [appearance, setAppearance] = useState<{
+    layout: string; accent: string; feature: number | null;
+  }>({ layout: '', accent: '', feature: null });
   const [liked, setLiked] = useState<Set<number>>(new Set());
   const [own, setOwn] = useState<Set<number>>(new Set());
   const [counts, setCounts] = useState<Record<number, number>>({});
@@ -70,6 +72,7 @@ export default function useLikes(): Likes {
         setAppearance({
           layout: String(data.layout ?? ''),
           accent: String(data.accent ?? ''),
+          feature: data.feature_item_id ?? null,
         });
         setLiked(new Set<number>(data.liked_item_ids ?? []));
         setOwn(new Set<number>(data.own_item_ids ?? []));

@@ -3,8 +3,14 @@
 import React, { useEffect, useState } from 'react';
 import {
   APPEARANCE_URL, CLAIM_START_URL, LAYOUT_NOTES, PORTFOLIO_ACCENTS,
-  PORTFOLIO_LAYOUTS, PortfolioAccent, PortfolioLayout,
+  PORTFOLIO_LAYOUTS, PortfolioAccent, PortfolioLayout, ShowcaseItem,
 } from './constants';
+
+export type Appearance = {
+  layout: PortfolioLayout;
+  accent: PortfolioAccent;
+  feature: number | null;
+};
 
 /**
  * The customise bar a creator gets on their own portfolio.
@@ -18,13 +24,18 @@ import {
  * creator can try all five and walk away unchanged.
  */
 export default function PortfolioEditor({
-  layout, accent, onPreview, onClose, onSaved,
+  layout, accent, feature, items, onPreview, onClose, onSaved,
 }: {
   layout: PortfolioLayout;
   accent: PortfolioAccent;
-  onPreview: (next: { layout: PortfolioLayout; accent: PortfolioAccent }) => void;
+  feature: number | null;
+  /** Everything loaded on the page, for the fold picker. Loaded rather
+      than all: a creator past one page picks from what they can see, and
+      pressing "show more" adds to the strip. */
+  items: ShowcaseItem[];
+  onPreview: (next: Appearance) => void;
   onClose: () => void;
-  onSaved: (saved: { layout: PortfolioLayout; accent: PortfolioAccent }) => void;
+  onSaved: (saved: Appearance) => void;
 }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -46,7 +57,7 @@ export default function PortfolioEditor({
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ layout, accent }),
+        body: JSON.stringify({ layout, accent, feature_item_id: feature }),
       });
       if (res.status === 401) {
         // The session expired while they were deciding. Send them back
@@ -63,7 +74,11 @@ export default function PortfolioEditor({
       }
       // The server answers with what actually renders, which can differ
       // from what was asked for, so the page settles on its answer.
-      onSaved({ layout: data.layout, accent: data.accent });
+      onSaved({
+        layout: data.layout,
+        accent: data.accent,
+        feature: data.feature_item_id ?? null,
+      });
     } catch {
       setError('That did not save. Check your connection and try again.');
     } finally {
@@ -83,7 +98,7 @@ export default function PortfolioEditor({
               className="pe-pill"
               aria-pressed={id === layout}
               title={LAYOUT_NOTES[id]}
-              onClick={() => onPreview({ layout: id, accent })}
+              onClick={() => onPreview({ layout: id, accent, feature })}
             >
               {id[0].toUpperCase() + id.slice(1)}
             </button>
@@ -103,11 +118,52 @@ export default function PortfolioEditor({
               aria-pressed={id === accent}
               aria-label={PORTFOLIO_ACCENTS[id].label}
               title={PORTFOLIO_ACCENTS[id].label}
-              onClick={() => onPreview({ layout, accent: id })}
+              onClick={() => onPreview({ layout, accent: id, feature })}
             />
           ))}
         </div>
       </div>
+
+      {/* Only Feature reads it, so it only appears there. Offering a
+          fold picker beside a layout with no fold is a control that does
+          nothing, which reads as broken rather than as inapplicable. */}
+      {layout === 'feature' && items.length > 0 && (
+        <div className="pe-group pe-fold">
+          <span className="pe-label">Fold</span>
+          <div className="pe-strip">
+            <button
+              type="button"
+              className="pe-auto"
+              aria-pressed={feature === null}
+              title="Let the network's hearts choose"
+              onClick={() => onPreview({ layout, accent, feature: null })}
+            >
+              Auto
+            </button>
+            {items.map((item) => {
+              const m = item.media[0];
+              const still = m?.content_type.startsWith('video/')
+                ? m.thumbnail
+                : m?.url;
+              return (
+                <button
+                  type="button"
+                  key={item.id}
+                  className="pe-thumb"
+                  aria-pressed={feature === item.id}
+                  aria-label={`Feature this creation`}
+                  onClick={() => onPreview({ layout, accent, feature: item.id })}
+                >
+                  {still && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={still} alt="" referrerPolicy="no-referrer" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <p className="pe-note">{error || LAYOUT_NOTES[layout]}</p>
 
@@ -128,6 +184,7 @@ export default function PortfolioEditor({
       <style jsx global>{`
         .pe-bar {
           position: fixed;
+          flex-wrap: wrap;
           left: 50%;
           bottom: 18px;
           transform: translateX(-50%);
@@ -200,6 +257,55 @@ export default function PortfolioEditor({
           max-width: 36ch;
           min-width: 16ch;
         }
+        /* Its own row: a strip of thumbnails beside four other controls
+           would either squeeze them or push Save off a laptop screen. */
+        .pe-fold { flex: 1 1 100%; order: 4; min-width: 0; }
+        .pe-strip {
+          display: flex;
+          align-items: center;
+          gap: 5px;
+          overflow-x: auto;
+          padding-bottom: 3px;
+          min-width: 0;
+        }
+        .pe-thumb {
+          flex: none;
+          width: 46px;
+          height: 34px;
+          padding: 0;
+          overflow: hidden;
+          border-radius: 4px;
+          border: 2px solid transparent;
+          background: #06060a;
+          cursor: pointer;
+          opacity: 0.55;
+          transition: opacity 0.16s ease, border-color 0.16s ease;
+        }
+        .pe-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .pe-thumb:hover { opacity: 1; }
+        .pe-thumb[aria-pressed='true'] {
+          opacity: 1;
+          border-color: var(--beam, #ffd98a);
+        }
+        .pe-auto {
+          flex: none;
+          appearance: none;
+          font: inherit;
+          font-size: 11.5px;
+          color: #9ba0b4;
+          background: none;
+          border: 1px solid rgba(255, 255, 255, 0.18);
+          border-radius: 4px;
+          padding: 9px 10px;
+          cursor: pointer;
+          white-space: nowrap;
+        }
+        .pe-auto[aria-pressed='true'] {
+          color: #0a0a0f;
+          background: var(--beam, #ffd98a);
+          border-color: transparent;
+          font-weight: 600;
+        }
         .pe-actions { display: flex; align-items: center; gap: 8px; }
         .pe-cancel, .pe-save {
           appearance: none;
@@ -241,6 +347,7 @@ export default function PortfolioEditor({
           .pe-group { flex: 1 1 100%; min-width: 0; }
           .pe-opts { overflow-x: auto; padding-bottom: 2px; }
           .pe-note { max-width: none; flex: 1 1 100%; order: 5; }
+          .pe-fold { order: 4; }
           .pe-actions { flex: 1 1 100%; order: 6; }
           .pe-cancel, .pe-save { flex: 1; }
         }
