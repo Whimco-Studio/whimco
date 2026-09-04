@@ -185,6 +185,10 @@ export type ShowcaseProfile = {
   /** Which creation fills the fold in the Feature layout. Null, or an id
       that matches nothing currently loaded, means the hearts decide. */
   feature_item_id?: number | null;
+  /** The featured creation itself, sent with the header so the fold is
+      right on first paint. The portfolio paginates, and a piece chosen
+      from a later page is not in the first page of items. */
+  feature_item?: ShowcaseItem | null;
 };
 
 /** Gallery ordering. 'new' is newest first and the default; 'top' ranks by

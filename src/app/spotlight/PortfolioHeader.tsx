@@ -98,6 +98,9 @@ export type Discipline = [code: string, count: number, hearts: number];
 export function disciplinesOf(items: ShowcaseItem[]): Discipline[] {
   const tally = new Map<string, [number, number]>();
   items.forEach((i) => {
+    // Uncategorised creations exist and have no label to show, so they
+    // were rendering a chip with nothing in it.
+    if (!i.category) return;
     const [c, h] = tally.get(i.category) ?? [0, 0];
     tally.set(i.category, [c + 1, h + i.hearts]);
   });
@@ -275,7 +278,7 @@ function FeatureHead({
         {editControl}
         </div>
         <Counts author={author} />
-        <Chips disciplines={disciplines} withCounts={false} />
+        <Chips disciplines={disciplines} withCounts />
         {profile?.bio && <p className="pf-bio">{profile.bio}</p>}
         <Links profile={profile} handle={handle} className="pf-links" />
         {profile?.contact && <p className="pf-contact">{profile.contact}</p>}
@@ -295,7 +298,7 @@ function CardHead({ name, profile, author, handle, disciplines, editControl }: H
         {profile && <VerifiedSeal className="pf-verified" />}
         {editControl}
       </div>
-      <Chips disciplines={disciplines} withCounts={false} />
+      <Chips disciplines={disciplines} withCounts />
       {profile?.bio && <p className="pf-bio">{profile.bio}</p>}
       <Counts author={author} />
       <Links profile={profile} handle={handle} className="pf-links pl-card-links" />

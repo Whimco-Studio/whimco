@@ -138,6 +138,107 @@ export default function PortfolioLayoutStyles() {
         text-shadow: 0 2px 30px rgba(10, 10, 15, 0.65);
       }
 
+      /* Left, not centred. A centred block floating in the middle of a
+         full-bleed hero reads as a caption on somebody else's picture;
+         anchored to the corner it reads as a title over your own. This is
+         the single biggest difference between the layout as drawn and the
+         layout as first shipped. */
+      .showcase.pl-feature .pl-hero {
+        align-items: flex-start;
+        text-align: left;
+        padding-left: max(1.5rem, calc((100vw - 78rem) / 2));
+        padding-right: max(1.5rem, calc((100vw - 78rem) / 2));
+      }
+      .showcase.pl-feature .pl-hero-body { align-items: flex-start; }
+      .showcase.pl-feature .pl-hero .pf-name-row { justify-content: flex-start; }
+      .showcase.pl-feature .pl-hero .pl-chips,
+      .showcase.pl-feature .pl-hero .pf-links { justify-content: flex-start; }
+      .showcase.pl-feature .pl-hero .pf-sub,
+      .showcase.pl-feature .pl-hero .pf-bio,
+      .showcase.pl-feature .pl-hero .pf-contact { text-align: left; }
+
+      /* Reaching this person is most of what the page is for, and a row
+         of 0.78rem monospace text is not a target. The hero has room. */
+      .showcase.pl-feature .pl-hero .pf-links {
+        gap: 0.5rem;
+        font-family: 'Inter', -apple-system, sans-serif;
+        font-size: 0.85rem;
+        letter-spacing: 0;
+      }
+      .showcase.pl-feature .pl-hero .pf-links a,
+      .showcase.pl-feature .pl-hero .pf-copy {
+        padding: 0.6rem 1rem;
+        border: 1px solid rgba(255, 255, 255, 0.28);
+        border-radius: 6px;
+        color: var(--stext);
+        font-weight: 600;
+      }
+      .showcase.pl-feature .pl-hero .pf-links a:hover,
+      .showcase.pl-feature .pl-hero .pf-copy:hover {
+        text-decoration: none;
+        border-color: var(--beam);
+        color: var(--beam);
+      }
+
+      /* A chosen layout is a creator saying the work should carry the
+         page. The card's panel, border, radius and lift are right on a
+         mixed feed where each tile is by a different person; on one
+         creator's own wall they put a frame around every piece and turn a
+         portfolio into a list. The meta row stays, holding the hearts and
+         the owner's controls, but it sits on the image instead of adding
+         a bar under it. */
+      .showcase.pl-feature .card,
+      .showcase.pl-sheet .card,
+      .showcase.pl-discipline .card {
+        background: none;
+        border: 0;
+        border-radius: 0;
+      }
+      .showcase.pl-feature .card:hover,
+      .showcase.pl-sheet .card:hover,
+      .showcase.pl-discipline .card:hover,
+      .showcase.pl-feature .card:focus-within,
+      .showcase.pl-sheet .card:focus-within,
+      .showcase.pl-discipline .card:focus-within {
+        transform: none;
+        border-color: transparent;
+        box-shadow: none;
+      }
+      .showcase.pl-feature .card-hit,
+      .showcase.pl-sheet .card-hit,
+      .showcase.pl-discipline .card-hit { border-radius: 0; }
+
+      .showcase.pl-feature .card,
+      .showcase.pl-sheet .card,
+      .showcase.pl-discipline .card { position: relative; }
+      .showcase.pl-feature .card-meta,
+      .showcase.pl-sheet .card-meta,
+      .showcase.pl-discipline .card-meta {
+        position: absolute;
+        inset: auto 0 0 0;
+        padding: 1.6rem 0.7rem 0.6rem;
+        background: linear-gradient(
+          to top,
+          rgba(6, 6, 10, 0.92) 0px,
+          rgba(6, 6, 10, 0.5) 30px,
+          transparent 70px
+        );
+        opacity: 0;
+        transition: opacity 0.2s ease;
+      }
+      .showcase.pl-feature .card:hover .card-meta,
+      .showcase.pl-sheet .card:hover .card-meta,
+      .showcase.pl-discipline .card:hover .card-meta,
+      .showcase.pl-feature .card:focus-within .card-meta,
+      .showcase.pl-sheet .card:focus-within .card-meta,
+      .showcase.pl-discipline .card:focus-within .card-meta { opacity: 1; }
+
+      /* Tighter gutters, now that nothing has a frame to keep apart. */
+      .showcase.pl-feature .masonry,
+      .showcase.pl-discipline .masonry { gap: 6px; }
+      .showcase.pl-feature .masonry-col,
+      .showcase.pl-discipline .masonry-col { gap: 6px; }
+
       /* ---------------- card ----------------
          A single column, because most of these URLs are opened from a
          Discord message on a phone. On a desktop it stays narrow rather

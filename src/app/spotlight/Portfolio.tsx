@@ -183,17 +183,21 @@ export default function Portfolio({
   // creations sit on the same low heart count, so in practice this is
   // "their best, and their most recent among equals".
   const hero = useMemo(() => {
-    // The creator's own pick wins, when it is still here. An id that
-    // matches nothing loaded falls through to the hearts, which covers a
-    // creation they took down after choosing it and a page that has not
-    // loaded that far yet alike.
+    // Loaded items first, so previewing a fold in the editor swaps
+    // immediately. Then the copy that arrives with the header, which is
+    // what makes a piece chosen from page three correct on first paint
+    // instead of only after "show more" happens to fetch it. Then the
+    // hearts, for a creator who never chose or whose piece is gone.
     const chosen = feature ? items.find((i) => i.id === feature) : undefined;
     if (chosen) return chosen;
+    if (feature && profile?.feature_item?.id === feature) {
+      return profile.feature_item;
+    }
     return [...items].sort(
       (a, b) => b.hearts - a.hearts
         || Date.parse(b.created_at) - Date.parse(a.created_at),
     )[0];
-  }, [items, feature]);
+  }, [items, feature, profile]);
 
   const gridProps = {
     likes,
@@ -311,7 +315,16 @@ export default function Portfolio({
           layout={draft.layout}
           accent={draft.accent}
           feature={draft.feature}
-          items={items}
+          // The chosen piece may sit on a page nobody has loaded, in
+          // which case the strip would show every creation except the one
+          // currently selected.
+          items={
+            draft.feature
+              && profile?.feature_item
+              && !items.some((i) => i.id === draft.feature)
+              ? [profile.feature_item, ...items]
+              : items
+          }
           onPreview={setDraft}
           onClose={() => setDraft(null)}
           onSaved={(next) => { setSaved(next); setDraft(null); }}

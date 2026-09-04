@@ -711,6 +711,10 @@ export default function ShowcaseStyles() {
         line-height: 1.65;
         color: var(--stext);
         opacity: 0.85;
+        /* Creators write bios with line breaks in them and the textarea
+           keeps those, so collapsing them here reflowed a three line
+           introduction into one paragraph nobody wrote. */
+        white-space: pre-line;
       }
       .showcase .pf-links {
         display: flex;
