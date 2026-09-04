@@ -12,6 +12,11 @@ const navLinks = [
   // { href: "/admin", label: "Admin" },
 ];
 
+// /lab/creator is deliberately absent from this list. It is a workbench
+// that renders one creator's real portfolio four different ways, kept
+// reachable by typing the URL and linked from nowhere, so it never
+// appears in the nav on any build.
+
 export default function GlassNav() {
   const pathname = usePathname();
 

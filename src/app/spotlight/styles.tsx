@@ -731,6 +731,33 @@ export default function ShowcaseStyles() {
         align-items: baseline;
         gap: 0.5rem;
       }
+      /* The pencil beside your own name. Only the owner of a portfolio
+         ever sees one, so it stays quiet until hovered rather than
+         advertising an action nobody else can take. */
+      .showcase .pf-edit {
+        flex: none;
+        width: 32px;
+        height: 32px;
+        display: grid;
+        place-items: center;
+        border-radius: 50%;
+        border: 1px solid var(--edge);
+        background: var(--panel);
+        /* Bright enough to read as a control at rest. It is the only way
+           into the customise bar, and nobody but the owner ever sees it,
+           so hiding it until hover would hide the feature. */
+        color: var(--stext);
+        font-size: 15px;
+        line-height: 1;
+        cursor: pointer;
+        transition: color 0.16s ease, border-color 0.16s ease, transform 0.16s ease;
+      }
+      .showcase .pf-edit:hover {
+        color: var(--beam);
+        border-color: var(--beam);
+        transform: translateY(-1px);
+      }
+
       .showcase .pf-copy {
         background: none;
         border: 0;

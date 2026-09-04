@@ -292,7 +292,8 @@ function Lightbox({
     parent owns items/pagination state. */
 export default function GalleryGrid({
   items, emptyText, showAuthor = true, canLoadMore = false, loading = false,
-  onLoadMore, likes, onRemoved, deep = false,
+  onLoadMore, likes, onRemoved, deep = false, arrangement = 'masonry',
+  maxCols = 4,
 }: {
   items: ShowcaseItem[];
   emptyText: string;
@@ -308,6 +309,20 @@ export default function GalleryGrid({
       cards must not each hold a network connection open. Set by
       /spotlight/gallery, left off for the fixed-length grids. */
   deep?: boolean;
+  /** 'masonry' is the default everywhere and is what the feed, the
+      gallery and the creators page all render. 'squares' is the contact
+      sheet the Sheet portfolio layout asks for: uniform cells in reading
+      order rather than dealt round-robin into columns, because a sheet
+      whose order runs down each column instead of across is not a sheet.
+      Both arrangements share every card, so hearts, the lightbox and the
+      owner's remove button work the same in either. */
+  arrangement?: 'masonry' | 'squares';
+  /** Ceiling on the masonry column count. The count is derived from the
+      window, which is right for a grid that spans the page and wrong for
+      one inside a narrow column: the Card portfolio layout is 34rem wide
+      on any monitor, and four columns in it made thumbnails so small the
+      date elided to "A...". */
+  maxCols?: number;
 }) {
   const [selected, setSelected] = useState<ShowcaseItem | null>(null);
   const [cols, setCols] = useState(4);
@@ -342,12 +357,12 @@ export default function GalleryGrid({
   useEffect(() => {
     const compute = () => {
       const w = window.innerWidth;
-      setCols(w < 640 ? 1 : w < 900 ? 2 : w < 1200 ? 3 : 4);
+      setCols(Math.min(maxCols, w < 640 ? 1 : w < 900 ? 2 : w < 1200 ? 3 : 4));
     };
     compute();
     window.addEventListener('resize', compute);
     return () => window.removeEventListener('resize', compute);
-  }, []);
+  }, [maxCols]);
 
   // The beam: warm light follows the cursor across the gallery.
   const onGalleryMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
@@ -365,25 +380,46 @@ export default function GalleryGrid({
       ) : (
         <div className="masonry-wrap" ref={galleryRef} onMouseMove={onGalleryMove}>
           <div className="beam-overlay" aria-hidden />
-          <div className="masonry">
-            {Array.from({ length: cols }, (_, c) => (
-              <div className="masonry-col" key={c}>
-                {items
-                  .filter((_, i) => i % cols === c)
-                  .map((item) => (
-                    <GalleryCard
-                      key={item.id}
-                      item={item}
-                      showAuthor={showAuthor}
-                      likes={likes}
-                      onRemoved={onRemoved}
-                      deep={deep}
-                      onOpen={() => openItem(item)}
-                    />
-                  ))}
-              </div>
-            ))}
-          </div>
+          {arrangement === 'squares' ? (
+            /* One flat container, so the cards keep document order. The
+               masonry below deals them round-robin into real columns,
+               which is right when heights vary and wrong here: uniform
+               cells dealt that way read top-to-bottom down each column
+               while the eye reads across. */
+            <div className="sheetgrid">
+              {items.map((item) => (
+                <GalleryCard
+                  key={item.id}
+                  item={item}
+                  showAuthor={showAuthor}
+                  likes={likes}
+                  onRemoved={onRemoved}
+                  deep={deep}
+                  onOpen={() => openItem(item)}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="masonry">
+              {Array.from({ length: cols }, (_, c) => (
+                <div className="masonry-col" key={c}>
+                  {items
+                    .filter((_, i) => i % cols === c)
+                    .map((item) => (
+                      <GalleryCard
+                        key={item.id}
+                        item={item}
+                        showAuthor={showAuthor}
+                        likes={likes}
+                        onRemoved={onRemoved}
+                        deep={deep}
+                        onOpen={() => openItem(item)}
+                      />
+                    ))}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

@@ -1,74 +1,18 @@
 'use client';
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import GalleryGrid from './Gallery';
+import PortfolioEditor from './PortfolioEditor';
+import PortfolioHeader, { catLabel, disciplinesOf } from './PortfolioHeader';
+import PortfolioLayoutStyles from './portfolioLayoutStyles';
 import RemovedDrawer from './RemovedDrawer';
 import ShowcaseStyles from './styles';
-import VerifiedSeal from './VerifiedSeal';
 import useLikes from './useLikes';
 import useInviteUrl from './useInviteUrl';
 import {
-  CLAIM_URL, SHOWCASE_API_URL, ShowcaseData, ShowcaseItem,
+  asAccent, asLayout, PORTFOLIO_ACCENTS, PortfolioAccent, PortfolioLayout,
+  SHOWCASE_API_URL, ShowcaseData, ShowcaseItem,
 } from './constants';
-
-/** The creator's Discord handle, click to copy.
-
-    Deliberately not a link. Discord has no public profile page, and
-    discord.com/users/<id> only resolves into a popout for a viewer already
-    signed in on that device, so most clicks would land on a login wall.
-    Linking would also mean publishing the Discord snowflake as an
-    invitation, which nobody agreed to by claiming a portfolio.
-
-    Copying is the thing people actually want anyway: reaching a creator
-    means pasting the handle into Discord's own search. Never the free-text
-    contact line, which is whatever the creator typed and is often an email.
-
-    Shown for unclaimed creators too. Their handle is author_name, captured
-    from str(message.author) when the bot broadcast the post, which is the
-    username rather than the display name: all 170 claimed creators with
-    items have an author_name identical to the username OAuth reports, so
-    the two fields are the same thing arriving by different routes. A
-    claimed profile still wins where we have one, because that copy is
-    refreshed on every login and an unclaimed one is frozen at post time.
-
-    This publishes nothing new either way. The handle is already the page
-    title and the byline under every card; the button copies what is
-    on screen. The Discord user id stays out of the payload. */
-function DiscordHandle({ handle }: { handle: string }) {
-  const [state, setState] = useState<'idle' | 'copied' | 'failed'>('idle');
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
-
-  const copy = async () => {
-    if (timer.current) clearTimeout(timer.current);
-    try {
-      await navigator.clipboard.writeText(handle);
-      setState('copied');
-    } catch {
-      // No clipboard permission, or an insecure context. Falling back to
-      // the handle in selectable text, because a button that silently does
-      // nothing reads as broken and leaves them no way to reach anyone.
-      setState('failed');
-    }
-    timer.current = setTimeout(() => setState('idle'), 2000);
-  };
-
-  return (
-    <span className="pf-copy-wrap">
-      <button
-        type="button"
-        className={`pf-copy ${state === 'copied' ? 'pf-copy-done' : ''}`}
-        onClick={copy}
-        title={`Copy ${handle} to your clipboard`}
-        aria-live="polite"
-      >
-        {state === 'copied' ? 'Copied ✓' : 'Discord ⧉'}
-      </button>
-      {state === 'failed' && <span className="pf-copy-fail">{handle}</span>}
-    </span>
-  );
-}
 
 export default function Portfolio({
   username, initialData,
@@ -168,76 +112,142 @@ export default function Portfolio({
     setRemovedToken((n) => n + 1);
   }, [refresh]);
 
+  // Whether the person reading this page is the person it is about.
+  // Compared on username rather than on owning any of the creations: a
+  // creator whose first post has not landed yet still owns their
+  // portfolio, and own_item_ids would be empty for them.
+  const isOwner = likes.ready && likes.signedIn
+    && !!likes.username && likes.username === name;
+
+  // What the server has. /me is the fresher of the two and is only about
+  // the reader, so it is trusted here and nowhere else: viewing somebody
+  // else's portfolio while signed in must not paint it in your colours.
+  const [saved, setSaved] = useState<
+    { layout: PortfolioLayout; accent: PortfolioAccent } | null
+  >(null);
+  const stored = saved ?? {
+    layout: asLayout((isOwner && likes.appearance.layout) || profile?.layout),
+    accent: asAccent((isOwner && likes.appearance.accent) || profile?.accent),
+  };
+
+  // Non-null while the customise bar is open. The page renders the draft,
+  // so the preview is the portfolio itself rather than a thumbnail of it,
+  // and closing without saving simply drops it.
+  const [draft, setDraft] = useState<
+    { layout: PortfolioLayout; accent: PortfolioAccent } | null
+  >(null);
+
+  // Only a claimed profile carries a layout, which is the same bar the
+  // verified seal stands for: an unclaimed portfolio has nobody who could
+  // have chosen one. Anything unrecognised falls back to classic, so a
+  // layout the backend ships before this site can render it degrades
+  // instead of blanking the page.
+  const layout = draft?.layout ?? stored.layout;
+  const accent = draft?.accent ?? stored.accent;
+  const disciplines = useMemo(() => disciplinesOf(items), [items]);
+  // Feature puts one piece behind the name, and the network's hearts pick
+  // it. Newest breaks the tie, which matters more than it sounds: most
+  // creations sit on the same low heart count, so in practice this is
+  // "their best, and their most recent among equals".
+  const hero = useMemo(
+    () => [...items].sort(
+      (a, b) => b.hearts - a.hearts
+        || Date.parse(b.created_at) - Date.parse(a.created_at),
+    )[0],
+    [items],
+  );
+
+  const gridProps = {
+    likes,
+    showAuthor: false,
+    onRemoved,
+    // Card is a 34rem column whatever the monitor, so the window-derived
+    // column count has to be capped or it deals four columns into it.
+    maxCols: layout === 'card' ? 2 : 4,
+    emptyText: initialData
+      ? `No creations from ${name} in the showcase yet.`
+      : 'The showcase is momentarily offline — check back shortly.',
+  };
+
+  const grouped = layout === 'discipline' && items.length > 0;
+
   return (
-    <div className="showcase">
-      <header className="pf-head">
-        <a className="pf-back" href="/spotlight">← THE SHOWCASE</a>
-        <div className="pf-name-row">
-          {profile?.avatar_url && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img className="pf-avatar" src={profile.avatar_url} alt="" referrerPolicy="no-referrer" />
-          )}
-          <h1 className="pf-name">{name}</h1>
-          {profile && <VerifiedSeal className="pf-verified" />}
-        </div>
-        {/* The hearts clause drops out entirely at zero rather than reading
-            "0 hearts from the network", which sits under the creator's name
-            and says the network saw their work and passed. Same reason the
-            card hearts hide their count until there is one. A creator with no
-            hearts yet is simply a creator with creations. */}
-        {author && (
-          <p className="pf-sub">
-            <b>{author.creations.toLocaleString('en-US')}</b> creation{author.creations === 1 ? '' : 's'} broadcast
-            {author.hearts > 0 && (
-              <>
-                {' · '}
-                <b>{author.hearts.toLocaleString('en-US')}</b> heart{author.hearts === 1 ? '' : 's'} from the network
-              </>
-            )}
-          </p>
-        )}
-        {profile?.bio && <p className="pf-bio">{profile.bio}</p>}
-        {/* The handle joins the link row rather than getting a row of its
-            own, so it reads as one more way to reach this person. Which
-            means the row now renders for a creator with no links, and for
-            an unclaimed one who has no profile block at all. */}
-        {(!!handle || !!profile?.links.length) && (
-          <p className="pf-links">
-            {(profile?.links ?? []).map((l) => (
-              <a key={l.url} href={l.url} target="_blank" rel="nofollow noopener noreferrer">
-                {l.label} ↗
-              </a>
-            ))}
-            {!!handle && <DiscordHandle handle={handle} />}
-          </p>
-        )}
-        {profile?.contact && <p className="pf-contact">{profile.contact}</p>}
-        {/* Shown even at zero creations: the welcome DM sends first-time
-            creators straight here, and the showcase API and this page's ISR
-            each cache for 5 minutes, so their first creation has not landed
-            yet. Gating on creations > 0 hid the claim from exactly the people
-            it was written for. */}
-        {!profile && author && (
-          <p className="pf-claim-cta">
-            <span>Is this you?</span>
-            <a href={CLAIM_URL}>CLAIM THIS PORTFOLIO</a>
-          </p>
-        )}
-      </header>
+    <div
+      className={`showcase${layout === 'classic' ? '' : ` pl-${layout}`}`}
+      style={{
+        // The accent overrides tokens the whole showcase already reads,
+        // so recolouring a portfolio costs two custom properties and no
+        // stylesheet of its own.
+        '--beam': PORTFOLIO_ACCENTS[accent].hex,
+        '--beam-dim': PORTFOLIO_ACCENTS[accent].dim,
+      } as React.CSSProperties}
+    >
+      <PortfolioHeader
+        layout={layout}
+        name={name}
+        profile={profile}
+        author={author}
+        handle={handle}
+        disciplines={disciplines}
+        hero={hero}
+        editControl={isOwner && !draft ? (
+          <button
+            type="button"
+            className="pf-edit"
+            onClick={() => setDraft(stored)}
+            title="Customise your portfolio"
+            aria-label="Customise your portfolio"
+          >
+            ✎
+          </button>
+        ) : null}
+      />
 
       <section className="gallery-section" aria-label={`Creations by ${name}`}>
-        <GalleryGrid
-          items={items}
-          likes={likes}
-          showAuthor={false}
-          emptyText={initialData
-            ? `No creations from ${name} in the showcase yet.`
-            : 'The showcase is momentarily offline — check back shortly.'}
-          canLoadMore={page < pages}
-          loading={loading}
-          onLoadMore={loadMore}
-          onRemoved={onRemoved}
-        />
+        {grouped ? (
+          disciplines.map(([code, count, hearts], i) => (
+            <div className="pl-sec" key={code}>
+              <div className="pl-sec-head">
+                <h2>{catLabel(code)}</h2>
+                <span className="pl-sec-count">
+                  {count} creation{count === 1 ? '' : 's'}
+                  {hearts > 0
+                    ? `, ${hearts} heart${hearts === 1 ? '' : 's'}`
+                    : ''}
+                </span>
+                <span
+                  className="pl-sec-bar"
+                  aria-hidden
+                  style={{
+                    // share of the body of work, against their biggest
+                    // discipline rather than the total, so a creator with
+                    // one discipline still gets a full bar
+                    '--w': `${Math.round((count / disciplines[0][1]) * 100)}%`,
+                  } as React.CSSProperties}
+                />
+              </div>
+              <GalleryGrid
+                {...gridProps}
+                items={items.filter((it) => it.category === code)}
+                // Only the last section carries it, so a page split into
+                // four groups still has one "show more" rather than four
+                // buttons all doing the same thing.
+                canLoadMore={i === disciplines.length - 1 && page < pages}
+                loading={loading}
+                onLoadMore={loadMore}
+              />
+            </div>
+          ))
+        ) : (
+          <GalleryGrid
+            {...gridProps}
+            items={items}
+            arrangement={layout === 'sheet' ? 'squares' : 'masonry'}
+            canLoadMore={page < pages}
+            loading={loading}
+            onLoadMore={loadMore}
+          />
+        )}
 
         <RemovedDrawer
           username={username}
@@ -258,6 +268,17 @@ export default function Portfolio({
         </div>
       </section>
 
+      {draft && (
+        <PortfolioEditor
+          layout={draft.layout}
+          accent={draft.accent}
+          onPreview={setDraft}
+          onClose={() => setDraft(null)}
+          onSaved={(next) => { setSaved(next); setDraft(null); }}
+        />
+      )}
+
+      {layout !== 'classic' && <PortfolioLayoutStyles />}
       <ShowcaseStyles />
     </div>
   );

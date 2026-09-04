@@ -11,6 +11,15 @@ export type Likes = {
   ready: boolean;
   signedIn: boolean;
   isCurator: boolean;
+  /** The signed-in creator's Discord username, which is what a portfolio
+      URL is built from. Comparing it to the page's canonical name is how
+      the page knows the reader owns it, and it works for a creator with
+      no creations yet, which own_item_ids cannot. */
+  username: string;
+  /** Their stored layout and accent, straight from /me rather than the
+      public payload: that one is cached five minutes, so a creator who
+      just saved would reopen the editor on their previous choice. */
+  appearance: { layout: string; accent: string };
   isLiked: (id: number) => boolean;
   hearts: (item: ShowcaseItem) => number;
   toggle: (item: ShowcaseItem) => void;
@@ -36,6 +45,8 @@ export default function useLikes(): Likes {
   const [ready, setReady] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
   const [isCurator, setIsCurator] = useState(false);
+  const [username, setUsername] = useState('');
+  const [appearance, setAppearance] = useState({ layout: '', accent: '' });
   const [liked, setLiked] = useState<Set<number>>(new Set());
   const [own, setOwn] = useState<Set<number>>(new Set());
   const [counts, setCounts] = useState<Record<number, number>>({});
@@ -55,6 +66,11 @@ export default function useLikes(): Likes {
         if (!alive || !data) return;
         setSignedIn(Boolean(data.signed_in));
         setIsCurator(Boolean(data.is_curator));
+        setUsername(String(data.username ?? ''));
+        setAppearance({
+          layout: String(data.layout ?? ''),
+          accent: String(data.accent ?? ''),
+        });
         setLiked(new Set<number>(data.liked_item_ids ?? []));
         setOwn(new Set<number>(data.own_item_ids ?? []));
       })
@@ -180,6 +196,8 @@ export default function useLikes(): Likes {
     ready,
     signedIn,
     isCurator,
+    username,
+    appearance,
     isLiked: useCallback((id: number) => liked.has(id), [liked]),
     hearts: useCallback(
       (item: ShowcaseItem) => counts[item.id] ?? item.hearts,

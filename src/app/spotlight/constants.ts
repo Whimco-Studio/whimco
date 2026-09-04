@@ -112,6 +112,64 @@ export type ShowcaseStats = {
   hearts_given: number;
 };
 
+/** How a claimed portfolio arranges itself. Only a verified creator can
+    choose one, since claiming is the proof the account is theirs, and an
+    unclaimed portfolio has nobody who could have chosen.
+
+    The codes are a contract with the Spotlight backend's
+    ClaimedProfile.LAYOUT_CHOICES and are append-only on both sides. */
+export const PORTFOLIO_LAYOUTS = [
+  'classic', 'sheet', 'feature', 'card', 'discipline',
+] as const;
+
+export type PortfolioLayout = (typeof PORTFOLIO_LAYOUTS)[number];
+
+/** Anything unrecognised renders classic. A response cached from before
+    the field existed has no layout at all, and a layout added to the
+    backend before this site ships its renderer would otherwise blank the
+    page rather than fall back. */
+export function asLayout(raw: unknown): PortfolioLayout {
+  return PORTFOLIO_LAYOUTS.includes(raw as PortfolioLayout)
+    ? (raw as PortfolioLayout)
+    : 'classic';
+}
+
+/** The accent a creator picked, as a code. The palette lives here rather
+    than arriving from the API: the server curates which codes are allowed,
+    and this side decides what they look like, so no colour string from a
+    response is ever dropped straight into CSS.
+
+    `dim` is the same hue at the opacity the gallery's cursor beam uses.
+    Both override tokens the whole showcase already reads, which is why an
+    accent needs no stylesheet of its own. */
+export const PORTFOLIO_ACCENTS = {
+  beam: { hex: '#ffd98a', dim: 'rgba(255, 217, 138, 0.14)', label: 'Spotlight gold' },
+  pink: { hex: '#ff86ff', dim: 'rgba(255, 134, 255, 0.14)', label: 'Pink' },
+  cyan: { hex: '#22d3ee', dim: 'rgba(34, 211, 238, 0.14)', label: 'Cyan' },
+  lime: { hex: '#a3e635', dim: 'rgba(163, 230, 53, 0.14)', label: 'Lime' },
+  violet: { hex: '#a855f7', dim: 'rgba(168, 85, 247, 0.14)', label: 'Violet' },
+} as const;
+
+export type PortfolioAccent = keyof typeof PORTFOLIO_ACCENTS;
+
+/** Anything unrecognised is the gold the site already uses, for the same
+    reason asLayout falls back to classic. */
+export function asAccent(raw: unknown): PortfolioAccent {
+  return (raw as PortfolioAccent) in PORTFOLIO_ACCENTS
+    ? (raw as PortfolioAccent)
+    : 'beam';
+}
+
+/** One line each, in the creator's terms. Mirrors LAYOUT_NOTES on the
+    backend, which drives the picker at spotlight.whimco.com/profile. */
+export const LAYOUT_NOTES: Record<PortfolioLayout, string> = {
+  classic: 'A masonry wall of everything you have posted.',
+  sheet: 'Your work edge to edge, with your details down the side.',
+  feature: 'Your best-loved piece fills the screen, the rest sits below.',
+  card: 'A tall single column built for phones and Discord links.',
+  discipline: 'Grouped by what it is, so people can find the GFX or the UI.',
+};
+
 /** Claimed-portfolio profile block (author mode only; null when unclaimed). */
 export type ShowcaseProfile = {
   username: string;
@@ -119,6 +177,11 @@ export type ShowcaseProfile = {
   bio: string;
   links: { label: string; url: string }[];
   contact: string;
+  /** Optional so a response cached before the field existed still parses,
+      the same reason author_claimed is optional. Read them through
+      asLayout() and asAccent(), never directly. */
+  layout?: string;
+  accent?: string;
 };
 
 /** Gallery ordering. 'new' is newest first and the default; 'top' ranks by
@@ -208,6 +271,9 @@ export const SPOTLIGHT_ORIGIN = new URL(SHOWCASE_API_URL).origin;
 export const LIKE_URL = `${SPOTLIGHT_ORIGIN}/api/showcase/like`;
 export const ME_URL = `${SPOTLIGHT_ORIGIN}/api/showcase/me`;
 export const CLAIM_START_URL = `${SPOTLIGHT_ORIGIN}/claim/start`;
+/** Where a creator's own layout and accent are written. Credentialed and
+    Origin-gated, like the like and remove endpoints beside it. */
+export const APPEARANCE_URL = `${SPOTLIGHT_ORIGIN}/api/showcase/appearance`;
 export const RECATEGORIZE_URL = `${SPOTLIGHT_ORIGIN}/api/showcase/recategorize`;
 /** A creator taking their own work off whimco.com, and their drawer of
     what they have taken off. Gallery only: the Discord copies already
