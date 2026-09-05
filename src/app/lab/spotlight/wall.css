@@ -1,0 +1,331 @@
+/* ArtStation-shaped Spotlight, as a proposal.
+ *
+ * Everything is prefixed .asw- and scoped under .asw so this can sit in
+ * the same bundle as the live showcase without either sheet reaching
+ * into the other. Nothing here is imported by /spotlight.
+ *
+ * The whole point of the reference is subtraction: ArtStation's browse
+ * page has no hero, no cards, no panels, and no max-width. Chrome is two
+ * thin bars and the rest of the viewport is other people's work. So the
+ * rules below are mostly about taking things away. */
+
+.asw {
+  --bg: #0f1013;
+  --bar: #17181c;
+  --raise: #1e2026;
+  --line: #262932;
+  --text: #c9cbd3;
+  --bright: #f2f3f7;
+  --dim: #797d8b;
+  --accent: #ffd98a;
+  --blurple: #5865f2;
+  --gutter: 8px;
+  --cols: 6;
+
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  font-family: var(--font-chrome), system-ui, sans-serif;
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+}
+
+.asw a { color: inherit; text-decoration: none; }
+
+/* ---------- bar one: identity and the one action ---------- */
+
+.asw-bar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  padding: 0 16px;
+  background: var(--bar);
+  border-bottom: 1px solid var(--line);
+}
+
+.asw-mark { display: flex; align-items: center; height: 52px; }
+.asw-mark img { height: 26px; width: auto; display: block; }
+
+.asw-nav { display: flex; align-items: center; gap: 20px; }
+.asw-nav a {
+  font-size: 13px;
+  color: var(--dim);
+  padding: 4px 0;
+  border-bottom: 2px solid transparent;
+  transition: color 0.12s;
+}
+.asw-nav a:hover { color: var(--bright); }
+.asw-nav a[aria-current] { color: var(--bright); border-bottom-color: var(--accent); }
+
+.asw-bar-end { margin-left: auto; display: flex; align-items: center; gap: 14px; }
+
+/* The newest post's age. The feed genuinely moves in seconds, which is
+   the one thing this wall can say that a portfolio site cannot, so it
+   gets a place in the chrome and no animation anywhere else. */
+.asw-live {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 12px; color: var(--dim);
+}
+.asw-live i {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--accent); display: block;
+}
+
+.asw-cta {
+  background: var(--blurple);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 7px 15px;
+  border-radius: 3px;
+  white-space: nowrap;
+  transition: filter 0.12s;
+}
+.asw-cta:hover { filter: brightness(1.12); }
+
+/* ---------- bar two: how the wall is sorted and sliced ---------- */
+
+.asw-filters {
+  position: sticky;
+  top: 52px;
+  z-index: 39;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 44px;
+  padding: 0 16px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.asw-filters::-webkit-scrollbar { display: none; }
+
+.asw-sort { display: flex; gap: 2px; margin-right: 12px; }
+.asw-sort button {
+  background: none; border: 0; cursor: pointer;
+  font: inherit; font-size: 13px; color: var(--dim);
+  padding: 6px 10px; border-radius: 3px;
+  transition: color 0.12s, background 0.12s;
+}
+.asw-sort button:hover { color: var(--bright); background: var(--raise); }
+/* One "you are here" device across both bars: bright text over a gold
+   underline. A filled pill here read louder than the install button,
+   which is the only thing on the page that should be shouting. */
+.asw-sort button[data-on] { color: var(--bright); box-shadow: inset 0 -2px 0 var(--accent); }
+
+.asw-rule { width: 1px; height: 18px; background: var(--line); margin-right: 12px; flex: none; }
+
+.asw-chip {
+  background: none; border: 0; cursor: pointer;
+  font: inherit; font-size: 12.5px; color: var(--dim);
+  padding: 6px 10px; border-radius: 3px;
+  white-space: nowrap; flex: none;
+  transition: color 0.12s, background 0.12s;
+}
+.asw-chip:hover { color: var(--bright); background: var(--raise); }
+.asw-chip[data-on] { color: var(--bright); background: var(--raise); box-shadow: inset 0 -2px 0 var(--accent); }
+.asw-chip b { font-weight: 400; color: #52555f; margin-left: 6px; }
+.asw-chip[data-on] b { color: var(--dim); }
+
+.asw-count { margin-left: auto; padding-left: 20px; font-size: 12px; color: #52555f; white-space: nowrap; }
+
+/* ---------- the wall ---------- */
+
+.asw-wall { padding: var(--gutter); }
+
+.asw-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  gap: var(--gutter);
+}
+
+/* Masonry keeps every piece uncropped at the cost of a ragged wall.
+   ArtStation crops; Spotlight's creators never chose a thumbnail, so
+   which of these is right is a real question and not a settled one. */
+.asw-grid[data-shape='masonry'] {
+  display: block;
+  column-count: var(--cols);
+  column-gap: var(--gutter);
+}
+.asw-grid[data-shape='masonry'] .asw-tile {
+  break-inside: avoid;
+  margin-bottom: var(--gutter);
+}
+.asw-grid[data-shape='masonry'] .asw-tile,
+.asw-grid[data-shape='masonry'] .asw-shot { aspect-ratio: auto; }
+.asw-grid[data-shape='masonry'] .asw-shot { height: auto; }
+
+.asw-tile {
+  position: relative;
+  display: block;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: 3px;
+  background: #1a1c21;
+  cursor: pointer;
+}
+
+.asw-shot {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.28s cubic-bezier(0.2, 0, 0.2, 1);
+}
+.asw-tile:hover .asw-shot,
+.asw-tile:focus-visible .asw-shot { transform: scale(1.045); }
+
+.asw-tile:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* A piece whose media 404s. Says what it was rather than showing a
+   broken frame, because the wall reads as one surface and a torn tile
+   in it looks like the site is down. */
+.asw-gone {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  background: repeating-linear-gradient(45deg, #191b20 0 8px, #1c1e24 8px 16px);
+  color: #4a4d57; font-size: 12px;
+}
+
+.asw-veil {
+  position: absolute; inset: 0;
+  background: linear-gradient(to top, rgba(6,7,9,0.92) 0, rgba(6,7,9,0.55) 46px, rgba(6,7,9,0) 96px);
+  opacity: 0;
+  transition: opacity 0.18s;
+  display: flex; align-items: flex-end;
+  padding: 9px 10px;
+}
+.asw-tile:hover .asw-veil,
+.asw-tile:focus-visible .asw-veil { opacity: 1; }
+
+.asw-meta { display: flex; align-items: center; gap: 7px; width: 100%; min-width: 0; }
+.asw-who {
+  font-size: 12.5px; color: var(--bright);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.asw-seal { color: var(--accent); display: inline-flex; width: 12px; flex: none; }
+.asw-seal svg { width: 12px; height: 12px; display: block; }
+.asw-hearts { margin-left: auto; font-size: 12px; color: var(--text); display: flex; gap: 4px; flex: none; }
+
+/* Persistent, not hover-only: whether a tile is a clip is something you
+   need before you decide to point at it. */
+.asw-kind {
+  position: absolute; top: 7px; right: 7px;
+  background: rgba(6,7,9,0.72);
+  color: #e9eaef;
+  font-size: 10.5px; line-height: 1;
+  padding: 4px 6px; border-radius: 2px;
+  backdrop-filter: blur(3px);
+}
+
+.asw-cat {
+  position: absolute; top: 7px; left: 7px;
+  background: rgba(6,7,9,0.72);
+  color: var(--text);
+  font-size: 10.5px; line-height: 1;
+  padding: 4px 6px; border-radius: 2px;
+  opacity: 0; transition: opacity 0.18s;
+  backdrop-filter: blur(3px);
+}
+.asw-tile:hover .asw-cat, .asw-tile:focus-visible .asw-cat { opacity: 1; }
+
+.asw-more { text-align: center; padding: 46px 0 60px; color: var(--dim); font-size: 13px; }
+.asw-showmore {
+  background: var(--raise); border: 1px solid var(--line);
+  color: var(--text); font: inherit; font-size: 13px;
+  padding: 9px 26px; border-radius: 3px; cursor: pointer;
+  transition: color 0.12s, border-color 0.12s;
+}
+.asw-showmore:hover { color: var(--bright); border-color: #3a3e4a; }
+
+/* ---------- the pitch, demoted ---------- */
+
+.asw-strip {
+  display: flex; align-items: center; gap: 18px;
+  padding: 11px 16px;
+  background: var(--bar);
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+.asw-strip p { margin: 0; color: var(--text); }
+.asw-strip .asw-cta { margin-left: auto; flex: none; }
+
+.asw-foot {
+  border-top: 1px solid var(--line);
+  padding: 54px 16px 70px;
+  display: flex; flex-wrap: wrap; align-items: flex-end;
+  gap: 40px 56px;
+}
+.asw-foot h2 {
+  margin: 0 0 10px;
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-size: 30px; font-weight: 700; letter-spacing: -0.02em;
+  color: var(--bright);
+}
+.asw-foot p { margin: 0 0 20px; max-width: 46ch; color: var(--dim); line-height: 1.62; }
+.asw-stats { display: flex; gap: 40px; margin-left: auto; }
+.asw-stat strong {
+  display: block;
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-size: 26px; font-weight: 700; color: var(--bright);
+}
+.asw-stat span { font-size: 12px; color: var(--dim); }
+
+/* ---------- the control panel, deliberately not part of the design ---------- */
+
+.asw-panel {
+  position: fixed; right: 14px; bottom: 14px; z-index: 60;
+  background: #101114;
+  border: 1px solid #33363f;
+  border-radius: 6px;
+  box-shadow: 0 12px 34px rgba(0,0,0,0.6);
+  font-size: 12px;
+  min-width: 216px;
+}
+.asw-panel > header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 11px;
+  color: #8a8e9b;
+  border-bottom: 1px solid #23262e;
+}
+.asw-panel > header button {
+  margin-left: auto; background: none; border: 0; cursor: pointer;
+  color: #8a8e9b; font: inherit; padding: 0 2px;
+}
+.asw-panel[data-shut] > header { border-bottom: 0; }
+.asw-panel[data-shut] .asw-panel-body { display: none; }
+.asw-panel-body { padding: 11px; display: grid; gap: 11px; }
+.asw-row > span { display: block; color: #6d707c; margin-bottom: 5px; }
+.asw-seg { display: flex; gap: 4px; }
+.asw-seg button {
+  flex: 1; background: #1b1d23; border: 1px solid #2c2f38;
+  color: #9aa0ad; font: inherit; font-size: 11.5px;
+  padding: 5px 4px; border-radius: 3px; cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.asw-seg button:hover { color: #e8eaf0; }
+.asw-seg button[data-on] { background: #303442; color: #f2f3f7; border-color: #444a5a; }
+
+/* ---------- narrower screens ---------- */
+
+@media (max-width: 1100px) {
+  .asw { --cols: 4; }
+  .asw-nav { display: none; }
+}
+@media (max-width: 760px) {
+  .asw { --cols: 2; --gutter: 5px; }
+  .asw-live { display: none; }
+  .asw-foot { padding: 40px 12px 56px; gap: 28px; }
+  .asw-stats { margin-left: 0; gap: 26px; flex-wrap: wrap; }
+  .asw-panel { left: 10px; right: 10px; bottom: 10px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .asw-shot, .asw-veil, .asw-cat { transition: none; }
+  .asw-tile:hover .asw-shot { transform: none; }
+}
