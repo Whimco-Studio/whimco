@@ -21,6 +21,17 @@ import VerifiedSeal from '../../spotlight/VerifiedSeal';
  * phone screenshot, and stand-in art cannot answer that. */
 
 type Shape = 'crop' | 'masonry';
+/* Where the week's reel sits: a featured slot in the wall the way ArtStation
+   runs one, a band under the masthead, or nowhere. */
+type ReelMode = 'tile' | 'banner' | 'none';
+// Served from Spotlight's static host rather than this repo: the cut has
+// creator names burned into it, and this repository is public.
+const REEL = {
+  week: 'Week 36',
+  src: 'https://spotlight.whimco.com/static/lab/reel-2026-W36.mp4',
+  poster: 'https://spotlight.whimco.com/static/lab/reel-poster.jpg',
+  creations: 487, creators: 322,
+} as const;
 
 /** ArtStation's blue is here to be rejected on sight. Wearing it would
     make this a clone and would spend the one piece of visual identity
@@ -63,6 +74,22 @@ function still(item: ShowcaseItem) {
   return src ? { src, video, url: m.url } : null;
 }
 
+function ReelVideo({ className }: { className?: string }) {
+  const ref = useRef<HTMLVideoElement>(null);
+  // Ambient motion is the reel's whole point, but not for someone who asked
+  // their OS for less of it: they get the poster and a play control.
+  useEffect(() => {
+    const el = ref.current;
+    if (el && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      el.pause(); el.controls = true;
+    }
+  }, []);
+  return (
+    <video ref={ref} className={className} src={REEL.src} poster={REEL.poster}
+      autoPlay muted loop playsInline preload="metadata" />
+  );
+}
+
 function Tile({ item, shape }: { item: ShowcaseItem; shape: Shape }) {
   const [dead, setDead] = useState(false);
   const img = useRef<HTMLImageElement>(null);
@@ -101,9 +128,9 @@ function Tile({ item, shape }: { item: ShowcaseItem; shape: Shape }) {
         <div className="asw-gone">{label || 'Creation'}</div>
       )}
 
-      {media?.video && <span className="asw-kind">Clip</span>}
-      {!media?.video && extra > 0 && <span className="asw-kind">+{extra}</span>}
-      {label && <span className="asw-cat">{label}</span>}
+      {media?.video && <span className="asw-kind asw-mono">Clip</span>}
+      {!media?.video && extra > 0 && <span className="asw-kind asw-mono">+{extra}</span>}
+      {label && <span className="asw-cat asw-mono">{label}</span>}
 
       <div className="asw-veil">
         <div className="asw-meta">
@@ -132,8 +159,9 @@ export default function Wall({ initial }: { initial: ShowcaseData | null }) {
   const [accent, setAccent] = useState<AccentKey>('gold');
   const [cols, setCols] = useState(6);
   const [shape, setShape] = useState<Shape>('crop');
-  const [strip, setStrip] = useState(false);
+  const [strip, setStrip] = useState(true);
   const [shut, setShut] = useState(false);
+  const [reel, setReel] = useState<ReelMode>('tile');
 
   const cats = initial?.categories ?? [];
   const stats = initial?.stats;
@@ -189,7 +217,7 @@ export default function Wall({ initial }: { initial: ShowcaseData | null }) {
   return (
     <div
       className="asw"
-      style={{ '--accent': ACCENTS[accent], '--cols': cols } as React.CSSProperties}
+      style={{ '--accent': ACCENTS[accent], '--cols-pick': cols } as React.CSSProperties}
     >
       <header className="asw-bar">
         <a className="asw-mark" href="/spotlight">
@@ -203,20 +231,39 @@ export default function Wall({ initial }: { initial: ShowcaseData | null }) {
         </nav>
         <div className="asw-bar-end">
           {newest && (
-            <span className="asw-live"><i aria-hidden />Newest {newest}</span>
+            <span className="asw-live asw-mono"><i aria-hidden />Newest {newest}</span>
           )}
           <a className="asw-cta" href={INVITE_URL}>Add to Discord</a>
         </div>
       </header>
 
+      {/* The site's masthead, scaled to one line: its mono eyebrow with
+          the live dot, then a Bricolage sentence. The only place the
+          landing page's voice appears above the wall. */}
       {strip && (
         <div className="asw-strip">
-          <p>
-            Post a creation in any connected server and Spotlight carries it to
-            the other {stats ? stats.server_count - 1 : 79}.
-          </p>
-          <a className="asw-cta" href={INVITE_URL}>Add to Discord</a>
+          <div className="asw-strip-text">
+            <p className="asw-eyebrow asw-mono"><i aria-hidden />Live from the network</p>
+            <h1>
+              Posted once in Discord.{' '}
+              <span className="asw-beamed">
+                Seen in {stats?.server_count ?? 80} servers.
+              </span>
+            </h1>
+          </div>
         </div>
+      )}
+
+      {reel === 'banner' && (
+        <a className="asw-reelband" href="/spotlight/reel">
+          <ReelVideo className="asw-reelband-video" />
+          <div className="asw-reelband-text">
+            <p className="asw-eyebrow asw-mono"><i aria-hidden />This week on Spotlight</p>
+            <h2>{REEL.week}. <span className="asw-beamed">{REEL.creations} creations</span> from {REEL.creators} creators, in 48 seconds.</h2>
+            <p>Every Monday. Everyone who posted is on the page.</p>
+            <span className="asw-reelband-cta">Watch the reel</span>
+          </div>
+        </a>
       )}
 
       <div className="asw-filters">
@@ -245,11 +292,20 @@ export default function Wall({ initial }: { initial: ShowcaseData | null }) {
             {CATEGORY_LABELS[c.category] ?? c.category}<b>{c.count}</b>
           </button>
         ))}
-        <span className="asw-count">{total.toLocaleString('en-US')} pieces</span>
+        <span className="asw-count asw-mono">{total.toLocaleString('en-US')} pieces</span>
       </div>
 
       <div className="asw-wall">
         <div className="asw-grid" data-shape={shape}>
+          {reel === 'tile' && (
+            <a className="asw-tile asw-reel" href="/spotlight/reel" aria-label="This week's reel">
+              <ReelVideo className="asw-shot asw-reel-video" />
+              <div className="asw-reel-veil">
+                <p className="asw-eyebrow asw-mono"><i aria-hidden />This week on Spotlight</p>
+                <h2>{REEL.week}. {REEL.creations} creations from {REEL.creators} creators.</h2>
+              </div>
+            </a>
+          )}
           {items.map((item) => (
             <Tile key={item.id} item={item} shape={shape} />
           ))}
@@ -267,7 +323,7 @@ export default function Wall({ initial }: { initial: ShowcaseData | null }) {
 
       <footer className="asw-foot">
         <div>
-          <h2>Your work, in {stats?.server_count ?? 80} servers at once.</h2>
+          <h2>Your work, <span className="asw-beamed">in {stats?.server_count ?? 80} servers</span> at once.</h2>
           <p>
             Spotlight carries a creation from one #creations channel to showcase
             channels across every connected Discord server. Everything above was
@@ -279,15 +335,15 @@ export default function Wall({ initial }: { initial: ShowcaseData | null }) {
           <div className="asw-stats">
             <div className="asw-stat">
               <strong>{stats.member_reach.toLocaleString('en-US')}</strong>
-              <span>members reached</span>
+              <span className="asw-mono">members reached</span>
             </div>
             <div className="asw-stat">
               <strong>{stats.server_count}</strong>
-              <span>servers connected</span>
+              <span className="asw-mono">servers connected</span>
             </div>
             <div className="asw-stat">
               <strong>{stats.creations.toLocaleString('en-US')}</strong>
-              <span>creations broadcast</span>
+              <span className="asw-mono">creations broadcast</span>
             </div>
           </div>
         )}
@@ -332,10 +388,18 @@ export default function Wall({ initial }: { initial: ShowcaseData | null }) {
             </div>
           </div>
           <div className="asw-row">
-            <span>Pitch above the wall</span>
+            <span>Masthead above the wall</span>
             <div className="asw-seg">
               <button data-on={!strip || undefined} onClick={() => setStrip(false)}>None</button>
               <button data-on={strip || undefined} onClick={() => setStrip(true)}>One line</button>
+            </div>
+          </div>
+          <div className="asw-row">
+            <span>Weekly reel</span>
+            <div className="asw-seg">
+              <button data-on={reel === 'tile' || undefined} onClick={() => setReel('tile')}>Tile</button>
+              <button data-on={reel === 'banner' || undefined} onClick={() => setReel('banner')}>Banner</button>
+              <button data-on={reel === 'none' || undefined} onClick={() => setReel('none')}>None</button>
             </div>
           </div>
         </div>

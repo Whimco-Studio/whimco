@@ -1,26 +1,26 @@
 import type { Metadata } from 'next';
-import { Archivo, Bricolage_Grotesque } from 'next/font/google';
+import { Bricolage_Grotesque, JetBrains_Mono } from 'next/font/google';
 import Wall from './Wall';
 import { SHOWCASE_API_URL, ShowcaseData } from '../../spotlight/constants';
 import './wall.css';
 
-/* Archivo, not the site's Bricolage, and no JetBrains Mono anywhere.
-   The reference's chrome recedes: 12 to 13px, regular weight, sentence
-   case, no tracking. Today every label on /spotlight is monospace with
-   0.28em of letterspacing, which is the loudest quiet type there is, so
-   the typeface is part of the proposal rather than incidental to it.
-   Bricolage survives in one place, the footer headline, so the brand
-   thread does not snap. */
-const chrome = Archivo({
-  subsets: ['latin'],
-  weight: ['400', '500', '600'],
-  variable: '--font-chrome',
-  display: 'swap',
-});
+/* The site's own faces, not a substitute. Body text inherits whatever
+   the root layout loaded, so the chrome reads like the rest of
+   whimco.com. Bricolage carries the masthead sentence and the footer
+   headline. JetBrains Mono comes back for small labels only, tracked
+   at the site's 0.14em: the landing page sets every label at 0.28em,
+   which is the loudest quiet type there is, and the wall keeps the
+   voice without the volume. */
 const display = Bricolage_Grotesque({
   subsets: ['latin'],
-  weight: ['700'],
+  weight: ['700', '800'],
   variable: '--font-display',
+  display: 'swap',
+});
+const mono = JetBrains_Mono({
+  subsets: ['latin'],
+  weight: ['400', '500'],
+  variable: '--font-mono',
   display: 'swap',
 });
 
@@ -46,7 +46,7 @@ async function firstPage(): Promise<ShowcaseData | null> {
 export default async function SpotlightWallLab() {
   const data = await firstPage();
   return (
-    <div className={`${chrome.variable} ${display.variable}`}>
+    <div className={`${display.variable} ${mono.variable}`}>
       <Wall initial={data} />
     </div>
   );
