@@ -6,6 +6,7 @@ import {
   ShowcaseData, ShowcaseItem, SortMode, cleanCaption,
 } from '../../spotlight/constants';
 import VerifiedSeal from '../../spotlight/VerifiedSeal';
+import useLikes, { type Likes } from '../../spotlight/useLikes';
 
 /* A proposal for /spotlight in ArtStation's structural language.
  *
@@ -92,7 +93,7 @@ function ReelVideo({ className }: { className?: string }) {
   );
 }
 
-function Tile({ item, shape }: { item: ShowcaseItem; shape: Shape }) {
+function Tile({ item, shape, likes }: { item: ShowcaseItem; shape: Shape; likes: Likes }) {
   const [dead, setDead] = useState(false);
   const img = useRef<HTMLImageElement>(null);
   const media = still(item);
@@ -108,44 +109,60 @@ function Tile({ item, shape }: { item: ShowcaseItem; shape: Shape }) {
   const label = CATEGORY_LABELS[item.category] ?? item.category;
   const caption = cleanCaption(item.content || '');
   const extra = (item.media?.length ?? 0) - 1;
+  const hearts = likes.hearts(item);
+  const on = likes.isLiked(item.id);
 
   return (
-    <a
-      className="asw-tile"
-      href={`/spotlight/p/${item.id}`}
-      title={caption || `${item.author_name}, ${ago(item.created_at)}`}
-    >
-      {media && !dead ? (
-        <img
-          ref={img}
-          className="asw-shot"
-          src={media.src}
-          alt={caption || `Creation by ${item.author_name}`}
-          loading="lazy"
-          decoding="async"
-          onError={() => setDead(true)}
-          style={shape === 'masonry' ? { height: 'auto' } : undefined}
-        />
-      ) : (
-        <div className="asw-gone">{label || 'Creation'}</div>
-      )}
+    <div className="asw-tile">
+      <a
+        className="asw-hit"
+        href={`/spotlight/p/${item.id}`}
+        aria-label={caption || `Creation by ${item.author_name}`}
+      >
+        {media && !dead ? (
+          <img
+            ref={img}
+            className="asw-shot"
+            src={media.src}
+            alt={caption || `Creation by ${item.author_name}`}
+            loading="lazy"
+            decoding="async"
+            onError={() => setDead(true)}
+            style={shape === 'masonry' ? { height: 'auto' } : undefined}
+          />
+        ) : (
+          <div className="asw-gone">{label || 'Creation'}</div>
+        )}
+        {media?.video && <span className="asw-kind asw-mono">Clip</span>}
+        {!media?.video && extra > 0 && <span className="asw-kind asw-mono">+{extra}</span>}
+        {label && <span className="asw-cat asw-mono">{label}</span>}
+      </a>
 
-      {media?.video && <span className="asw-kind asw-mono">Clip</span>}
-      {!media?.video && extra > 0 && <span className="asw-kind asw-mono">+{extra}</span>}
-      {label && <span className="asw-cat asw-mono">{label}</span>}
-
+      {/* A sibling of the link, not a child: a button inside an anchor is
+          invalid and its click would navigate. The veil lets the pointer
+          through except where it has controls, so the tile underneath
+          still takes the click. The caption shows here when there is one,
+          which the tester asked for and a title tooltip never delivered. */}
       <div className="asw-veil">
+        {caption && <p className="asw-cap">{caption}</p>}
         <div className="asw-meta">
-          <span className="asw-who">{item.author_name}</span>
+          <a className="asw-who" href={`/spotlight/@${encodeURIComponent(item.author_name)}`}>
+            {item.author_name}
+          </a>
           {item.author_claimed && <VerifiedSeal className="asw-seal" />}
-          {item.hearts > 0 && (
-            <span className="asw-hearts">
-              <span aria-hidden>♥</span>{item.hearts}
-            </span>
-          )}
+          <button
+            type="button"
+            className="asw-heart"
+            data-on={on || undefined}
+            aria-label={on ? 'Remove your heart' : 'Heart this creation'}
+            title={likes.signedIn ? undefined : 'Sign in with Discord to heart'}
+            onClick={() => likes.toggle(item)}
+          >
+            <span aria-hidden>♥</span>{hearts > 0 ? hearts : ''}
+          </button>
         </div>
       </div>
-    </a>
+    </div>
   );
 }
 
@@ -164,6 +181,13 @@ export default function Wall({ initial }: { initial: ShowcaseData | null }) {
   const [strip, setStrip] = useState(true);
   const [shut, setShut] = useState(false);
   const [reel, setReel] = useState<ReelMode>('tile');
+  const likes = useLikes();
+
+  // The control panel is a desktop comparison tool. On a phone it took
+  // the bottom third of the screen, which a tester read as the design.
+  useEffect(() => {
+    if (window.matchMedia('(max-width: 760px)').matches) setShut(true);
+  }, []);
 
   const cats = initial?.categories ?? [];
   const stats = initial?.stats;
@@ -309,7 +333,7 @@ export default function Wall({ initial }: { initial: ShowcaseData | null }) {
             </a>
           )}
           {items.map((item) => (
-            <Tile key={item.id} item={item} shape={shape} />
+            <Tile key={item.id} item={item} shape={shape} likes={likes} />
           ))}
         </div>
         <div className="asw-more" ref={end}>

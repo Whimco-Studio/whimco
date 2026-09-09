@@ -274,14 +274,18 @@
   transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
 .asw-tile:hover,
-.asw-tile:focus-visible {
+.asw-tile:focus-within {
   transform: translateY(-2px);
   box-shadow:
     0 0 0 1px var(--accent-edge),
     0 10px 34px rgba(0, 0, 0, 0.5),
     0 0 22px var(--accent-halo);
 }
-.asw-tile:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* The link that fills the tile. Focus shows on it, not the tile, since the
+   tile also holds the veil's own controls. */
+.asw-hit { display: block; width: 100%; height: 100%; }
+.asw-hit:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
 .asw-shot {
   width: 100%;
@@ -292,7 +296,7 @@
   transition: filter 0.18s ease;
 }
 .asw-tile:hover .asw-shot,
-.asw-tile:focus-visible .asw-shot { filter: brightness(1.04); }
+.asw-tile:focus-within .asw-shot { filter: brightness(1.04); }
 
 /* A piece whose media 404s. Says what it was rather than showing a
    broken frame, because the wall reads as one surface and a torn tile
@@ -306,14 +310,21 @@
 
 .asw-veil {
   position: absolute; inset: 0;
-  background: linear-gradient(to top, rgba(6, 6, 10, 0.92) 0, rgba(6, 6, 10, 0.55) 46px, rgba(6, 6, 10, 0) 96px);
+  background: linear-gradient(to top, rgba(6, 6, 10, 0.94) 0, rgba(6, 6, 10, 0.6) 64px, rgba(6, 6, 10, 0) 128px);
   opacity: 0;
   transition: opacity 0.18s ease;
-  display: flex; align-items: flex-end;
+  display: flex; flex-direction: column; justify-content: flex-end; gap: 6px;
   padding: 9px 10px;
+  /* Let clicks fall through to the link beneath, except on the controls. */
+  pointer-events: none;
+}
+.asw-veil a, .asw-veil button { pointer-events: auto; }
+.asw-cap {
+  margin: 0; font-size: 12.5px; line-height: 1.35; color: var(--stext);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
 .asw-tile:hover .asw-veil,
-.asw-tile:focus-visible .asw-veil { opacity: 1; }
+.asw-tile:focus-within .asw-veil { opacity: 1; }
 
 .asw-meta { display: flex; align-items: center; gap: 7px; width: 100%; min-width: 0; }
 .asw-who {
@@ -322,8 +333,20 @@
 }
 .asw-seal { color: var(--accent); display: inline-flex; width: 12px; flex: none; }
 .asw-seal svg { width: 12px; height: 12px; display: block; }
-.asw-hearts { margin-left: auto; font-size: 12px; color: var(--stext); display: flex; gap: 4px; flex: none; }
-.asw-hearts span[aria-hidden] { color: var(--heart); }
+.asw-who:hover { color: var(--accent); }
+/* The live gallery's heart, in the veil. Sign-in gated by useLikes, which
+   explains itself in the title when the visitor is not signed in. */
+.asw-heart {
+  margin-left: auto; flex: none;
+  display: flex; align-items: center; gap: 4px;
+  background: none; border: 0; cursor: pointer;
+  font: inherit; font-size: 12px; color: var(--stext);
+  padding: 2px 4px; border-radius: 6px;
+  transition: transform 0.12s ease, color 0.12s ease;
+}
+.asw-heart span[aria-hidden] { color: var(--stext-dim); transition: color 0.12s ease; }
+.asw-heart:hover { transform: scale(1.12); }
+.asw-heart:hover span[aria-hidden], .asw-heart[data-on] span[aria-hidden] { color: var(--heart); }
 
 /* Persistent, not hover-only: whether a tile is a clip is something you
    need before you decide to point at it. Same badge the live cards use. */
@@ -344,7 +367,7 @@
   color: var(--stext-dim);
   opacity: 0; transition: opacity 0.18s ease;
 }
-.asw-tile:hover .asw-cat, .asw-tile:focus-visible .asw-cat { opacity: 1; }
+.asw-tile:hover .asw-cat, .asw-tile:focus-within .asw-cat { opacity: 1; }
 
 .asw-more { text-align: center; padding: 46px 0 60px; color: var(--stext-dim); font-size: 13px; }
 .asw-showmore {
@@ -484,7 +507,10 @@
   .asw-nav { display: none; }
 }
 @media (max-width: 760px) {
-  .asw { --cols: 2; --gutter: 5px; }
+  .asw { --cols: 2; --gutter: 6px; }
+  /* The chip row scrolls sideways; fade the right edge so it reads as such. */
+  .asw-filters { mask-image: linear-gradient(to right, #000 88%, transparent); -webkit-mask-image: linear-gradient(to right, #000 88%, transparent); }
+  .asw-panel-body { max-height: 38vh; overflow: auto; }
   .asw-live { display: none; }
   .asw-strip { padding: 12px 12px 13px; }
   .asw-strip h1 { font-size: 18px; }
