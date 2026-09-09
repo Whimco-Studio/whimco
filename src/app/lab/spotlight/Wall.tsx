@@ -27,7 +27,9 @@ type ReelMode = 'tile' | 'banner' | 'none';
 // Served from Spotlight's static host rather than this repo: the cut has
 // creator names burned into it, and this repository is public.
 const REEL = {
-  week: 'Week 36',
+  // A date range, not an ISO week number: a tester read "Week 36. 487"
+  // as a decimal, and nobody outside a calendar spec knows what week 36 is.
+  dates: '31 Aug to 6 Sep',
   src: 'https://spotlight.whimco.com/static/lab/reel-2026-W36.mp4',
   poster: 'https://spotlight.whimco.com/static/lab/reel-poster.jpg',
   creations: 487, creators: 322,
@@ -258,8 +260,8 @@ export default function Wall({ initial }: { initial: ShowcaseData | null }) {
         <a className="asw-reelband" href="/spotlight/reel">
           <ReelVideo className="asw-reelband-video" />
           <div className="asw-reelband-text">
-            <p className="asw-eyebrow asw-mono"><i aria-hidden />This week on Spotlight</p>
-            <h2>{REEL.week}. <span className="asw-beamed">{REEL.creations} creations</span> from {REEL.creators} creators, in 48 seconds.</h2>
+            <p className="asw-eyebrow asw-mono"><i aria-hidden />This week on Spotlight, {REEL.dates}</p>
+            <h2><span className="asw-beamed">{REEL.creations} creations</span> from {REEL.creators} creators, in 48 seconds.</h2>
             <p>Every Monday. Everyone who posted is on the page.</p>
             <span className="asw-reelband-cta">Watch the reel</span>
           </div>
@@ -301,8 +303,8 @@ export default function Wall({ initial }: { initial: ShowcaseData | null }) {
             <a className="asw-tile asw-reel" href="/spotlight/reel" aria-label="This week's reel">
               <ReelVideo className="asw-shot asw-reel-video" />
               <div className="asw-reel-veil">
-                <p className="asw-eyebrow asw-mono"><i aria-hidden />This week on Spotlight</p>
-                <h2>{REEL.week}. {REEL.creations} creations from {REEL.creators} creators.</h2>
+                <p className="asw-eyebrow asw-mono"><i aria-hidden />This week on Spotlight, {REEL.dates}</p>
+                <h2>{REEL.creations} creations from {REEL.creators} creators</h2>
               </div>
             </a>
           )}
