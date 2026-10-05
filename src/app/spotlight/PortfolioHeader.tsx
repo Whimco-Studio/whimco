@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import VerifiedSeal from './VerifiedSeal';
+import { Seals } from './VerifiedSeal';
 import {
   CATEGORY_LABELS, CLAIM_URL, PortfolioLayout, ShowcaseItem, ShowcaseProfile,
 } from './constants';
@@ -152,9 +152,24 @@ function Counts({ author }: { author: HeaderProps['author'] }) {
 function Links({ profile, handle, className }: {
   profile?: ShowcaseProfile | null; handle: string; className: string;
 }) {
-  if (!profile?.links.length && !handle) return null;
+  if (!profile?.links.length && !handle && !profile?.roblox) return null;
   return (
     <p className={className}>
+      {profile?.roblox && (
+        // The one outbound link a hirer wants most: the account the work
+        // ships from, with its age, which is the fact a fresh alt cannot
+        // fake. Linked because, unlike Discord, Roblox has a public page.
+        <a
+          className="pf-roblox"
+          href={profile.roblox.url}
+          target="_blank"
+          rel="nofollow noopener noreferrer"
+          title={`Roblox account verified${profile.roblox.since ? `, created ${profile.roblox.since}` : ''}`}
+        >
+          Roblox @{profile.roblox.username}
+          {profile.roblox.since ? ` · since ${profile.roblox.since}` : ''} ↗
+        </a>
+      )}
       {(profile?.links ?? []).map((l) => (
         <a key={l.url} href={l.url} target="_blank" rel="nofollow noopener noreferrer">
           {l.label} ↗
@@ -221,7 +236,7 @@ function ClassicHead({ name, profile, author, handle, editControl }: HeaderProps
       <div className="pf-name-row">
         <Avatar url={profile?.avatar_url} className="pf-avatar" />
         <h1 className="pf-name">{name}</h1>
-        {profile && <VerifiedSeal className="pf-verified" />}
+        <Seals claimed={!!profile} roblox={!!profile?.roblox} className="pf-verified" />
         {editControl}
       </div>
       <Counts author={author} />
@@ -240,7 +255,7 @@ function SheetHead({ name, profile, author, handle, disciplines, editControl }: 
       <Avatar url={profile?.avatar_url} className="pf-avatar pl-rail-avatar" />
       <div className="pf-name-row">
         <h1 className="pf-name">{name}</h1>
-        {profile && <VerifiedSeal className="pf-verified" />}
+        <Seals claimed={!!profile} roblox={!!profile?.roblox} className="pf-verified" />
         {editControl}
       </div>
       <Counts author={author} />
@@ -274,7 +289,7 @@ function FeatureHead({
         <div className="pf-name-row">
           <Avatar url={profile?.avatar_url} className="pf-avatar" />
           <h1 className="pf-name pl-hero-name">{name}</h1>
-          {profile && <VerifiedSeal className="pf-verified" />}
+          <Seals claimed={!!profile} roblox={!!profile?.roblox} className="pf-verified" />
         {editControl}
         </div>
         <Counts author={author} />
@@ -295,7 +310,7 @@ function CardHead({ name, profile, author, handle, disciplines, editControl }: H
       <Avatar url={profile?.avatar_url} className="pf-avatar pl-card-avatar" />
       <div className="pf-name-row">
         <h1 className="pf-name">{name}</h1>
-        {profile && <VerifiedSeal className="pf-verified" />}
+        <Seals claimed={!!profile} roblox={!!profile?.roblox} className="pf-verified" />
         {editControl}
       </div>
       <Chips disciplines={disciplines} withCounts />
@@ -317,7 +332,7 @@ function DisciplineHead({ name, profile, author, handle, editControl }: HeaderPr
         <div className="pl-compact-id">
           <div className="pf-name-row">
             <h1 className="pf-name">{name}</h1>
-            {profile && <VerifiedSeal className="pf-verified" />}
+            <Seals claimed={!!profile} roblox={!!profile?.roblox} className="pf-verified" />
         {editControl}
           </div>
           <Counts author={author} />

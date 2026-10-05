@@ -190,6 +190,8 @@ export default function FeedStyles() {
         display: block;
         filter: drop-shadow(0 0 0.14em rgba(255, 217, 138, 0.4));
       }
+      .feedpage .sl-seal-quiet { color: var(--stext-dim, #8a8aa0); }
+      .feedpage .sl-seal-quiet svg { filter: none; }
       .feedpage .handle, .feedpage .time {
         font-family: var(--font-mono), monospace;
         font-size: 0.68rem; color: var(--stext-dim);

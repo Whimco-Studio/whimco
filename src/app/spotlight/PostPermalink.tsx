@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import FeedStyles from './feedStyles';
 import ShareButton from './ShareButton';
-import VerifiedSeal from './VerifiedSeal';
+import { Seals } from './VerifiedSeal';
 import {
   CATEGORY_LABELS, ShowcaseItem, ShowcaseMedia, cleanCaption, xLink,
 } from './constants';
@@ -46,7 +46,7 @@ export default function PostPermalink({ item }: { item: ShowcaseItem }) {
             <a className="permalink-author" href={`/spotlight/@${encodeURIComponent(item.author_name)}`}>
               {item.author_name}
             </a>
-            {item.author_claimed && <VerifiedSeal />}
+            <Seals claimed={item.author_claimed} roblox={item.author_roblox} />
           </h1>
           <p className="sub">{when}</p>
         </header>

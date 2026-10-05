@@ -704,7 +704,14 @@ export default function ShowcaseStyles() {
         display: block;
         filter: drop-shadow(0 0 0.14em rgba(255, 217, 138, 0.4));
       }
+      /* The seal that is not the primary proof. Same shape family, no
+         glow, the dim text colour: present, legible on hover, never
+         competing with the gold one beside it. */
+      .showcase .sl-seal-quiet { color: var(--stext-dim); }
+      .showcase .sl-seal-quiet svg { filter: none; }
+      .showcase .sl-seal + .sl-seal { margin-left: 0.15em; }
       .showcase .pf-verified { font-size: clamp(2.2rem, 6vw, 4.2rem); }
+      .showcase .pf-verified + .pf-verified { font-size: clamp(1.4rem, 3.6vw, 2.4rem); }
       .showcase .pf-bio {
         max-width: 560px;
         font-size: 0.95rem;

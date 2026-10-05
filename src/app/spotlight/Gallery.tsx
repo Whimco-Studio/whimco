@@ -7,7 +7,7 @@ import {
   ShowcaseItem, ShowcaseMedia, cleanCaption, postPath, xLink,
 } from './constants';
 import ShareButton from './ShareButton';
-import VerifiedSeal from './VerifiedSeal';
+import { Seals } from './VerifiedSeal';
 import CategoryTag from './CategoryTag';
 import type { Likes } from './useLikes';
 
@@ -214,7 +214,7 @@ function GalleryCard({
             title={`View ${item.author_name}'s portfolio`}
           >
             by {item.author_name}
-            {item.author_claimed && <VerifiedSeal className="card-seal" />}
+            <Seals claimed={item.author_claimed} roblox={item.author_roblox} className="card-seal" />
           </a>
         ) : (
           <span className="card-author">{new Date(item.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</span>
@@ -266,7 +266,7 @@ function Lightbox({
         <div className="lightbox-meta">
           <a className="card-author" href={`/spotlight/@${encodeURIComponent(item.author_name)}`}>
             by {item.author_name}
-            {item.author_claimed && <VerifiedSeal className="card-seal" />}
+            <Seals claimed={item.author_claimed} roblox={item.author_roblox} className="card-seal" />
           </a>
           <HeartButton item={item} likes={likes} />
           <CategoryTag item={item} likes={likes} />
