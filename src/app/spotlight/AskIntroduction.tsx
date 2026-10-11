@@ -25,7 +25,9 @@ type AskStatus = {
   request: AskRequest | null;
 };
 
-const NEED_MAX = 300;
+/** Matches NEED_MAX in the Spotlight service and the bot's modal.
+    Raised from 300 on 2026-10-11 at a hirer's request. */
+const NEED_MAX = 1000;
 const BUDGET_MAX = 80;
 /** The hash a signed-out press carries through Discord sign-in, so the
     form is already open when the viewer lands back here. */
