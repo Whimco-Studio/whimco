@@ -5,6 +5,7 @@ import {
   CLAIM_START_URL, INTRODUCE_URL, INTRODUCTIONS_URL, SUPPORT_INVITE_URL,
 } from './constants';
 import { DiscordHandle } from './PortfolioHeader';
+import { readArrival } from './arrival';
 import type { Likes } from './useLikes';
 
 /** One ask as the server describes it. "waiting" covers a creator's no
@@ -102,7 +103,10 @@ export default function AskIntroduction({ creator, likes }: {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ creator, need: need.trim(), budget: budget.trim() }),
+        body: JSON.stringify({
+          creator, need: need.trim(), budget: budget.trim(),
+          referrer: readArrival(creator)?.referrer ?? '',
+        }),
       });
       if (r.status === 401) { press(); return; }
       const body = (await r.json()) as { ok: boolean; text: string; request: AskRequest | null };
