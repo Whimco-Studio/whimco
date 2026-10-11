@@ -1,24 +1,13 @@
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
-import { Bricolage_Grotesque, JetBrains_Mono } from 'next/font/google';
+import { display, mono } from '../../../fonts';
 import GlassNav from '../../../components/GlassNav';
 import PostPermalink from '../../PostPermalink';
 import {
   CATEGORY_LABELS, SITE_ORIGIN, cleanCaption, fetchShowcaseItem, playableVideo,
   postPath, postVideoPath, twimgVideoSize,
 } from '../../constants';
-
-const display = Bricolage_Grotesque({
-  subsets: ['latin'],
-  weight: ['500', '700', '800'],
-  variable: '--font-display',
-});
-const mono = JetBrains_Mono({
-  subsets: ['latin'],
-  weight: ['400', '500', '700'],
-  variable: '--font-mono',
-});
 
 export const revalidate = 300;
 
