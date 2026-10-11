@@ -298,6 +298,8 @@ export const ITEM_URL = `${SPOTLIGHT_ORIGIN}/api/showcase/item`;
     used Spotlight gets an account. */
 export const INTRODUCTIONS_URL = `${SPOTLIGHT_ORIGIN}/api/showcase/introductions`;
 export const INTRODUCE_URL = `${SPOTLIGHT_ORIGIN}/api/showcase/introduce`;
+/** One beacon per portfolio page load. See arrival.ts. */
+export const VIEW_URL = `${SPOTLIGHT_ORIGIN}/api/showcase/view`;
 
 /** The canonical URL for one creation. Every share button copies this,
     and the gallery lightbox pushes it, so a creation has exactly one

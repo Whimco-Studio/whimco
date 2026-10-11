@@ -9,6 +9,7 @@ import RemovedDrawer from './RemovedDrawer';
 import ShowcaseStyles from './styles';
 import useLikes from './useLikes';
 import AskIntroduction from './AskIntroduction';
+import { recordArrival } from './arrival';
 import useInviteUrl from './useInviteUrl';
 import {
   asAccent, asLayout, PORTFOLIO_ACCENTS, PortfolioAccent, PortfolioLayout,
@@ -121,6 +122,9 @@ export default function Portfolio({
   }, [username]);
 
   useEffect(() => { refresh(); }, [refresh]);
+  // One view per load, keyed by the URL's name so a stale-name URL and
+  // its canonical one count for the same creator on the server side.
+  useEffect(() => { recordArrival(username); }, [username]);
 
   /** A creation the owner just took down. The card goes immediately, then
       the refresh corrects the header counts, which are computed server
