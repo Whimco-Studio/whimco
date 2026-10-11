@@ -291,6 +291,13 @@ export const REMOVED_URL = `${SPOTLIGHT_ORIGIN}/api/showcase/removed`;
     to a single creation has to guess a page number; this is what lets a
     permalink exist at all. */
 export const ITEM_URL = `${SPOTLIGHT_ORIGIN}/api/showcase/item`;
+/** Ask for an introduction from a portfolio page. Credentialed: the
+    signed-in viewer is the requester, the page's creator is the
+    creator, and the rules are the bot's. A signed-out press goes
+    through CLAIM_START_URL first, which is how a hirer who has never
+    used Spotlight gets an account. */
+export const INTRODUCTIONS_URL = `${SPOTLIGHT_ORIGIN}/api/showcase/introductions`;
+export const INTRODUCE_URL = `${SPOTLIGHT_ORIGIN}/api/showcase/introduce`;
 
 /** The canonical URL for one creation. Every share button copies this,
     and the gallery lightbox pushes it, so a creation has exactly one

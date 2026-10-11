@@ -69,6 +69,7 @@ export default function PortfolioLayoutStyles() {
       }
       .showcase.pl-sheet .pl-rail .pl-chips,
       .showcase.pl-sheet .pl-rail .pf-links { justify-content: flex-start; }
+      .showcase.pl-sheet .pl-rail .pf-ask { align-items: flex-start; }
       .showcase.pl-sheet .pl-rail .pf-bio,
       .showcase.pl-sheet .pl-rail .pf-sub,
       .showcase.pl-sheet .pl-rail .pf-contact { text-align: left; }
@@ -164,6 +165,7 @@ export default function PortfolioLayoutStyles() {
       .showcase.pl-feature .pl-hero .pf-name-row { justify-content: flex-start; }
       .showcase.pl-feature .pl-hero .pl-chips,
       .showcase.pl-feature .pl-hero .pf-links { justify-content: flex-start; }
+      .showcase.pl-feature .pl-hero .pf-ask { align-items: flex-start; }
       .showcase.pl-feature .pl-hero .pf-sub,
       .showcase.pl-feature .pl-hero .pf-bio,
       .showcase.pl-feature .pl-hero .pf-contact { text-align: left; }

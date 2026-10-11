@@ -8,6 +8,7 @@ import PortfolioLayoutStyles from './portfolioLayoutStyles';
 import RemovedDrawer from './RemovedDrawer';
 import ShowcaseStyles from './styles';
 import useLikes from './useLikes';
+import AskIntroduction from './AskIntroduction';
 import useInviteUrl from './useInviteUrl';
 import {
   asAccent, asLayout, PORTFOLIO_ACCENTS, PortfolioAccent, PortfolioLayout,
@@ -242,6 +243,9 @@ export default function Portfolio({
           >
             ✎
           </button>
+        ) : null}
+        askControl={handle && !isOwner ? (
+          <AskIntroduction creator={name} likes={likes} />
         ) : null}
       />
 

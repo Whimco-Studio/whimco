@@ -779,6 +779,87 @@ export default function ShowcaseStyles() {
         color: var(--stext-dim);
         user-select: all;
       }
+      /* Ask for an introduction. The one action on this page for a
+         reader who is not the creator, so it is the one control that
+         looks like a button. Under the link row in every layout. */
+      .showcase .pf-ask {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.6rem;
+        margin-top: 0.2rem;
+        font-family: var(--font-mono), monospace;
+        font-size: 0.74rem;
+        letter-spacing: 0.1em;
+        color: var(--stext-dim);
+      }
+      .showcase .pf-ask-btn {
+        display: inline-block;
+        padding: 0.55rem 1.1rem;
+        border-radius: 999px;
+        border: 1px solid var(--beam);
+        background: var(--beam-dim);
+        color: var(--beam);
+        font: inherit;
+        letter-spacing: inherit;
+        text-transform: uppercase;
+        cursor: pointer;
+        transition: background 0.16s ease, transform 0.16s ease;
+      }
+      .showcase .pf-ask-btn:hover { background: rgba(255, 217, 138, 0.26); transform: translateY(-1px); }
+      .showcase .pf-ask-btn:disabled { opacity: 0.5; cursor: default; transform: none; }
+      .showcase .pf-ask-state { line-height: 1.6; text-align: center; }
+      .showcase .pf-ask-state a { color: var(--beam); }
+      .showcase .pf-ask-form {
+        width: min(100%, 26rem);
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        padding: 0.9rem;
+        border: 1px solid var(--edge);
+        border-radius: 12px;
+        background: var(--panel);
+        text-align: left;
+        letter-spacing: 0;
+      }
+      .showcase .pf-ask-form label {
+        display: flex;
+        flex-direction: column;
+        gap: 0.3rem;
+        font-size: 0.7rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--stext-dim);
+      }
+      .showcase .pf-ask-form textarea,
+      .showcase .pf-ask-form input {
+        font: inherit;
+        font-size: 0.9rem;
+        letter-spacing: 0;
+        text-transform: none;
+        color: var(--stext);
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid var(--edge);
+        border-radius: 8px;
+        padding: 0.5rem 0.6rem;
+      }
+      .showcase .pf-ask-form textarea { min-height: 5.5rem; resize: vertical; }
+      .showcase .pf-ask-form textarea:focus,
+      .showcase .pf-ask-form input:focus { outline: 2px solid var(--beam); outline-offset: 1px; }
+      .showcase .pf-ask-note { font-size: 0.72rem; line-height: 1.5; color: var(--stext-dim); letter-spacing: 0; }
+      .showcase .pf-ask-row { display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; }
+      .showcase .pf-ask-cancel {
+        background: none;
+        border: 0;
+        padding: 0;
+        font: inherit;
+        font-size: 0.72rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--stext-dim);
+        cursor: pointer;
+      }
+      .showcase .pf-ask-cancel:hover { color: var(--stext); }
       .showcase .pf-contact {
         font-family: var(--font-mono), monospace;
         font-size: 0.75rem;
