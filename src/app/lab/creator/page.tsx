@@ -1,23 +1,8 @@
 import type { Metadata } from "next";
-import { Bricolage_Grotesque, JetBrains_Mono } from "next/font/google";
+import { display, mono } from "../../fonts";
 import CreatorLab from "./CreatorLab";
 import { DEFAULT_USER, getCreator } from "./creator";
 import "./creator.css";
-
-// The same two faces the live portfolio loads, so a layout that looks
-// better here is not just a different typeface winning.
-const display = Bricolage_Grotesque({
-	subsets: ["latin"],
-	weight: ["500", "700", "800"],
-	variable: "--font-display",
-	display: "swap",
-});
-const mono = JetBrains_Mono({
-	subsets: ["latin"],
-	weight: ["400", "500", "700"],
-	variable: "--font-mono",
-	display: "swap",
-});
 
 export const metadata: Metadata = {
 	title: "Creator portfolio lab",

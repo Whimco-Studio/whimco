@@ -1,19 +1,8 @@
 import type { Metadata } from 'next';
-import { Bricolage_Grotesque, JetBrains_Mono } from 'next/font/google';
+import { display, mono } from '../../fonts';
 import GlassNav from '../../components/GlassNav';
 import FeedStream from '../FeedStream';
 import { SHOWCASE_API_URL, ShowcaseData } from '../constants';
-
-const display = Bricolage_Grotesque({
-  subsets: ['latin'],
-  weight: ['500', '700', '800'],
-  variable: '--font-display',
-});
-const mono = JetBrains_Mono({
-  subsets: ['latin'],
-  weight: ['400', '500', '700'],
-  variable: '--font-mono',
-});
 
 /* Shorter than the gallery's 300s. This page's whole claim is that it
    shows what just landed, and a five minute cache would make the first

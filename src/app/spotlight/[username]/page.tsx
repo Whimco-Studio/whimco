@@ -1,20 +1,9 @@
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
-import { Bricolage_Grotesque, JetBrains_Mono } from 'next/font/google';
+import { display, mono } from '../../fonts';
 import GlassNav from '../../components/GlassNav';
 import Portfolio from '../Portfolio';
 import { parseUsername, SHOWCASE_API_URL, ShowcaseData } from '../constants';
-
-const display = Bricolage_Grotesque({
-  subsets: ['latin'],
-  weight: ['500', '700', '800'],
-  variable: '--font-display',
-});
-const mono = JetBrains_Mono({
-  subsets: ['latin'],
-  weight: ['400', '500', '700'],
-  variable: '--font-mono',
-});
 
 export const revalidate = 300;
 
