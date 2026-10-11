@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import GalleryGrid from './Gallery';
 import ShowcaseStyles from './styles';
+import { VerificationPrimaryProvider } from './VerifiedSeal';
 import BrowseStyles from './browseStyles';
 import useLikes from './useLikes';
 import {
@@ -205,6 +206,7 @@ export default function GalleryBrowser({
   const more = page < pages;
 
   return (
+    <VerificationPrimaryProvider value={initialData?.stats?.verification_primary}>
     <div className="showcase">
       <ShowcaseStyles />
       <BrowseStyles />
@@ -342,5 +344,6 @@ export default function GalleryBrowser({
         )}
       </section>
     </div>
+    </VerificationPrimaryProvider>
   );
 }

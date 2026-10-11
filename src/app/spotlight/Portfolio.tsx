@@ -7,6 +7,7 @@ import PortfolioHeader, { catLabel, disciplinesOf } from './PortfolioHeader';
 import PortfolioLayoutStyles from './portfolioLayoutStyles';
 import RemovedDrawer from './RemovedDrawer';
 import ShowcaseStyles from './styles';
+import { VerificationPrimaryProvider } from './VerifiedSeal';
 import useLikes from './useLikes';
 import AskIntroduction from './AskIntroduction';
 import useInviteUrl from './useInviteUrl';
@@ -215,6 +216,7 @@ export default function Portfolio({
   const grouped = layout === 'discipline' && items.length > 0;
 
   return (
+    <VerificationPrimaryProvider value={initialData?.stats?.verification_primary}>
     <div
       className={`showcase${layout === 'classic' ? '' : ` pl-${layout}`}`}
       style={{
@@ -338,5 +340,6 @@ export default function Portfolio({
       {layout !== 'classic' && <PortfolioLayoutStyles />}
       <ShowcaseStyles />
     </div>
+    </VerificationPrimaryProvider>
   );
 }

@@ -6,6 +6,7 @@ import React, {
 import Image from 'next/image';
 import GalleryGrid from './Gallery';
 import ShowcaseStyles from './styles';
+import { VerificationPrimaryProvider } from './VerifiedSeal';
 import useLikes from './useLikes';
 import useInviteUrl from './useInviteUrl';
 import {
@@ -263,6 +264,7 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
   })();
 
   return (
+    <VerificationPrimaryProvider value={initialData?.stats?.verification_primary}>
     <div className="showcase">
       <section className="hero">
         <p className="eyebrow"><span className="live-dot" aria-hidden />LIVE FROM THE NETWORK</p>
@@ -400,5 +402,6 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
 
       <ShowcaseStyles />
     </div>
+    </VerificationPrimaryProvider>
   );
 }

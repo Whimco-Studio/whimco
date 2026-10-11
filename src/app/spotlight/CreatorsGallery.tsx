@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import CreatorsStyles from './creatorsStyles';
 import ShowcaseStyles from './styles';
-import VerifiedSeal from './VerifiedSeal';
+import { Seals, VerificationPrimaryProvider } from './VerifiedSeal';
 import {
   CATEGORY_LABELS, CREATORS_API_URL, Creator, CreatorsData,
 } from './constants';
@@ -81,7 +81,7 @@ function CreatorCard({ creator, active }: { creator: Creator; active: string }) 
             <Monogram name={name} />
           )}
           <span className="cr-name">{name}</span>
-          {claimed && <VerifiedSeal className="cr-seal" />}
+          <Seals claimed={claimed} roblox={creator.roblox} className="cr-seal" />
         </div>
         <Specialty creator={creator} active={active} />
         {creator.bio && <p className="cr-bio">{creator.bio}</p>}
@@ -170,6 +170,7 @@ export default function CreatorsGallery({
   const label = active ? (CATEGORY_LABELS[active] ?? active) : '';
 
   return (
+    <VerificationPrimaryProvider value={initialData?.verification_primary}>
     <div className="showcase">
       <ShowcaseStyles />
       <CreatorsStyles />
@@ -235,5 +236,6 @@ export default function CreatorsGallery({
         </div>
       )}
     </div>
+    </VerificationPrimaryProvider>
   );
 }

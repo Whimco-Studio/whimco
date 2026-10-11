@@ -62,6 +62,10 @@ export type ShowcaseItem = {
   /** Author has claimed their portfolio through Discord. Optional so a
       cached response from before the field existed still parses. */
   author_claimed?: boolean;
+  /** Author proved a Roblox account on top of the claim. Optional for the
+      same reason. Which of the two is the gold seal is decided by
+      stats.verification_primary, not here. */
+  author_roblox?: boolean;
   content: string;
   tag: string;
   category: string;
@@ -105,7 +109,13 @@ export function creationsIn(total: number, category: string): string {
   return label ? `${noun} in ${label}` : noun;
 }
 
+/** Which proof the gold seal follows. The Spotlight backend flips this to
+    'roblox' the day Roblox approves the OAuth app; the site needs no
+    deploy. Absent (an older cached response) means Discord. */
+export type VerificationPrimary = 'discord' | 'roblox';
+
 export type ShowcaseStats = {
+  verification_primary?: VerificationPrimary;
   member_reach: number;
   server_count: number;
   creations: number;
@@ -177,6 +187,9 @@ export type ShowcaseProfile = {
   bio: string;
   links: { label: string; url: string }[];
   contact: string;
+  /** The Roblox account this creator proved, or null. `since` is the
+      account's creation year, which is the one fact a hirer wants. */
+  roblox?: { username: string; since: number | null; url: string } | null;
   /** Optional so a response cached before the field existed still parses,
       the same reason author_claimed is optional. Read them through
       asLayout() and asAccent(), never directly. */
@@ -223,6 +236,8 @@ export type Creator = {
   creations: number;
   hearts: number;
   claimed: boolean;
+  /** Proved a Roblox account as well. See VerificationPrimary. */
+  roblox?: boolean;
   avatar_url: string | null;
   bio: string;
   /** Free text the creator typed; blank unless they claimed and filled it. */
@@ -237,6 +252,7 @@ export type Creator = {
 
 export type CreatorsData = {
   creators: Creator[];
+  verification_primary?: VerificationPrimary;
   page: number;
   pages: number;
   total: number;

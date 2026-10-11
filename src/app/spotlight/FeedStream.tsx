@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import FeedStyles from './feedStyles';
 import ShareButton from './ShareButton';
-import VerifiedSeal from './VerifiedSeal';
+import { Seals, VerificationPrimaryProvider } from './VerifiedSeal';
 import {
   CATEGORY_LABELS, SHOWCASE_API_URL, ShowcaseData, ShowcaseItem, ShowcaseMedia,
   cleanCaption, postPath, xLink,
@@ -126,7 +126,7 @@ function Post({ item, fresh, onOpen }: {
       <div className="body">
         <div className="line">
           <a className="name" href={`/spotlight/@${encodeURIComponent(name)}`}>{name}</a>
-          {item.author_claimed && <VerifiedSeal />}
+          <Seals claimed={item.author_claimed} roblox={item.author_roblox} />
           <span className="handle">@{name}</span>
           <span className="time">· {ago(item.created_at)}</span>
         </div>
@@ -399,6 +399,7 @@ export default function FeedStream({ initialData }: { initialData: ShowcaseData 
   const filtered = Boolean(q || category);
 
   return (
+    <VerificationPrimaryProvider value={initialData?.stats?.verification_primary}>
     <div className="feedpage">
       <FeedStyles />
       <div className="wrap">
@@ -517,5 +518,6 @@ export default function FeedStream({ initialData }: { initialData: ShowcaseData 
         </button>
       )}
     </div>
+    </VerificationPrimaryProvider>
   );
 }
