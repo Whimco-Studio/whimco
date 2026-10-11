@@ -123,6 +123,10 @@ export type HeaderProps = {
       a flag: the button carries the editor's state, which belongs to
       Portfolio, and every layout only has to say where it sits. */
   editControl?: React.ReactNode;
+  /** The introduction button, for everyone who is not the owner. Also a
+      slot: the form's state belongs to the page, and every layout only
+      says where it sits, which is under the link row in all of them. */
+  askControl?: React.ReactNode;
 };
 
 /** The counts line. Hearts drop out entirely at zero rather than reading
@@ -214,7 +218,7 @@ export default function PortfolioHeader(props: HeaderProps) {
   return <ClassicHead {...props} />;
 }
 
-function ClassicHead({ name, profile, author, handle, editControl }: HeaderProps) {
+function ClassicHead({ name, profile, author, handle, editControl, askControl }: HeaderProps) {
   return (
     <header className="pf-head">
       <a className="pf-back" href="/spotlight">← THE SHOWCASE</a>
@@ -227,13 +231,14 @@ function ClassicHead({ name, profile, author, handle, editControl }: HeaderProps
       <Counts author={author} />
       {profile?.bio && <p className="pf-bio">{profile.bio}</p>}
       <Links profile={profile} handle={handle} className="pf-links" />
+      {askControl}
       {profile?.contact && <p className="pf-contact">{profile.contact}</p>}
       <ClaimCta profile={profile} author={author} />
     </header>
   );
 }
 
-function SheetHead({ name, profile, author, handle, disciplines, editControl }: HeaderProps) {
+function SheetHead({ name, profile, author, handle, disciplines, editControl, askControl }: HeaderProps) {
   return (
     <header className="pf-head pl-rail">
       <a className="pf-back" href="/spotlight">← THE SHOWCASE</a>
@@ -247,6 +252,7 @@ function SheetHead({ name, profile, author, handle, disciplines, editControl }: 
       <Chips disciplines={disciplines} withCounts />
       {profile?.bio && <p className="pf-bio">{profile.bio}</p>}
       <Links profile={profile} handle={handle} className="pf-links pl-rail-links" />
+      {askControl}
       {profile?.contact && <p className="pf-contact">{profile.contact}</p>}
       <ClaimCta profile={profile} author={author} />
     </header>
@@ -254,8 +260,7 @@ function SheetHead({ name, profile, author, handle, disciplines, editControl }: 
 }
 
 function FeatureHead({
-  name, profile, author, handle, disciplines, hero, editControl,
-}: HeaderProps) {
+  name, profile, author, handle, disciplines, hero, editControl, askControl, }: HeaderProps) {
   const shot = hero?.media.find((m) => m.content_type.startsWith('image/'))
     ?? hero?.media[0];
   const still = shot?.content_type.startsWith('video/')
@@ -281,6 +286,7 @@ function FeatureHead({
         <Chips disciplines={disciplines} withCounts />
         {profile?.bio && <p className="pf-bio">{profile.bio}</p>}
         <Links profile={profile} handle={handle} className="pf-links" />
+        {askControl}
         {profile?.contact && <p className="pf-contact">{profile.contact}</p>}
         <ClaimCta profile={profile} author={author} />
       </div>
@@ -288,7 +294,7 @@ function FeatureHead({
   );
 }
 
-function CardHead({ name, profile, author, handle, disciplines, editControl }: HeaderProps) {
+function CardHead({ name, profile, author, handle, disciplines, editControl, askControl }: HeaderProps) {
   return (
     <header className="pf-head pl-card">
       <a className="pf-back" href="/spotlight">← THE SHOWCASE</a>
@@ -302,13 +308,14 @@ function CardHead({ name, profile, author, handle, disciplines, editControl }: H
       {profile?.bio && <p className="pf-bio">{profile.bio}</p>}
       <Counts author={author} />
       <Links profile={profile} handle={handle} className="pf-links pl-card-links" />
+      {askControl}
       {profile?.contact && <p className="pf-contact">{profile.contact}</p>}
       <ClaimCta profile={profile} author={author} />
     </header>
   );
 }
 
-function DisciplineHead({ name, profile, author, handle, editControl }: HeaderProps) {
+function DisciplineHead({ name, profile, author, handle, editControl, askControl }: HeaderProps) {
   return (
     <header className="pf-head pl-compact">
       <a className="pf-back" href="/spotlight">← THE SHOWCASE</a>
@@ -324,6 +331,7 @@ function DisciplineHead({ name, profile, author, handle, editControl }: HeaderPr
           {profile?.bio && <p className="pf-bio">{profile.bio}</p>}
         </div>
         <Links profile={profile} handle={handle} className="pf-links" />
+        {askControl}
       </div>
       {profile?.contact && <p className="pf-contact">{profile.contact}</p>}
       <ClaimCta profile={profile} author={author} />
