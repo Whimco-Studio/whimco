@@ -3,7 +3,8 @@
     The click table on the Spotlight side only sees presses on links we
     own, so it only ever counts the readers a broadcast sent. The beacon
     counts everyone: one POST per page load with the creator, the source
-    server if the Spotlight hop tagged the URL, and the referrer. The
+    server and campaign if the Spotlight hop tagged the URL, and the
+    referrer. The
     server keeps the referrer's host and nothing else, and stores no IP,
     cookie or agent, same as the click table.
 
@@ -13,7 +14,13 @@
     of the visit that started it, not the bounce. */
 import { VIEW_URL } from './constants';
 
-export type Arrival = { referrer: string; source: string; at: number };
+export type Arrival = { referrer: string; source: string; campaign: string; at: number };
+
+/** Which of our own links sent the reader: "portfolio" is the link under
+    a broadcast, "welcome" the one-time DM after a first post. A creator's
+    first look at their own page comes from that DM before they sign in,
+    so without this it counts as a stranger. The server allowlists too. */
+const CAMPAIGNS = new Set(['portfolio', 'welcome']);
 
 const TTL_MS = 60 * 60 * 1000;
 /** Hosts that mean "we sent you back here", not "you arrived". */
@@ -46,14 +53,15 @@ export function readArrival(creator: string): Arrival | null {
 export function recordArrival(creator: string): Arrival {
   const referrer = typeof document !== 'undefined' ? document.referrer : '';
   const params = new URLSearchParams(window.location.search);
-  const source = params.get('utm_source') === 'spotlight'
-    ? (params.get('utm_content') ?? '').replace(/\D/g, '')
-    : '';
+  const ours = params.get('utm_source') === 'spotlight';
+  const source = ours ? (params.get('utm_content') ?? '').replace(/\D/g, '') : '';
+  const tagged = (params.get('utm_campaign') ?? '').toLowerCase();
+  const campaign = ours && CAMPAIGNS.has(tagged) ? tagged : '';
   const previous = stored(creator);
   const host = hostOf(referrer);
   if (previous && (BOUNCE_HOSTS.has(host) || !host)) return previous;
 
-  const arrival: Arrival = { referrer, source, at: Date.now() };
+  const arrival: Arrival = { referrer, source, campaign, at: Date.now() };
   try { sessionStorage.setItem(key(creator), JSON.stringify(arrival)); } catch { /* private mode */ }
   try {
     fetch(VIEW_URL, {
@@ -61,7 +69,7 @@ export function recordArrival(creator: string): Arrival {
       credentials: 'include',
       keepalive: true,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ creator, source, referrer }),
+      body: JSON.stringify({ creator, source, campaign, referrer }),
     }).catch(() => {});
   } catch { /* counting a view must never cost the page */ }
   return arrival;
