@@ -119,14 +119,6 @@ export default function Studio({
       <StudioStyles />
 
       <div className="studiohead">
-        <div className="st-ribbon">
-          <b>PRIVATE DEMO</b>
-          {' · '}
-          a server&apos;s page: everything posted in its Spotlight channel, and who posted it
-          {' · '}
-          nothing links here and it is not indexed
-        </div>
-
         <div className="st-band">
           {server.icon && (
             <div className="st-bg" style={{ backgroundImage: `url(${server.icon})` }} />
@@ -135,6 +127,10 @@ export default function Studio({
             <div className="st-row">
               <ServerIcon server={server} />
               <div className="st-titles">
+                {/* A chip beside the name rather than a stripe across the
+                    top: the floating nav covers the top of the page, and
+                    a disclaimer nobody can read is not a disclaimer. */}
+                <span className="st-demo">Private demo, not indexed</span>
                 <h1 className="st-name">{name}</h1>
                 <p className="st-facts">
                   {server.members > 0 ? (

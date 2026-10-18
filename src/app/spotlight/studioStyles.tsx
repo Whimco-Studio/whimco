@@ -22,20 +22,19 @@ export default function StudioStyles() {
         color: var(--stext);
       }
 
-      .studiohead .st-ribbon {
-        background: repeating-linear-gradient(
-          135deg, rgba(255, 217, 138, 0.16) 0 12px, rgba(255, 217, 138, 0.07) 12px 24px
-        );
-        border-bottom: 1px solid rgba(255, 217, 138, 0.3);
-        color: var(--beam);
+      .studiohead .st-demo {
+        display: inline-block;
         font-family: var(--font-mono), monospace;
-        font-size: 0.68rem;
-        line-height: 1.6;
-        letter-spacing: 0.04em;
-        text-align: center;
-        padding: 0.55rem 1.25rem;
+        font-size: 0.62rem;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--beam);
+        background: rgba(255, 217, 138, 0.09);
+        border: 1px solid rgba(255, 217, 138, 0.28);
+        border-radius: 5px;
+        padding: 0.2rem 0.55rem;
+        margin-bottom: 0.6rem;
       }
-      .studiohead .st-ribbon b { color: #fff2d4; letter-spacing: 0.16em; }
 
       .studiohead .st-band { position: relative; overflow: hidden; }
       /* The server's own icon, blown up and washed back, so each page
@@ -185,6 +184,10 @@ export default function StudioStyles() {
         margin: 0 auto;
         padding: 0 2rem;
         scrollbar-width: none;
+        /* The row scrolls when a server has every discipline. A tab cut
+           at the edge reads as a bug; a tab fading out reads as more. */
+        mask-image: linear-gradient(90deg, #000 calc(100% - 3.5rem), transparent);
+        -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 3.5rem), transparent);
       }
       .studiohead .st-tabs::-webkit-scrollbar { display: none; }
       .studiohead .st-tab {
