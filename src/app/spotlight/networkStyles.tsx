@@ -187,6 +187,24 @@ export default function NetworkStyles() {
         color: var(--stext-dim);
         margin: 0;
       }
+      .showcase .nt-name-link {
+        color: inherit;
+        text-decoration: none;
+      }
+      .showcase .nt-name-link:hover,
+      .showcase .nt-name-link:focus-visible { color: var(--beam); }
+      .showcase .nt-page {
+        font-family: var(--font-mono), monospace;
+        font-size: 0.62rem;
+        font-weight: 700;
+        letter-spacing: 0.18em;
+        color: var(--beam);
+        text-decoration: none;
+        white-space: nowrap;
+        opacity: 0.85;
+      }
+      .showcase .nt-page:hover,
+      .showcase .nt-page:focus-visible { opacity: 1; text-decoration: underline; }
       .showcase .nt-count b {
         color: var(--stext);
         font-size: 0.94rem;
