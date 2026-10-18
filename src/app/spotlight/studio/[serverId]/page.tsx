@@ -5,11 +5,12 @@ import GlassNav from '../../../components/GlassNav';
 import Studio from '../../Studio';
 import { SHOWCASE_API_URL, ShowcaseData } from '../../constants';
 
-/* Lab route: a server's page, every creation posted in one Discord
-   server with the people who posted them. Studio servers and community
-   servers get the same page; the subject is the server, the work is
-   what it already broadcast. Private demo, so noindex and nothing links
-   here. See brain 432 for why this and not a game page yet. */
+/* A server's page: every creation posted in one Discord server, with
+   the people who posted them. Studio servers and community servers get
+   the same page; the subject is the server, the work is what it already
+   broadcast, so nothing is asked of anyone. Linked from the network
+   directory for every server with something posted. See brain 432 for
+   why this and not a game page. */
 
 export const revalidate = 300;
 
@@ -36,13 +37,25 @@ async function getServerPage(id: string): Promise<ShowcaseData | null> {
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const id = parseServerId(params.serverId);
   const data = id ? await getServerPage(id) : null;
-  const name = data?.server?.name ?? 'A Spotlight server';
+  const s = data?.server;
+  const name = s?.name ?? 'A Spotlight server';
+  const description = s
+    ? `${s.creations.toLocaleString('en-US')} creation${s.creations === 1 ? '' : 's'} by `
+      + `${s.creators.toLocaleString('en-US')} creator${s.creators === 1 ? '' : 's'}, `
+      + `posted in ${name} and shared through Spotlight.`
+    : 'Work posted in a Discord server and shared through Spotlight.';
   return {
-    title: `${name} (demo): Spotlight | Whimco`,
-    robots: { index: false, follow: false },
+    title: `${name}: Spotlight | Whimco`,
+    description,
     // video.twimg.com 403s any request carrying a foreign Referer, and
     // the grid plays X video inline, same as every page that renders it.
     referrer: 'no-referrer',
+    openGraph: {
+      title: `${name}: Spotlight`,
+      description,
+      images: [s?.icon ?? '/spotlight-logo.png'],
+    },
+    twitter: { card: 'summary' },
   };
 }
 

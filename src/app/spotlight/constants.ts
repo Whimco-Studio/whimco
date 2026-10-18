@@ -288,6 +288,11 @@ export type NetworkServer = {
   /** Only present when NETWORK_SHOW_CONTRIBUTION is enabled server side.
       Off today, so nothing renders it yet. */
   creations?: number;
+  /** Whether /spotlight/studio/<id> exists for this server, which is
+      true once anything visible was posted there. A yes/no rather than
+      a count, so the directory can link without ranking. Optional so a
+      cached response from before the field existed still parses. */
+  has_page?: boolean;
 };
 
 export type NetworkData = {

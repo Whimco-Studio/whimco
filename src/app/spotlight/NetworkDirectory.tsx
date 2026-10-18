@@ -35,15 +35,23 @@ function Wash({ server }: { server: NetworkServer }) {
   );
 }
 
+/** A server with a page links to it, from the name and from a line in
+    the body. Still an <article>, and still no invite: the page is ours
+    to link, the server is not, so the only thing a card sends a reader
+    to is the work that was posted there. A server with nothing posted
+    has no page and no link, same as before. */
 function ServerCard({ server }: { server: NetworkServer }) {
-  const { name, members, online } = server;
+  const { name, members, online, has_page } = server;
+  const page = has_page ? `/spotlight/studio/${server.id}` : null;
   return (
     <article className="nt-card">
       <Wash server={server} />
       <div className="nt-identity">
         <ServerIcon server={server} sizeClass="nt-icon" />
         <div className="nt-id">
-          <h2 className="nt-name" title={name}>{name}</h2>
+          <h2 className="nt-name" title={name}>
+            {page ? <a className="nt-name-link" href={page}>{name}</a> : name}
+          </h2>
           <p className="nt-meta">
             <span className="nt-dot" aria-hidden="true" />
             {online.toLocaleString('en-US')} online
@@ -52,6 +60,7 @@ function ServerCard({ server }: { server: NetworkServer }) {
       </div>
       <div className="nt-body">
         <p className="nt-count"><b>{members.toLocaleString('en-US')}</b> members</p>
+        {page && <a className="nt-page" href={page}>THE WORK ›</a>}
       </div>
     </article>
   );

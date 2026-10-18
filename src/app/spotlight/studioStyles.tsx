@@ -22,20 +22,6 @@ export default function StudioStyles() {
         color: var(--stext);
       }
 
-      .studiohead .st-demo {
-        display: inline-block;
-        font-family: var(--font-mono), monospace;
-        font-size: 0.62rem;
-        letter-spacing: 0.16em;
-        text-transform: uppercase;
-        color: var(--beam);
-        background: rgba(255, 217, 138, 0.09);
-        border: 1px solid rgba(255, 217, 138, 0.28);
-        border-radius: 5px;
-        padding: 0.2rem 0.55rem;
-        margin-bottom: 0.6rem;
-      }
-
       .studiohead .st-band { position: relative; overflow: hidden; }
       /* The server's own icon, blown up and washed back, so each page
          carries its own colour without a hero image nobody uploaded. */
