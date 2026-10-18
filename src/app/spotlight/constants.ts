@@ -196,6 +196,30 @@ export type ShowcaseProfile = {
     only accumulate, so an all-time ranking drifts older every day. */
 export type SortMode = 'new' | 'top';
 
+/** A server page's header: the server as Discord describes it, the
+    work posted there as a whole, and the people who posted it. Only
+    returned for ?server=, and null when nothing visible was ever posted
+    there, which is the one condition under which a page exists. The
+    Discord half may be empty for a server the bot has since left. */
+export type ShowcaseServer = {
+  id: string;
+  name: string | null;
+  icon: string | null;
+  members: number;
+  online: number;
+  creations: number;
+  creators: number;
+  hearts: number;
+  people: {
+    name: string;
+    creations: number;
+    hearts: number;
+    claimed: boolean;
+    avatar_url: string | null;
+  }[];
+  categories: { category: string; count: number }[];
+};
+
 export type ShowcaseData = {
   items: ShowcaseItem[];
   page: number;
@@ -209,6 +233,7 @@ export type ShowcaseData = {
   categories: { category: string; count: number }[];
   author?: { name: string; creations: number; hearts: number } | null;
   profile?: ShowcaseProfile | null;
+  server?: ShowcaseServer | null;
 };
 
 export const CLAIM_URL = 'https://spotlight.whimco.com/claim';
