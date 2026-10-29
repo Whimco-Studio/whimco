@@ -4,9 +4,10 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import FeedStyles from './feedStyles';
 import ShareButton from './ShareButton';
 import VerifiedSeal from './VerifiedSeal';
+import AudioTile from './AudioTile';
 import {
   CATEGORY_LABELS, SHOWCASE_API_URL, ShowcaseData, ShowcaseItem, ShowcaseMedia,
-  cleanCaption, postPath, xLink,
+  cleanCaption, postPath, xLink, mediaKind, mediaPath
 } from './constants';
 
 type Sort = 'new' | 'top';
@@ -90,12 +91,24 @@ function ImageCell({ item, onOpen }: { item: ShowcaseMedia; onOpen: (url: string
   );
 }
 
+function AudioCell({ item }: { item: ShowcaseMedia }) {
+  return (
+    <div className="cell cell-audio">
+      <AudioTile seed={mediaPath(item.url)} />
+      {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+      <audio src={item.url} controls preload="none" />
+      <span className="badge">audio</span>
+    </div>
+  );
+}
+
 function Cell({ item, autoplay, onOpen }: {
   item: ShowcaseMedia; autoplay: boolean; onOpen: (url: string) => void;
 }) {
-  return item.content_type?.startsWith('video')
-    ? <VideoCell item={item} autoplay={autoplay} />
-    : <ImageCell item={item} onOpen={onOpen} />;
+  const kind = mediaKind(item);
+  if (kind === 'video') return <VideoCell item={item} autoplay={autoplay} />;
+  if (kind === 'audio') return <AudioCell item={item} />;
+  return <ImageCell item={item} onOpen={onOpen} />;
 }
 
 function Post({ item, fresh, onOpen }: {
@@ -111,7 +124,7 @@ function Post({ item, fresh, onOpen }: {
      on their poster frames. Counted over what actually renders, not over
      the whole array, since anything past the fourth item is not on screen
      to compete. */
-  const lone = shown.filter((m) => m.content_type?.startsWith('video')).length === 1;
+  const lone = shown.filter((m) => mediaKind(m) === 'video').length === 1;
 
   return (
     <article className={`post${fresh ? ' fresh' : ''}`} data-post={item.id}>

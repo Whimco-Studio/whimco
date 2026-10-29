@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import VerifiedSeal from './VerifiedSeal';
 import {
-  CATEGORY_LABELS, CLAIM_URL, PortfolioLayout, ShowcaseItem, ShowcaseProfile,
+  CATEGORY_LABELS, CLAIM_URL, PortfolioLayout, ShowcaseItem, ShowcaseProfile, mediaKind
 } from './constants';
 
 /** The creator's Discord handle, click to copy.
@@ -261,11 +261,14 @@ function SheetHead({ name, profile, author, handle, disciplines, editControl, as
 
 function FeatureHead({
   name, profile, author, handle, disciplines, hero, editControl, askControl, }: HeaderProps) {
-  const shot = hero?.media.find((m) => m.content_type.startsWith('image/'))
+  const shot = hero?.media.find((m) => mediaKind(m) === 'image')
     ?? hero?.media[0];
-  const still = shot?.content_type.startsWith('video/')
-    ? shot.thumbnail
-    : shot?.url;
+  // A sound has no still. Its URL in an <img> paints a broken frame
+  // across the hero, so the head goes without a picture instead.
+  const shotKind = shot ? mediaKind(shot) : 'other';
+  const still = shotKind === 'audio' ? undefined
+    : shotKind === 'video' ? shot?.thumbnail
+      : shot?.url;
 
   return (
     <header className="pf-head pl-hero">

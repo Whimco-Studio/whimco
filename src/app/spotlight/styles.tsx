@@ -351,6 +351,27 @@ export default function ShowcaseStyles() {
       .showcase .card:hover .card-media video {
         filter: brightness(1.04);
       }
+      /* The audio tile is drawn, not loaded, so it needs the box an image
+         would have brought with it. 16:9, the shape most clips arrive in,
+         so a sound sits in the grid at the same height as its neighbours. */
+      .showcase .card-media .audio-tile {
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        display: block;
+      }
+      .showcase .lightbox-audio { margin-bottom: 0.8rem; }
+      .showcase .lightbox-audio .audio-tile {
+        width: 100%;
+        aspect-ratio: 16 / 6;
+        display: block;
+        border-radius: 10px 10px 0 0;
+      }
+      .showcase .lightbox-audio audio {
+        width: 100%;
+        display: block;
+        background: var(--panel);
+        border-radius: 0 0 10px 10px;
+      }
       .showcase .video-badge,
       .showcase .count-badge {
         position: absolute;
