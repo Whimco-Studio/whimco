@@ -219,6 +219,9 @@ export default function FeedStyles() {
         width: 100%; height: 100%; object-fit: cover; display: block;
       }
       .feedpage .media.n1 .cell img { object-fit: contain; max-height: 520px; }
+      .feedpage .cell-audio { display: flex; flex-direction: column; }
+      .feedpage .cell-audio .audio-tile { flex: 1; width: 100%; min-height: 0; display: block; }
+      .feedpage .cell-audio audio { width: 100%; display: block; }
       .feedpage button.cell { cursor: zoom-in; }
       .feedpage button.cell img { transition: transform 0.3s ease; }
       .feedpage .post:hover button.cell img { transform: scale(1.02); }
@@ -313,6 +316,12 @@ export default function FeedStyles() {
         border: 1px solid var(--edge);
         background: #08080c;
       }
+      .feedpage .permalink-audio .audio-tile {
+        width: 100%;
+        aspect-ratio: 16 / 6;
+        display: block;
+      }
+      .feedpage .permalink-audio audio { width: 100%; display: block; }
       .feedpage .permalink-media img,
       .feedpage .permalink-media video {
         width: 100%;

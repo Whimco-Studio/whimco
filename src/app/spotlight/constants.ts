@@ -27,7 +27,43 @@ export type ShowcaseMedia = {
   url: string;
   content_type: string;
   thumbnail?: string;
+  /** image, video, audio or other, decided server side from the type and
+      the file path. Optional so a cached response from before the field
+      existed still parses; mediaKind() fills the gap. */
+  kind?: string;
 };
+
+export type MediaKind = 'image' | 'video' | 'audio' | 'other';
+
+const AUDIO_PATH_RE = /\.(mp3|wav|ogg|m4a|aac)$/;
+
+/** What a media entry is, for choosing an element to paint it with.
+
+    The server's kind wins. Older payloads carry only a content type, and
+    an .ogg stored before its type was registered says
+    application/octet-stream, so the file path is the last word. Only the
+    path: presigned URLs carry a signature in the query that can contain
+    anything. */
+export function mediaKind(m: ShowcaseMedia): MediaKind {
+  if (m.kind === 'image' || m.kind === 'video' || m.kind === 'audio') return m.kind;
+  const ct = m.content_type || '';
+  if (ct.startsWith('video/')) return 'video';
+  if (ct.startsWith('image/')) return 'image';
+  if (ct.startsWith('audio/')) return 'audio';
+  if (AUDIO_PATH_RE.test(mediaPath(m.url))) return 'audio';
+  return 'other';
+}
+
+/** The path of a media URL, which is the part that survives a presign
+    rotation. Used to seed the audio tile so a track wears the same wave
+    on every visit. */
+export function mediaPath(url: string): string {
+  try {
+    return new URL(url).pathname.toLowerCase();
+  } catch {
+    return (url || '').split('?')[0].toLowerCase();
+  }
+}
 
 const X_LINK_RE = /https?:\/\/(?:www\.)?(?:x|twitter|fxtwitter|vxtwitter)\.com\/[^\s]+/i;
 const X_STATUS_ID_RE = /(?:x|twitter|fxtwitter|vxtwitter)\.com\/[^/\s]+\/status\/(\d+)/i;

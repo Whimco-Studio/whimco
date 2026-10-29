@@ -4,10 +4,11 @@ import React, {
   useCallback, useEffect, useRef, useState,
 } from 'react';
 import {
-  ShowcaseItem, ShowcaseMedia, cleanCaption, postPath, xLink,
+  ShowcaseItem, ShowcaseMedia, cleanCaption, postPath, xLink, mediaKind, mediaPath
 } from './constants';
 import ShareButton from './ShareButton';
 import VerifiedSeal from './VerifiedSeal';
+import AudioTile from './AudioTile';
 import CategoryTag from './CategoryTag';
 import type { Likes } from './useLikes';
 
@@ -130,11 +131,32 @@ function RemoveButton({
   );
 }
 
+/** Lightbox audio: the tile above a native player, which starts on open
+    since the click is the gesture. */
+function LightboxAudio({ media, auto }: { media: ShowcaseMedia; auto: boolean }) {
+  return (
+    <div className="lightbox-audio">
+      <AudioTile seed={mediaPath(media.url)} />
+      {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+      <audio src={media.url} controls preload="metadata" autoPlay={auto} />
+    </div>
+  );
+}
+
 function CardMedia({ item, deep }: { item: ShowcaseItem; deep: boolean }) {
   const media = item.media[0];
   const videoRef = useRef<HTMLVideoElement>(null);
   if (!media) return null;
-  if (media.content_type.startsWith('video/')) {
+  const kind = mediaKind(media);
+  if (kind === 'audio') {
+    return (
+      <div className="card-media">
+        <AudioTile seed={mediaPath(media.url)} />
+        <span className="video-badge" aria-hidden>♪</span>
+      </div>
+    );
+  }
+  if (kind === 'video') {
     return (
       <div className="card-media">
         <video
@@ -157,7 +179,7 @@ function CardMedia({ item, deep }: { item: ShowcaseItem; deep: boolean }) {
       </div>
     );
   }
-  if (media.content_type.startsWith('image/')) {
+  if (kind === 'image') {
     return (
       <div className="card-media">
         {/* Presigned S3 URLs rotate every revalidate — plain img, not
@@ -248,19 +270,20 @@ function Lightbox({
       <div className="lightbox-inner" onClick={(e) => e.stopPropagation()}>
         <button type="button" className="lightbox-close" onClick={onClose} aria-label="Close">✕</button>
         <div className="lightbox-media">
-          {item.media.map((m, i) => (
-            m.content_type.startsWith('video/')
-              ? <LightboxVideo key={m.url} media={m} auto={i === 0} />
-              : (
-                <img
-                  key={m.url}
-                  src={m.url}
-                  referrerPolicy="no-referrer"
-                  alt=""
-                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                />
-              )
-          ))}
+          {item.media.map((m, i) => {
+            const kind = mediaKind(m);
+            if (kind === 'video') return <LightboxVideo key={m.url} media={m} auto={i === 0} />;
+            if (kind === 'audio') return <LightboxAudio key={m.url} media={m} auto={i === 0} />;
+            return (
+              <img
+                key={m.url}
+                src={m.url}
+                referrerPolicy="no-referrer"
+                alt=""
+                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+              />
+            );
+          })}
         </div>
         {cleanCaption(item.content) && <p className="lightbox-caption">{cleanCaption(item.content)}</p>}
         <div className="lightbox-meta">

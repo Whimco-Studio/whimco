@@ -4,14 +4,25 @@ import { useState } from 'react';
 import FeedStyles from './feedStyles';
 import ShareButton from './ShareButton';
 import VerifiedSeal from './VerifiedSeal';
+import AudioTile from './AudioTile';
 import {
-  CATEGORY_LABELS, ShowcaseItem, ShowcaseMedia, cleanCaption, xLink,
+  CATEGORY_LABELS, ShowcaseItem, ShowcaseMedia, cleanCaption, xLink, mediaKind, mediaPath
 } from './constants';
 
 function Media({ item }: { item: ShowcaseMedia }) {
   const [dead, setDead] = useState(false);
 
-  if (item.content_type?.startsWith('video')) {
+  const kind = mediaKind(item);
+  if (kind === 'audio') {
+    return (
+      <div className="permalink-audio">
+        <AudioTile seed={mediaPath(item.url)} />
+        {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+        <audio src={item.url} controls preload="metadata" />
+      </div>
+    );
+  }
+  if (kind === 'video') {
     return (
       // eslint-disable-next-line jsx-a11y/media-has-caption
       <video controls playsInline preload="metadata" poster={item.thumbnail}>

@@ -3,8 +3,9 @@
 import React, { useEffect, useState } from 'react';
 import {
   APPEARANCE_URL, CLAIM_START_URL, LAYOUT_NOTES, PORTFOLIO_ACCENTS,
-  PORTFOLIO_LAYOUTS, PortfolioAccent, PortfolioLayout, ShowcaseItem,
+  PORTFOLIO_LAYOUTS, PortfolioAccent, PortfolioLayout, ShowcaseItem, mediaKind, mediaPath
 } from './constants';
+import AudioTile from './AudioTile';
 
 export type Appearance = {
   layout: PortfolioLayout;
@@ -142,9 +143,10 @@ export default function PortfolioEditor({
             </button>
             {items.map((item) => {
               const m = item.media[0];
-              const still = m?.content_type.startsWith('video/')
-                ? m.thumbnail
-                : m?.url;
+              const kind = m ? mediaKind(m) : 'other';
+              const still = kind === 'audio' ? undefined
+                : kind === 'video' ? m?.thumbnail
+                  : m?.url;
               return (
                 <button
                   type="button"
@@ -154,6 +156,7 @@ export default function PortfolioEditor({
                   aria-label={`Feature this creation`}
                   onClick={() => onPreview({ layout, accent, feature: item.id })}
                 >
+                  {kind === 'audio' && m && <AudioTile seed={mediaPath(m.url)} />}
                   {still && (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={still} alt="" referrerPolicy="no-referrer" />
