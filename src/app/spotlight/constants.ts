@@ -367,6 +367,51 @@ export const INTRODUCE_URL = `${SPOTLIGHT_ORIGIN}/api/showcase/introduce`;
 /** One beacon per portfolio page load. See arrival.ts. */
 export const VIEW_URL = `${SPOTLIGHT_ORIGIN}/api/showcase/view`;
 
+/** Everything whimco.com's sitemap.xml lists from Spotlight, in one
+    response: each creator once, with their creation ids and dates. */
+export const SITEMAP_API_URL = `${SPOTLIGHT_ORIGIN}/api/showcase/sitemap`;
+
+export type SitemapData = {
+  creators: {
+    name: string;
+    creations: number;
+    claimed: boolean;
+    lastmod: string;
+    /** [creation id, ISO date] */
+    items: [number, string][];
+  }[];
+};
+
+/** A portfolio is offered to search engines when there is enough on it to
+    be worth a result: three creations, or a creator who claimed the page.
+    Most of the network has one or two posts, and hundreds of near-empty
+    pages would lower how a search engine rates every page on the site.
+    The page's robots tag and the sitemap both read this, so they agree. */
+export const INDEX_MIN_CREATIONS = 3;
+export function isIndexablePortfolio(creations: number, claimed: boolean): boolean {
+  return claimed || creations >= INDEX_MIN_CREATIONS;
+}
+
+/** A creator's portfolio address. */
+export function portfolioPath(name: string): string {
+  return `/spotlight/@${encodeURIComponent(name)}`;
+}
+
+/** A creator's disciplines, most frequent first, from the creations at
+    hand. The showcase payload's own category counts are network-wide, so
+    a portfolio derives its creator's from their items instead. */
+export function topDisciplines(items: { category?: string }[], max = 2): string[] {
+  const counts = new Map<string, number>();
+  for (const item of items) {
+    if (!item.category || !CATEGORY_LABELS[item.category]) continue;
+    counts.set(item.category, (counts.get(item.category) ?? 0) + 1);
+  }
+  return Array.from(counts.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, max)
+    .map(([code]) => CATEGORY_LABELS[code]);
+}
+
 /** The canonical URL for one creation. Every share button copies this,
     and the gallery lightbox pushes it, so a creation has exactly one
     address no matter which surface it was opened from. */

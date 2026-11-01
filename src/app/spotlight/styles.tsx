@@ -312,6 +312,7 @@ export default function ShowcaseStyles() {
       .showcase .card-hit {
         display: block;
         width: 100%;
+        text-decoration: none;
         text-align: left;
         background: none;
         border: none;

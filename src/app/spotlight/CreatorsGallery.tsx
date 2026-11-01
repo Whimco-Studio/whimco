@@ -225,13 +225,23 @@ export default function CreatorsGallery({
 
       {page < pages && (
         <div className="cr-more">
-          <button
-            type="button"
-            onClick={() => fetchPage(page + 1, active, true)}
-            disabled={loading}
+          {/* A real link to the next page, so the directory can be walked
+              without JavaScript and by a crawler. A click still appends
+              in place, under whatever filter is lit. The href carries
+              only the page: the server renders the unfiltered directory,
+              and that is the walk a crawler needs. */}
+          <a
+            className="cr-more-link"
+            href={`/spotlight/creators?page=${page + 1}`}
+            aria-disabled={loading}
+            onClick={(e) => {
+              if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+              e.preventDefault();
+              if (!loading) fetchPage(page + 1, active, true);
+            }}
           >
             {loading ? 'LOADING…' : 'SHOW MORE CREATORS'}
-          </button>
+          </a>
         </div>
       )}
     </div>

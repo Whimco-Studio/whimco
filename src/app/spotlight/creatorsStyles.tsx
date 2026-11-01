@@ -212,7 +212,9 @@ export default function CreatorsStyles() {
         justify-content: center;
         padding: 0 1.5rem 4rem;
       }
-      .showcase .cr-more button {
+      .showcase .cr-more .cr-more-link {
+        display: inline-block;
+        text-decoration: none;
         font-family: var(--font-mono), monospace;
         font-size: 0.7rem;
         letter-spacing: 0.2em;
@@ -224,10 +226,10 @@ export default function CreatorsStyles() {
         cursor: pointer;
         transition: background 0.18s ease;
       }
-      .showcase .cr-more button:hover:not(:disabled) {
+      .showcase .cr-more .cr-more-link:hover:not([aria-disabled="true"]) {
         background: var(--beam-dim);
       }
-      .showcase .cr-more button:disabled {
+      .showcase .cr-more .cr-more-link[aria-disabled="true"] {
         opacity: 0.5;
         cursor: default;
       }

@@ -3,7 +3,10 @@ import { notFound, redirect } from 'next/navigation';
 import { display, mono } from '../../fonts';
 import GlassNav from '../../components/GlassNav';
 import Portfolio from '../Portfolio';
-import { parseUsername, SHOWCASE_API_URL, ShowcaseData } from '../constants';
+import {
+  isIndexablePortfolio, parseUsername, portfolioPath, SHOWCASE_API_URL, ShowcaseData,
+  topDisciplines,
+} from '../constants';
 
 export const revalidate = 300;
 
@@ -38,24 +41,35 @@ export async function generateMetadata(
   const data = await getPortfolio(name);
   const a = data?.author;
   const canonical = a?.name || name;
+  // What they make, named the way someone searching for them would type
+  // it: "kruger_xd, Roblox VFX and UI portfolio".
+  const disciplines = topDisciplines(data?.items ?? []);
+  const craft = disciplines.length ? `Roblox ${disciplines.join(' and ')}` : 'Roblox';
   const description = a && a.creations > 0
-    ? `${a.creations} creation${a.creations === 1 ? '' : 's'} by ${canonical}, broadcast across the Spotlight network with ${a.hearts} hearts.`
-    : `Creations by ${canonical} on the Spotlight network.`;
+    ? `${a.creations} Roblox creation${a.creations === 1 ? '' : 's'} by ${canonical}${disciplines.length ? `, mostly ${disciplines.join(' and ')}` : ''}, shared across the Spotlight network of Discord servers.`
+    : `Roblox creations by ${canonical} on the Spotlight network.`;
+  const claimed = Boolean(data?.profile);
+  const isPreview = Boolean(
+    searchParams?.layout || searchParams?.accent || searchParams?.feature,
+  );
+  // Thin portfolios stay out of search; isIndexablePortfolio is the same
+  // rule sitemap.ts applies, so the two never disagree about a page.
+  const thin = !a || !isIndexablePortfolio(a.creations, claimed);
   return {
-    title: `${canonical} — Spotlight Portfolio | Whimco`,
+    title: `${canonical}, ${craft} portfolio | Spotlight by Whimco`,
     description,
+    alternates: { canonical: portfolioPath(canonical) },
     referrer: 'no-referrer',
     // A preview is the same portfolio wearing another layout. Letting a
     // crawler index one would put four more copies of a creator's page in
     // search results, all outranking each other.
-    ...(params.username
-      && (searchParams?.layout || searchParams?.accent || searchParams?.feature)
-      ? { robots: { index: false, follow: true } }
-      : {}),
+    // Thin portfolios follow the same rule: links on them still count,
+    // the page itself is not offered as a result.
+    ...(isPreview || thin ? { robots: { index: false, follow: true } } : {}),
     // og:image comes from opengraph-image.tsx — a live composite of the
     // creator's top posts, so Discord/X embeds preview their actual work.
     openGraph: {
-      title: `${canonical} — Spotlight Portfolio`,
+      title: `${canonical}, ${craft} portfolio`,
       description,
     },
     twitter: { card: 'summary_large_image' },
