@@ -4,7 +4,7 @@ import React, {
   useCallback, useEffect, useRef, useState,
 } from 'react';
 import {
-  ShowcaseItem, ShowcaseMedia, cleanCaption, postPath, xLink, mediaKind, mediaPath
+  CATEGORY_LABELS, ShowcaseItem, ShowcaseMedia, cleanCaption, postPath, xLink, mediaKind, mediaPath
 } from './constants';
 import ShareButton from './ShareButton';
 import VerifiedSeal from './VerifiedSeal';
@@ -187,7 +187,8 @@ function CardMedia({ item, deep }: { item: ShowcaseItem; deep: boolean }) {
         <img
           src={media.url}
           referrerPolicy="no-referrer"
-          alt={cleanCaption(item.content).slice(0, 80) || `Creation by ${item.author_name}`}
+          alt={cleanCaption(item.content).slice(0, 80)
+            || `${item.category && CATEGORY_LABELS[item.category] ? `Roblox ${CATEGORY_LABELS[item.category]}` : 'Roblox creation'} by ${item.author_name}`}
           loading="lazy"
           // X-hosted media is linked, not mirrored, so it 404s the moment
           // the creator deletes their post. The liveness sweep retires
@@ -215,10 +216,18 @@ function GalleryCard({
   const caption = cleanCaption(item.content);
   return (
     <article className="card">
-      <button
-        type="button"
+      {/* A real link to the creation's own page, so a crawler can walk
+          from any grid to every permalink. A plain click still opens the
+          lightbox in place; a modified click (new tab, copy link) gets
+          the page, which is what those gestures mean. */}
+      <a
+        href={postPath(item.id)}
         className="card-hit"
-        onClick={onOpen}
+        onClick={(e) => {
+          if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+          e.preventDefault();
+          onOpen();
+        }}
         aria-label={`Open creation by ${item.author_name}`}
       >
         <CardMedia item={item} deep={deep} />
@@ -227,7 +236,7 @@ function GalleryCard({
             {caption}
           </p>
         )}
-      </button>
+      </a>
       <div className="card-meta">
         {showAuthor ? (
           <a
