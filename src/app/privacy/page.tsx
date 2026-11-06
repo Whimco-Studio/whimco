@@ -4,6 +4,7 @@ import LegalPage from "../legal";
 export const metadata: Metadata = {
 	title: "Privacy Policy | Whimco",
 	description: "Privacy Policy for Whimco and the Spotlight network.",
+	alternates: { canonical: "/privacy" },
 };
 
 export default function PrivacyPage() {

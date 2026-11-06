@@ -27,6 +27,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: 'The Network: Spotlight | Whimco',
     description,
+    alternates: { canonical: '/spotlight/network' },
     referrer: 'no-referrer',
     openGraph: {
       title: 'The Network: Spotlight',
