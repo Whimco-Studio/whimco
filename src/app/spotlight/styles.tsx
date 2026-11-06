@@ -120,42 +120,34 @@ export default function ShowcaseStyles() {
         border-color: rgba(255, 217, 138, 0.4);
       }
 
-      /* --------------------------- stat strip ------------------ */
-      .showcase .stat-strip {
-        display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 1px;
-        background: var(--edge);
-        border: 1px solid var(--edge);
-        border-radius: 16px;
-        overflow: hidden;
-        margin-top: 2.2rem;
-        width: min(58rem, 100%);
+      /* --------------------------- fact line ------------------- */
+      .showcase .fact-line {
+        font-family: var(--font-mono), monospace;
+        font-size: 0.8rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--stext-dim);
+        margin: 0;
       }
-      .showcase .stat {
-        display: flex;
-        flex-direction: column;
-        gap: 0.45rem;
-        padding: 1.5rem 1rem;
-        background: rgba(20, 20, 29, 0.85);
-      }
-      .showcase .stat-number {
+      .showcase .fact-line strong {
         font-family: var(--font-display), 'Inter', sans-serif;
-        font-weight: 700;
-        font-size: clamp(1.5rem, 3.2vw, 2.3rem);
+        font-size: 1.05rem;
+        letter-spacing: 0.02em;
         color: var(--beam);
-        text-shadow: 0 0 24px rgba(255, 217, 138, 0.25);
+        font-weight: 700;
         font-variant-numeric: tabular-nums;
       }
-      .showcase .stat-label {
+      .showcase .how-link {
         font-family: var(--font-mono), monospace;
-        font-size: 0.68rem;
+        font-size: 0.72rem;
         letter-spacing: 0.14em;
+        text-transform: uppercase;
         color: var(--stext-dim);
+        text-decoration: underline;
+        text-underline-offset: 4px;
+        margin-top: 0.2rem;
       }
-      @media (max-width: 720px) {
-        .showcase .stat-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      }
+      .showcase .how-link:hover { color: var(--stext); }
 
       /* ---------------------------- gallery --------------------- */
       .showcase .gallery-section {

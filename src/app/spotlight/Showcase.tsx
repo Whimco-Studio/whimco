@@ -13,37 +13,13 @@ import {
   SortMode, creationsIn,
 } from './constants';
 
-function useCountUp(target: number, start: boolean, duration = 1400) {
-  const [value, setValue] = useState(0);
-  useEffect(() => {
-    if (!start) return;
-    if (typeof window !== 'undefined' &&
-        window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      setValue(target);
-      return;
-    }
-    let raf = 0;
-    const t0 = performance.now();
-    const tick = (now: number) => {
-      const p = Math.min(1, (now - t0) / duration);
-      const eased = 1 - Math.pow(1 - p, 3);
-      setValue(Math.round(target * eased));
-      if (p < 1) raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [target, start, duration]);
-  return value;
-}
-
-function Stat({ label, value, started }: { label: string; value: number; started: boolean }) {
-  const n = useCountUp(value, started);
-  return (
-    <div className="stat">
-      <span className="stat-number">{n.toLocaleString('en-US')}</span>
-      <span className="stat-label">{label}</span>
-    </div>
-  );
+/** A count stated as a floor that stays true as it grows: 6,996 reads
+    "6,900+" and 101 reads "100+". Plain text in the server render, so
+    crawlers, link previews and slow connections see the real number
+    instead of a counter animating up from zero. */
+function atLeast(n: number): string {
+  const step = n >= 1000 ? 100 : n >= 100 ? 100 : 10;
+  return `${(Math.floor(n / step) * step).toLocaleString('en-US')}+`;
 }
 
 export default function Showcase({ initialData }: { initialData: ShowcaseData | null }) {
@@ -57,11 +33,9 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
   // first paint and this initial state always agree.
   const [sort, setSort] = useState<SortMode>('new');
   const [loading, setLoading] = useState(false);
-  const [statsStarted, setStatsStarted] = useState(false);
   const likes = useLikes();
   const inviteUrl = useInviteUrl();
 
-  const statsRef = useRef<HTMLDivElement>(null);
   // Mirrors activeCategory for the curator retry loop further down, which
   // spans multiple renders and needs whatever category is current at the
   // moment each retry fires, not whatever was current when the loop
@@ -75,17 +49,6 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
 
   const stats = initialData?.stats;
   const categories = initialData?.categories ?? [];
-
-  useEffect(() => {
-    const el = statsRef.current;
-    if (!el) return;
-    const obs = new IntersectionObserver(
-      (entries) => entries.forEach((e) => { if (e.isIntersecting) setStatsStarted(true); }),
-      { threshold: 0.4 },
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, []);
 
   // Request generation, guarding loadView the same way useLikes.ts's
   // categoryGen guards recategorize. Two calls can be in flight together,
@@ -276,6 +239,12 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
           channels across every connected server. Everything below is real work,
           shared by the network, newest first.
         </p>
+        {stats && stats.creations > 0 && (
+          <p className="fact-line">
+            <strong>{atLeast(stats.creations)}</strong> creations from{' '}
+            <strong>{atLeast(stats.server_count)}</strong> servers
+          </p>
+        )}
         <div className="cta-row">
           <a
             className="cta-primary"
@@ -285,17 +254,11 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
           >
             Add Spotlight to Discord
           </a>
-          <a className="cta-ghost" href="/spotlight/how-it-works">See how it works →</a>
+          {/* Hirers are the scarce side of the network (hiring scan,
+              2026-11-06), and until this the page had nothing for them. */}
+          <a className="cta-ghost" href="/spotlight/creators">Hiring? Find a creator →</a>
         </div>
-
-        {stats && (
-          <div className="stat-strip" ref={statsRef}>
-            <Stat label="members reached" value={stats.member_reach} started={statsStarted} />
-            <Stat label="servers connected" value={stats.server_count} started={statsStarted} />
-            <Stat label="creations broadcast" value={stats.creations} started={statsStarted} />
-            <Stat label="hearts given" value={stats.hearts_given} started={statsStarted} />
-          </div>
-        )}
+        <a className="how-link" href="/spotlight/how-it-works">How it works</a>
       </section>
 
       {/* aria-busy is the only report of a filter fetch now that the load
