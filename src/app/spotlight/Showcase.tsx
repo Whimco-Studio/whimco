@@ -109,8 +109,8 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
   //
   // Always page one, and always a replacement. Depth belongs to
   // /spotlight/gallery now: this section is a fixed-length slab of proof
-  // sitting above how-it-works, and it used to be able to grow to eighty
-  // screens and push that out of reach.
+  // at the foot of the landing page, and it used to be able to grow to
+  // eighty screens. How it works has its own page now.
   const fetchGen = useRef(0);
   const loadView = useCallback(async (
     category: string, mode: SortMode, silent = false,
@@ -285,7 +285,7 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
           >
             Add Spotlight to Discord
           </a>
-          <a className="cta-ghost" href="#how-it-works">See how it works ↓</a>
+          <a className="cta-ghost" href="/spotlight/how-it-works">See how it works →</a>
         </div>
 
         {stats && (
@@ -382,8 +382,8 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
         />
 
         {/* Where "Show more creations" used to be, and the reason this
-            section stopped growing. Below it sit how-it-works and the
-            invite, and every press of that button pushed both further out
+            section stopped growing. How it works and the invite used to sit
+            below it, and every press of that button pushed both further out
             of reach: at 24 a page across 1,911 creations there were
             seventy-nine presses available. Browsing and converting want
             opposite page shapes, so they are two pages now. The count is
