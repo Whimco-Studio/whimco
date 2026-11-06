@@ -4,6 +4,7 @@ import LegalPage from "../legal";
 export const metadata: Metadata = {
 	title: "Terms of Service | Whimco",
 	description: "Terms of Service for Whimco and the Spotlight network.",
+	alternates: { canonical: "/terms" },
 };
 
 export default function TermsPage() {
