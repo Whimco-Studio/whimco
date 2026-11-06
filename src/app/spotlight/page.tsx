@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import { display, mono } from '../fonts';
 import GlassNav from '../components/GlassNav';
 import Showcase from './Showcase';
-import HowItWorksSimple from './HowItWorksSimple';
 import SpotlightIntro from './SpotlightIntro';
 import { SHOWCASE_API_URL, ShowcaseData } from './constants';
 
@@ -14,7 +13,7 @@ async function getShowcase(): Promise<ShowcaseData | null> {
     if (!res.ok) return null;
     return await res.json();
   } catch {
-    // Spotlight down: the page still renders hero + how-it-works, and
+    // Spotlight down: the page still renders the hero, and
     // Vercel keeps serving the last successful render until it recovers.
     return null;
   }
@@ -46,22 +45,6 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-/** A real creation for the how-it-works loop, so it demonstrates the
-    product instead of diagramming it. Prefers a still: a video's poster
-    frame is already a plain image, and the loop is too small to play one
-    usefully. Returns null when nothing usable came back, which the
-    component renders as a gradient stand-in rather than a broken tile. */
-function pickSample(data: ShowcaseData | null) {
-  for (const item of data?.items ?? []) {
-    const media = item.media?.[0];
-    if (!media) continue;
-    const image = media.thumbnail
-      ?? (media.content_type?.startsWith('image/') ? media.url : null);
-    if (image) return { image, author: item.author_name };
-  }
-  return null;
-}
-
 export default async function SpotlightPage() {
   const data = await getShowcase();
   return (
@@ -72,26 +55,6 @@ export default async function SpotlightPage() {
       <GlassNav />
       <SpotlightIntro />
       <Showcase initialData={data} />
-      <div
-        style={{
-          textAlign: 'center',
-          padding: '4.5rem 1.5rem 0',
-          background: '#0a0a0f',
-        }}
-      >
-        <p
-          style={{
-            fontFamily: 'var(--font-mono), monospace',
-            fontSize: '0.72rem',
-            letterSpacing: '0.28em',
-            color: '#9ba0b4',
-            margin: 0,
-          }}
-        >
-          HOW IT WORKS
-        </p>
-      </div>
-      <HowItWorksSimple stats={data?.stats ?? null} sample={pickSample(data)} />
     </div>
   );
 }

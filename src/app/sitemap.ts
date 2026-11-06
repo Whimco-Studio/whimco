@@ -14,6 +14,7 @@ const STATIC_PAGES: { path: string; priority: number }[] = [
   { path: '/spotlight/creators', priority: 0.8 },
   { path: '/spotlight/gallery', priority: 0.8 },
   { path: '/spotlight/network', priority: 0.6 },
+  { path: '/spotlight/how-it-works', priority: 0.6 },
   { path: '/experiences', priority: 0.6 },
   { path: '/about', priority: 0.5 },
   { path: '/privacy', priority: 0.2 },
