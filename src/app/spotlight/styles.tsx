@@ -29,8 +29,8 @@ export default function ShowcaseStyles() {
         flex-direction: column;
         align-items: center;
         text-align: center;
-        padding: 8.5rem 1.5rem 4rem;
-        gap: 1.4rem;
+        padding: 7rem 1.5rem 1.75rem;
+        gap: 0.9rem;
       }
       .showcase .eyebrow {
         font-family: var(--font-mono), monospace;
@@ -58,13 +58,13 @@ export default function ShowcaseStyles() {
         .showcase .live-dot { animation: none; }
       }
       .showcase .hero-logo {
-        width: clamp(220px, 30vw, 340px);
+        width: clamp(150px, 17vw, 210px);
         height: auto;
       }
       .showcase .headline {
         font-family: var(--font-display), 'Inter', sans-serif;
         font-weight: 800;
-        font-size: clamp(2.6rem, 7vw, 5.2rem);
+        font-size: clamp(2.2rem, 4.4vw, 3.5rem);
         line-height: 1.02;
         letter-spacing: -0.02em;
         margin: 0;
@@ -153,7 +153,7 @@ export default function ShowcaseStyles() {
       .showcase .gallery-section {
         max-width: 78rem;
         margin: 0 auto;
-        padding: 2rem 1.5rem 5rem;
+        padding: 0.5rem 1.5rem 5rem;
       }
       .showcase .gallery-head {
         display: flex;
@@ -994,7 +994,8 @@ export default function ShowcaseStyles() {
       .showcase .lightbox-source:hover { text-decoration: underline; }
 
       @media (max-width: 640px) {
-        .showcase .hero { padding-top: 7rem; }
+        .showcase .hero { padding-top: 6rem; }
+        .showcase .headline-line { display: block; }
         .showcase .gallery-head { flex-direction: column; gap: 0.2rem; }
       }
     `}</style>

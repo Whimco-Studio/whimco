@@ -230,14 +230,15 @@ export default function Showcase({ initialData }: { initialData: ShowcaseData | 
       <section className="hero">
         <p className="eyebrow"><span className="live-dot" aria-hidden />LIVE FROM THE NETWORK</p>
         <Image src="/spotlight-logo.png" alt="Spotlight" width={340} height={114} priority className="hero-logo" />
+        {/* One line on wide screens so the first row of work shows on
+            load: the work is the proof, and the hero used to fill the
+            whole first screen (2026-11-07). Two lines again on phones. */}
         <h1 className="headline">
-          Post once.<br />
-          <span className="beamed">Seen everywhere.</span>
+          <span className="headline-line">Post once.</span>{' '}
+          <span className="headline-line beamed">Seen everywhere.</span>
         </h1>
         <p className="sub">
-          Spotlight carries creators&apos; posts from any #creations channel to showcase
-          channels across every connected server. Everything below is real work,
-          shared by the network, newest first.
+          Real work from Roblox dev servers, carried to every connected server.
         </p>
         {stats && stats.creations > 0 && (
           <p className="fact-line">
