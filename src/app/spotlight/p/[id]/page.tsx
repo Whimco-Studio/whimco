@@ -62,19 +62,19 @@ export async function generateMetadata(
 ): Promise<Metadata> {
   const item = await fetchShowcaseItem(params.id); // deduped with the page fetch
   if (!item) {
-    return { title: 'Creation not found — Spotlight | Whimco', robots: { index: false } };
+    return { title: 'Creation not found | Spotlight by Whimco', robots: { index: false } };
   }
 
   const label = item.category ? (CATEGORY_LABELS[item.category] ?? item.category) : '';
   const title = label
-    ? `${label} by ${item.author_name} — Spotlight`
-    : `Creation by ${item.author_name} — Spotlight`;
+    ? `Roblox ${label} by ${item.author_name} | Spotlight`
+    : `Roblox creation by ${item.author_name} | Spotlight`;
   const caption = cleanCaption(item.content || '');
   const description = caption
     || `Shared by ${item.author_name} and broadcast across the Spotlight network.`;
 
   const base = {
-    title: `${title} | Whimco`,
+    title: `${title} by Whimco`,
     description,
     alternates: { canonical: postPath(item.id) },
     // video.twimg.com 403s any request carrying a foreign Referer, so this

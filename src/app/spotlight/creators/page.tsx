@@ -46,7 +46,7 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
     alternates: { canonical: page > 1 ? `/spotlight/creators?page=${page}` : '/spotlight/creators' },
     referrer: 'no-referrer',
     openGraph: {
-      title: 'The Creators — Spotlight',
+      title: 'Roblox creators | Spotlight',
       description,
       images: ['/spotlight-logo.png'],
     },

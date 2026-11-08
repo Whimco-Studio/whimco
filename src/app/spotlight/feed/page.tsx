@@ -31,7 +31,7 @@ export async function generateMetadata(): Promise<Metadata> {
     : 'A live timeline of every creation broadcast across the Spotlight network, newest first.';
 
   return {
-    title: 'The Feed — Spotlight | Whimco',
+    title: 'Live feed of Roblox creations | Spotlight by Whimco',
     description,
     alternates: { canonical: '/spotlight/feed' },
     // video.twimg.com 403s any request carrying a foreign Referer, so this
@@ -39,7 +39,7 @@ export async function generateMetadata(): Promise<Metadata> {
     // the showcase and the gallery.
     referrer: 'no-referrer',
     openGraph: {
-      title: 'The Feed — Spotlight',
+      title: 'The Feed | Spotlight',
       description,
       images: ['/spotlight-logo.png'],
     },
