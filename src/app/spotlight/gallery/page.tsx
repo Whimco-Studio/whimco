@@ -70,14 +70,14 @@ export async function generateMetadata(
 
   const description = total > 0
     ? `${total.toLocaleString('en-US')} ${creationsIn(total, view.category)}, broadcast across the Spotlight network from every connected Discord server.`
-    : 'Every creation broadcast across the Spotlight network.';
+    : 'Every Roblox creation shared across the Spotlight network.';
 
-  const titleParts = [label || 'The Gallery'];
+  const titleParts = [label ? `Roblox ${label}` : 'Roblox creations gallery'];
   if (view.sort === 'top') titleParts.push('Top This Week');
   if (view.page > 1) titleParts.push(`Page ${view.page}`);
 
   return {
-    title: `${titleParts.join(' · ')} — Spotlight | Whimco`,
+    title: `${titleParts.join(' · ')} | Spotlight by Whimco`,
     description,
     // Paginated views self-canonicalise rather than all pointing at page
     // one: they hold different creations, and collapsing them would tell
@@ -88,7 +88,7 @@ export async function generateMetadata(
     // the showcase.
     referrer: 'no-referrer',
     openGraph: {
-      title: `${label || 'The Gallery'} — Spotlight`,
+      title: `${label ? `Roblox ${label}` : 'The Gallery'} | Spotlight`,
       description,
       images: ['/spotlight-logo.png'],
     },

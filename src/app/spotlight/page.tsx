@@ -23,23 +23,24 @@ export async function generateMetadata(): Promise<Metadata> {
   const data = await getShowcase(); // deduped with the page fetch below
   const s = data?.stats;
   const description = s && s.member_reach > 0
-    ? `Real creations broadcast to ${s.server_count} connected Discord servers, reaching ${s.member_reach.toLocaleString('en-US')} members. Post once, broadcast everywhere.`
-    : "Spotlight broadcasts creators' posts from #creations channels to showcase channels across every connected Discord server.";
+    ? `Real Roblox creations, VFX, builds, UI, scripting and more, shared across ${s.server_count} Roblox dev Discord servers reaching ${s.member_reach.toLocaleString('en-US')} members. Find a creator or add Spotlight to your server.`
+    : "Real Roblox creations, VFX, builds, UI, scripting and more, shared across the Roblox dev Discord servers on the Spotlight network.";
   return {
-    title: 'Spotlight — Post Once, Broadcast Everywhere | Whimco',
+    // Search wants the words people type; social unfurls keep the slogan.
+    title: 'Roblox creator showcase: VFX, builds, UI and scripting | Spotlight by Whimco',
     description,
     alternates: { canonical: '/spotlight' },
     // video.twimg.com 403s any request carrying a foreign Referer, so the
     // whole page must send none for inline X video playback to work.
     referrer: 'no-referrer',
     openGraph: {
-      title: 'Spotlight — Post Once, Broadcast Everywhere',
+      title: 'Spotlight: post once, seen everywhere',
       description,
       images: ['/spotlight-logo.png'],
     },
     twitter: {
       card: 'summary_large_image',
-      title: 'Spotlight — Post Once, Broadcast Everywhere',
+      title: 'Spotlight: post once, seen everywhere',
       description,
     },
   };
