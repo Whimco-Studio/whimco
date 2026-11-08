@@ -5,9 +5,10 @@ import { display, mono } from '../../../fonts';
 import GlassNav from '../../../components/GlassNav';
 import PostPermalink from '../../PostPermalink';
 import {
-  CATEGORY_LABELS, SITE_ORIGIN, cleanCaption, fetchShowcaseItem, playableVideo,
-  postPath, postVideoPath, twimgVideoSize,
+  CATEGORY_LABELS, SITE_ORIGIN, cleanCaption, fetchShowcaseItem, isIndexablePost,
+  playableVideo, postPath, postVideoPath, twimgVideoSize,
 } from '../../constants';
+import MoreFromNetwork from '../../MoreFromNetwork';
 
 export const revalidate = 300;
 
@@ -77,6 +78,9 @@ export async function generateMetadata(
     title: `${title} by Whimco`,
     description,
     alternates: { canonical: postPath(item.id) },
+    // A lone image with no words is still a public page, just not a
+    // search result; see isIndexablePost.
+    ...(isIndexablePost(item) ? {} : { robots: { index: false, follow: true } }),
     // video.twimg.com 403s any request carrying a foreign Referer, so this
     // page must send none for inline X video playback to work, the same as
     // the showcase, the gallery and the feed.
@@ -178,6 +182,7 @@ export default async function PostPage({ params }: { params: { id: string } }) {
     >
       <GlassNav />
       <PostPermalink item={item} />
+      <MoreFromNetwork currentId={item.id} />
     </div>
   );
 }
