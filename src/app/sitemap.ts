@@ -60,7 +60,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: c.lastmod,
       priority: c.claimed ? 0.7 : 0.5,
     });
-    for (const [id, date] of c.items) {
+    for (const [id, date, indexable] of c.items) {
+      // Thin creations (isIndexablePost) are noindex on their own page,
+      // so listing them would send the crawler somewhere it is told to
+      // leave.
+      if (indexable === false) continue;
       pages.push({
         url: `${SITE_ORIGIN}${postPath(id)}`,
         lastModified: date,

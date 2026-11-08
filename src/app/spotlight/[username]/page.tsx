@@ -83,6 +83,11 @@ export default async function PortfolioPage({ params, searchParams }: Params) {
   // Display names change on Discord; the API resolves any historical name
   // to the creator's canonical one. Send stale-name URLs there (307, not
   // 308 — a rename back would loop against a browser-cached permanent).
+  // A handle with nothing behind it (never posted, or every post gone,
+  // and no claimed profile) is a real 404 rather than an empty page that
+  // answers 200, which search engines file as a soft 404. data null means
+  // the API was unreachable, which is not the same thing and still renders.
+  if (data && (data.author?.creations ?? 0) === 0 && !data.profile) notFound();
   const canonical = data?.author?.name;
   if (canonical && canonical !== name) {
     redirect(`/spotlight/@${encodeURIComponent(canonical)}`);

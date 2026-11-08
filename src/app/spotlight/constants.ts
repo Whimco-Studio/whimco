@@ -83,6 +83,24 @@ export function cleanCaption(content: string): string {
   return content.replace(ANY_URL_RE, '').replace(/\s{2,}/g, ' ').trim();
 }
 
+/** Characters of caption, after links are stripped, that make a lone
+    image worth a search result on its own. */
+export const INDEX_MIN_CAPTION = 20;
+
+/** A permalink is offered to search engines when there is something on it
+    beyond a single still: a real caption, a video, or several pieces of
+    media. About a third of creations are one image with no words; a new
+    domain's crawl budget spent on those is budget not spent on the
+    portfolios and captioned work (Product-Led SEO, 2026-11-07). The page
+    stays public and its links still count; it is just not a result.
+    sitemap.ts honours the same rule through the API's third item field. */
+export function isIndexablePost(item: Pick<ShowcaseItem, 'content' | 'media'>): boolean {
+  if (cleanCaption(item.content || '').length >= INDEX_MIN_CAPTION) return true;
+  const media = item.media ?? [];
+  if (media.length > 1) return true;
+  return media.some((m) => (m.content_type || '').startsWith('video/'));
+}
+
 /** /spotlight/@<name> — the @ marks creator portfolios so future static
     routes under /spotlight never collide with usernames. */
 export function parseUsername(raw: string): string | null {
@@ -377,8 +395,9 @@ export type SitemapData = {
     creations: number;
     claimed: boolean;
     lastmod: string;
-    /** [creation id, ISO date] */
-    items: [number, string][];
+    /** [creation id, ISO date, indexable]. The third field is optional so
+        an API from before it existed still parses; absent means indexable. */
+    items: [number, string, boolean?][];
   }[];
 };
 
