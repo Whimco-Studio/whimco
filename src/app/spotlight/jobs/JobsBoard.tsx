@@ -53,7 +53,9 @@ function Hirer({ h }: { h: Live['hirer'] }) {
   const facts = [
     years(h.discord_age_days),
     h.roblox_linked ? 'ROBLOX LINKED' : 'NO ROBLOX LINK',
-    `${h.jobs_filled} OF ${h.jobs_posted} FILLED`,
+    // Posted, not filled: hirers rarely press Filled, so a fill count
+    // reads as a bad record when it is only an unpressed button.
+    `${h.jobs_posted} JOB${h.jobs_posted === 1 ? '' : 'S'} POSTED`,
   ];
   return (
     <div className="jb-hirer">
@@ -217,7 +219,7 @@ export default function JobsBoard() {
           what a creator actually gets when they cash out.
         </p>
         <p>
-          Demo built from {DEMO_JOBS.length} real posts read between Oct 30 and
+          Demo built from {DEMO_JOBS.length} real posts read between Nov 1 and
           Nov 8. Poster names and handles are left out. Listings would close
           after 14 days or when the hirer marks the job filled.
         </p>
