@@ -1,9 +1,74 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import ShowcaseStyles from '../styles';
 import JobsStyles from './jobsStyles';
 import { DEMO_AS_OF, DEMO_JOBS, DemoJob } from './demoJobs';
+import { SHOWCASE_API_URL } from '../constants';
+
+/** What the key-gated /api/jobs/demo adds to a job. Fetched in the
+    browser with the ?k= the operator opened the page with, so no name,
+    avatar or image is ever committed to this public repo. */
+type Live = {
+  hirer: {
+    name: string;
+    avatar: string;
+    discord_age_days: number | null;
+    roblox_linked: boolean;
+    jobs_posted: number;
+    jobs_filled: number;
+    backing: string;
+  };
+  images: string[];
+};
+
+function useLive(): Record<number, Live> {
+  const [live, setLive] = useState<Record<number, Live>>({});
+  useEffect(() => {
+    const k = new URLSearchParams(window.location.search).get('k');
+    if (!k) return;
+    const base = new URL(SHOWCASE_API_URL).origin;
+    fetch(`${base}/api/jobs/demo?k=${encodeURIComponent(k)}`, { cache: 'no-store', referrerPolicy: 'no-referrer' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { jobs: ({ id: number } & Live)[] } | null) => {
+        if (!d) return;
+        const byId: Record<number, Live> = {};
+        d.jobs.forEach((j) => { byId[j.id] = { hirer: j.hirer, images: j.images }; });
+        setLive(byId);
+      })
+      .catch(() => {});
+  }, []);
+  return live;
+}
+
+function years(days: number | null): string {
+  if (days === null) return 'ACCOUNT AGE UNKNOWN';
+  if (days < 60) return `${days}D OLD ACCOUNT`;
+  if (days < 730) return `${Math.round(days / 30)}MO OLD ACCOUNT`;
+  return `${Math.floor(days / 365)}Y OLD ACCOUNT`;
+}
+
+/** Facts only, never a verdict: creators judge the hirer themselves. */
+function Hirer({ h }: { h: Live['hirer'] }) {
+  const facts = [
+    years(h.discord_age_days),
+    h.roblox_linked ? 'ROBLOX LINKED' : 'NO ROBLOX LINK',
+    `${h.jobs_filled} OF ${h.jobs_posted} FILLED`,
+  ];
+  return (
+    <div className="jb-hirer">
+      {h.avatar
+        // eslint-disable-next-line @next/next/no-img-element
+        ? <img className="jb-ava" src={h.avatar} alt="" referrerPolicy="no-referrer" />
+        : <span className="jb-ava jb-ava-empty" aria-hidden="true">{(h.name[0] ?? '?').toUpperCase()}</span>}
+      <div className="jb-hirer-text">
+        <b>{h.name || 'Unknown hirer'}</b>
+        <span>{facts.join(' · ')}</span>
+      </div>
+      {h.backing === 'refused' && <span className="jb-note jb-note-flag">Blacklight record</span>}
+    </div>
+  );
+}
 
 const usd = (n: number) => `$${Math.round(n).toLocaleString('en-US')}`;
 const mid = (j: DemoJob) => (j.usdLo + j.usdHi) / 2;
@@ -29,11 +94,18 @@ function tone(note: string): string {
     job board for. The cashed-out dollar figure leads; what the hirer
     actually wrote sits under it, so nothing is hidden by the conversion.
     Only notes that change a decision (price, rush, scope) make the tile. */
-function JobTile({ job }: { job: DemoJob }) {
+function JobTile({ job, live }: { job: DemoJob; live?: Live }) {
   const flags = job.notes.filter((n) => tone(n) !== 'jb-note');
   return (
     <article className="jb-tile">
       <span className="jb-glow" aria-hidden="true" />
+      {live && live.images.length > 0 && (
+        <div className="jb-shot">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={live.images[0]} alt={`Reference for ${job.title}`} loading="lazy" referrerPolicy="no-referrer" />
+          {live.images.length > 1 && <span className="jb-shot-count">+{live.images.length - 1}</span>}
+        </div>
+      )}
       <div className="jb-tile-head">
         <span className="jb-role">{job.role}</span>
         <span className={`jb-status${job.status === 'Open' ? ' jb-live' : ''}`}>
@@ -51,6 +123,7 @@ function JobTile({ job }: { job: DemoJob }) {
           {flags.map((n) => <span key={n} className={tone(n)}>{n}</span>)}
         </div>
       )}
+      {live && <Hirer h={live.hirer} />}
       <p className="jb-meta">
         <span>{age(job.posted)}</span>
         {job.due && <span>DUE {job.due.toUpperCase()}</span>}
@@ -64,6 +137,7 @@ function JobTile({ job }: { job: DemoJob }) {
 export default function JobsBoard() {
   const [role, setRole] = useState('All');
   const [sort, setSort] = useState<'new' | 'pay'>('pay');
+  const live = useLive();
 
   const counts = useMemo(() => {
     const c: Record<string, number> = {};
@@ -134,7 +208,7 @@ export default function JobsBoard() {
       </div>
 
       <section className="jb-grid" aria-label="Jobs">
-        {jobs.map((j) => <JobTile key={j.id} job={j} />)}
+        {jobs.map((j) => <JobTile key={j.id} job={j} live={live[j.id]} />)}
       </section>
 
       <footer className="jb-foot">

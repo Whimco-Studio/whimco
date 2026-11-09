@@ -255,6 +255,73 @@ export default function JobsStyles() {
       .showcase .jb-tile .jb-meta { margin-top: auto; }
       .showcase .jb-tile .jb-btn { align-self: flex-start; }
 
+      /* Reference image from the post: full bleed across the top of the tile. */
+      .showcase .jb-shot {
+        margin: -1rem -1rem 0.1rem;
+        aspect-ratio: 16 / 9;
+        max-width: calc(100% + 2rem);
+        overflow: hidden;
+        border-bottom: 1px solid var(--edge);
+        background: #0f0f16;
+      }
+      .showcase .jb-shot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+      .showcase .jb-shot-count {
+        position: absolute;
+        top: 0.6rem;
+        left: 0.6rem;
+        font-family: var(--font-mono), monospace;
+        font-size: 0.58rem;
+        letter-spacing: 0.1em;
+        color: var(--stext);
+        background: rgba(10, 10, 15, 0.75);
+        border: 1px solid var(--edge);
+        border-radius: 999px;
+        padding: 0.2rem 0.5rem;
+      }
+      /* Who posted it, and only facts about them. */
+      .showcase .jb-hirer {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 0.6rem 0.65rem;
+        border: 1px solid var(--edge);
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.02);
+        min-width: 0;
+        flex-wrap: wrap;
+      }
+      .showcase .jb-ava {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        object-fit: cover;
+        border: 1px solid var(--beam-dim);
+      }
+      .showcase .jb-ava-empty {
+        display: grid;
+        place-items: center;
+        font-family: var(--font-mono), monospace;
+        font-size: 0.7rem;
+        color: var(--beam);
+      }
+      .showcase .jb-hirer-text { min-width: 0; flex: 1; display: grid; gap: 0.1rem; }
+      .showcase .jb-hirer-text b {
+        font-family: var(--font-display), 'Inter', sans-serif;
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: var(--stext);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .showcase .jb-hirer-text span {
+        font-family: var(--font-mono), monospace;
+        font-size: 0.5rem;
+        letter-spacing: 0.1em;
+        color: var(--stext-dim);
+      }
+
       .showcase .jb-foot {
         padding-bottom: 4rem;
         display: grid;

@@ -10,6 +10,8 @@ export const metadata: Metadata = {
   title: 'Roblox Jobs: Spotlight | Whimco',
   description: 'Roblox jobs read from the hiring channels of the servers Spotlight broadcasts into.',
   robots: { index: false, follow: false },
+  // The demo key rides in ?k=; never hand it to another site.
+  referrer: 'no-referrer',
 };
 
 export default function JobsPage() {
