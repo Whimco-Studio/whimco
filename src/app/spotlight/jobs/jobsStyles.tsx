@@ -226,7 +226,8 @@ export default function JobsStyles() {
         background: radial-gradient(circle, rgba(255, 217, 138, 0.16), transparent 70%);
         pointer-events: none;
       }
-      .showcase .jb-tile > * { position: relative; }
+      /* Everything but the glow sits in flow; the glow floats behind. */
+      .showcase .jb-tile > :not(.jb-glow) { position: relative; }
       .showcase .jb-tile-head {
         display: flex;
         justify-content: space-between;
