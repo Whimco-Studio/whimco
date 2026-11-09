@@ -25,54 +25,45 @@ function tone(note: string): string {
   return 'jb-note';
 }
 
-function JobCard({ job }: { job: DemoJob }) {
-  const converted =
-    job.unit === 'USD'
-      ? null
-      : `≈ ${usd(job.usdLo)}${job.usdHi !== job.usdLo ? `–${usd(job.usdHi)}` : ''} CASHED OUT`;
+/** Layout C: pay is the headline, since it is what a creator opens a
+    job board for. The cashed-out dollar figure leads; what the hirer
+    actually wrote sits under it, so nothing is hidden by the conversion.
+    Only notes that change a decision (price, rush, scope) make the tile. */
+function JobTile({ job }: { job: DemoJob }) {
+  const flags = job.notes.filter((n) => tone(n) !== 'jb-note');
   return (
-    <article className="jb-card">
-      <div className="jb-top">
-        <div className="jb-what">
-          <span className="jb-role">{job.role}</span>
-          <h2 className="jb-title">{job.title}</h2>
-        </div>
-        <div className="jb-pay">
-          <b>{job.pay}</b>
-          {converted && <span>{converted}</span>}
-        </div>
-      </div>
-
-      <p className="jb-meta">
-        <span>{age(job.posted)} · {job.server.toUpperCase()}</span>
-        {job.due && <span>DUE {job.due.toUpperCase()}</span>}
-        <span>{job.basis.toUpperCase()}</span>
-        {job.portfolio && <span className="jb-strong">PORTFOLIO REQUIRED</span>}
-      </p>
-
-      {job.notes.length > 0 && (
-        <div className="jb-notes">
-          {job.notes.map((n) => <span key={n} className={tone(n)}>{n}</span>)}
-        </div>
-      )}
-
-      <div className="jb-actions">
+    <article className="jb-tile">
+      <span className="jb-glow" aria-hidden="true" />
+      <div className="jb-tile-head">
+        <span className="jb-role">{job.role}</span>
         <span className={`jb-status${job.status === 'Open' ? ' jb-live' : ''}`}>
           <span className="jb-dot" aria-hidden="true" />
-          {job.status.toUpperCase()}
+          {job.status === 'Open' ? 'OPEN' : 'TALKING'}
         </span>
-        <div className="jb-buttons">
-          <button type="button" className="jb-btn jb-btn-ghost" disabled title="Demo">MATCHING WORK</button>
-          <button type="button" className="jb-btn" disabled title="Demo">I&apos;M INTERESTED</button>
-        </div>
       </div>
+      <div className="jb-big">
+        {usd(mid(job))}
+        <small>{job.pay.toUpperCase()}</small>
+      </div>
+      <h2 className="jb-title">{job.title}</h2>
+      {flags.length > 0 && (
+        <div className="jb-notes">
+          {flags.map((n) => <span key={n} className={tone(n)}>{n}</span>)}
+        </div>
+      )}
+      <p className="jb-meta">
+        <span>{age(job.posted)}</span>
+        {job.due && <span>DUE {job.due.toUpperCase()}</span>}
+        {job.portfolio && <span className="jb-strong">PORTFOLIO</span>}
+      </p>
+      <button type="button" className="jb-btn" disabled title="Demo">I&apos;M INTERESTED</button>
     </article>
   );
 }
 
 export default function JobsBoard() {
   const [role, setRole] = useState('All');
-  const [sort, setSort] = useState<'new' | 'pay'>('new');
+  const [sort, setSort] = useState<'new' | 'pay'>('pay');
 
   const counts = useMemo(() => {
     const c: Record<string, number> = {};
@@ -136,14 +127,14 @@ export default function JobsBoard() {
         <label className="jb-sort" htmlFor="jb-sort">
           SORT
           <select id="jb-sort" value={sort} onChange={(e) => setSort(e.target.value as 'new' | 'pay')}>
-            <option value="new">Newest</option>
             <option value="pay">Highest pay</option>
+            <option value="new">Newest</option>
           </select>
         </label>
       </div>
 
-      <section className="jb-list" aria-label="Jobs">
-        {jobs.map((j) => <JobCard key={j.id} job={j} />)}
+      <section className="jb-grid" aria-label="Jobs">
+        {jobs.map((j) => <JobTile key={j.id} job={j} />)}
       </section>
 
       <footer className="jb-foot">

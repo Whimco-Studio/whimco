@@ -64,9 +64,8 @@ export default function JobsStyles() {
       }
 
       .showcase .jb-bar,
-      .showcase .jb-list,
       .showcase .jb-foot {
-        max-width: 920px;
+        max-width: 1400px;
         margin: 0 auto;
         padding-left: max(1.5rem, env(safe-area-inset-left, 0px));
         padding-right: max(1.5rem, env(safe-area-inset-right, 0px));
@@ -122,30 +121,6 @@ export default function JobsStyles() {
         padding: 0.35rem 0.5rem;
       }
 
-      .showcase .jb-list { display: grid; gap: 0.9rem; padding-bottom: 2.5rem; }
-      .showcase .jb-card {
-        background: var(--panel);
-        border: 1px solid var(--edge);
-        border-radius: 14px;
-        padding: 1.1rem 1.2rem 1rem;
-        display: flex;
-        flex-direction: column;
-        gap: 0.8rem;
-        min-width: 0;
-        transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
-      }
-      .showcase .jb-card:hover {
-        transform: translateY(-2px);
-        border-color: var(--beam);
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 0 1px var(--beam-dim);
-      }
-      .showcase .jb-top {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        gap: 1rem;
-      }
-      .showcase .jb-what { min-width: 0; }
       .showcase .jb-role {
         font-family: var(--font-mono), monospace;
         font-size: 0.58rem;
@@ -161,21 +136,6 @@ export default function JobsStyles() {
         margin: 0.3rem 0 0;
         color: var(--stext);
         text-wrap: balance;
-      }
-      .showcase .jb-pay { text-align: right; flex-shrink: 0; max-width: 45%; }
-      .showcase .jb-pay b {
-        display: block;
-        font-family: var(--font-mono), monospace;
-        font-size: 0.82rem;
-        color: var(--stext);
-        line-height: 1.4;
-      }
-      .showcase .jb-pay span {
-        font-family: var(--font-mono), monospace;
-        font-size: 0.56rem;
-        letter-spacing: 0.1em;
-        color: var(--beam);
-        font-variant-numeric: tabular-nums;
       }
       .showcase .jb-meta {
         display: flex;
@@ -202,15 +162,6 @@ export default function JobsStyles() {
       .showcase .jb-note-warn { color: var(--beam); border-color: var(--beam-dim); background: rgba(255, 217, 138, 0.06); }
       .showcase .jb-note-flag { color: #ff8a80; border-color: rgba(237, 66, 69, 0.35); background: rgba(237, 66, 69, 0.08); }
 
-      .showcase .jb-actions {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 0.8rem;
-        flex-wrap: wrap;
-        border-top: 1px solid var(--edge);
-        padding-top: 0.8rem;
-      }
       .showcase .jb-status {
         display: inline-flex;
         align-items: center;
@@ -223,7 +174,6 @@ export default function JobsStyles() {
       .showcase .jb-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--stext-dim); }
       .showcase .jb-live { color: var(--stext); }
       .showcase .jb-live .jb-dot { background: #3ba55c; }
-      .showcase .jb-buttons { display: flex; gap: 0.5rem; flex-wrap: wrap; }
       .showcase .jb-btn {
         font-family: var(--font-mono), monospace;
         font-size: 0.58rem;
@@ -236,7 +186,74 @@ export default function JobsStyles() {
         padding: 0.5rem 1.05rem;
         cursor: not-allowed;
       }
-      .showcase .jb-btn-ghost { background: transparent; color: var(--beam); border-color: var(--beam-dim); }
+
+      /* Layout C: tiles on the Network page's grid, pay as the headline. */
+      .showcase .jb-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        gap: 1.1rem;
+        max-width: 1400px;
+        margin: 0 auto;
+        padding-left: max(1.5rem, env(safe-area-inset-left, 0px));
+        padding-right: max(1.5rem, env(safe-area-inset-right, 0px));
+        padding-bottom: 2.5rem;
+      }
+      .showcase .jb-tile {
+        position: relative;
+        background: var(--panel);
+        border: 1px solid var(--edge);
+        border-radius: 14px;
+        overflow: hidden;
+        padding: 1rem 1rem 1.05rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.7rem;
+        min-width: 0;
+        transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+      }
+      .showcase .jb-tile:hover {
+        transform: translateY(-3px);
+        border-color: var(--beam);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 0 1px var(--beam-dim);
+      }
+      .showcase .jb-glow {
+        position: absolute;
+        top: -50px;
+        right: -50px;
+        width: 160px;
+        height: 160px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(255, 217, 138, 0.16), transparent 70%);
+        pointer-events: none;
+      }
+      .showcase .jb-tile > * { position: relative; }
+      .showcase .jb-tile-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .showcase .jb-big {
+        font-family: var(--font-display), 'Inter', sans-serif;
+        font-weight: 800;
+        font-size: 2.1rem;
+        line-height: 1;
+        color: var(--beam);
+        font-variant-numeric: tabular-nums;
+      }
+      .showcase .jb-big small {
+        display: block;
+        margin-top: 0.4rem;
+        font-family: var(--font-mono), monospace;
+        font-size: 0.56rem;
+        font-weight: 500;
+        letter-spacing: 0.12em;
+        color: var(--stext-dim);
+        overflow-wrap: anywhere;
+      }
+      .showcase .jb-tile .jb-title { font-size: 1rem; margin: 0; }
+      .showcase .jb-tile .jb-meta { margin-top: auto; }
+      .showcase .jb-tile .jb-btn { align-self: flex-start; }
 
       .showcase .jb-foot {
         padding-bottom: 4rem;
@@ -254,13 +271,11 @@ export default function JobsStyles() {
       }
 
       @media (max-width: 600px) {
-        .showcase .jb-top { flex-direction: column; }
-        .showcase .jb-pay { text-align: left; max-width: none; }
         .showcase .jb-sort { margin-left: 0; }
       }
       @media (prefers-reduced-motion: reduce) {
-        .showcase .jb-card, .showcase .jb-chip { transition: none; }
-        .showcase .jb-card:hover { transform: none; }
+        .showcase .jb-tile, .showcase .jb-chip { transition: none; }
+        .showcase .jb-tile:hover { transform: none; }
       }
     `}</style>
   );
