@@ -237,7 +237,7 @@ export default function JobsStyles() {
       .showcase .jb-big {
         font-family: var(--font-display), 'Inter', sans-serif;
         font-weight: 800;
-        font-size: 2.1rem;
+        font-size: clamp(1.6rem, 2.4vw, 2.1rem);
         line-height: 1;
         color: var(--beam);
         font-variant-numeric: tabular-nums;
@@ -252,6 +252,12 @@ export default function JobsStyles() {
         color: var(--stext-dim);
         overflow-wrap: anywhere;
       }
+      .showcase .jb-big small.jb-conv {
+        color: var(--beam);
+        opacity: 0.85;
+        margin-top: 0.45rem;
+      }
+      .showcase .jb-big small.jb-conv + small { margin-top: 0.2rem; }
       .showcase .jb-tile .jb-title { font-size: 1rem; margin: 0; }
       .showcase .jb-tile .jb-meta { margin-top: auto; }
       .showcase .jb-tile .jb-btn { align-self: flex-start; }

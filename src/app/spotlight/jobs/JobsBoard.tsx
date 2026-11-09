@@ -84,6 +84,36 @@ function age(posted: string): string {
   return `${d} DAYS AGO`;
 }
 
+/** DevEx pays $0.0038 a Robux, so a dollar is about 263 Robux. One rate
+    both ways, so a Robux job and a dollar job compare on the same scale. */
+const DEVEX = 0.0038;
+
+function compact(n: number): string {
+  if (n >= 10000) return `${Math.round(n / 1000).toLocaleString('en-US')}K`;
+  return Math.round(n).toLocaleString('en-US');
+}
+
+/** The pay in the currency the hirer offered: what they will actually
+    send. A trailing "+" in the post is kept, since it is part of the offer. */
+function native(job: DemoJob): string {
+  const sym = job.unit === 'R$' ? 'R$' : job.unit === 'EUR' ? '€' : '$';
+  const plus = job.lo === job.hi && /\d\s*[kK]?\s*(robux|rbx)?\s*\+(?!\s*\d)/i.test(job.pay) ? '+' : '';
+  return job.lo === job.hi
+    ? `${sym}${compact(job.lo)}${plus}`
+    : `${sym}${compact(job.lo)}–${compact(job.hi)}`;
+}
+
+/** The other currency, at the DevEx rate. */
+function converted(job: DemoJob): string {
+  if (job.unit === 'R$') {
+    return `≈ ${usd(job.usdLo)}${job.usdHi !== job.usdLo ? `–${usd(job.usdHi)}` : ''} AT DEVEX`;
+  }
+  const lo = job.usdLo / DEVEX;
+  const hi = job.usdHi / DEVEX;
+  const eur = job.unit === 'EUR' ? `≈ ${usd(job.usdLo)} · ` : '';
+  return `${eur}≈ R$${compact(lo)}${hi !== lo ? `–${compact(hi)}` : ''} AT DEVEX`;
+}
+
 /** Notes are what the standard record noticed about a post. Price and
     scope problems are the ones a creator most needs before replying. */
 function tone(note: string): string {
@@ -93,8 +123,8 @@ function tone(note: string): string {
 }
 
 /** Layout C: pay is the headline, since it is what a creator opens a
-    job board for. The cashed-out dollar figure leads; what the hirer
-    actually wrote sits under it, so nothing is hidden by the conversion.
+    job board for. The hirer's own currency leads, since not everyone
+    cashes out; the DevEx conversion and the words they wrote sit under it.
     Only notes that change a decision (price, rush, scope) make the tile. */
 function JobTile({ job, live }: { job: DemoJob; live?: Live }) {
   const flags = job.notes.filter((n) => tone(n) !== 'jb-note');
@@ -122,7 +152,8 @@ function JobTile({ job, live }: { job: DemoJob; live?: Live }) {
         </span>
       </div>
       <div className="jb-big">
-        {usd(mid(job))}
+        {native(job)}
+        <small className="jb-conv">{converted(job)}</small>
         <small>{job.pay.toUpperCase()}</small>
       </div>
       <h2 className="jb-title">{job.title}</h2>
@@ -187,7 +218,7 @@ export default function JobsBoard() {
 
       <div className="jb-rail">
         <div className="jb-stat"><b>{DEMO_JOBS.length}</b><span>OPEN JOBS</span></div>
-        <div className="jb-stat"><b>{usd(stats.median)}</b><span>MEDIAN OFFER</span></div>
+        <div className="jb-stat"><b>{usd(stats.median)}</b><span>MEDIAN OFFER, AT DEVEX</span></div>
         <div className="jb-stat"><b>{stats.robux}/{DEMO_JOBS.length}</b><span>PAID IN ROBUX</span></div>
         <div className="jb-stat"><b>{stats.servers}</b><span>SERVERS</span></div>
       </div>
