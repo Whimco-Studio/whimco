@@ -101,13 +101,19 @@ function JobTile({ job, live }: { job: DemoJob; live?: Live }) {
   return (
     <article className="jb-tile">
       <span className="jb-glow" aria-hidden="true" />
-      {live && live.images.length > 0 && (
+      {/* Every tile gets the same slot once images are loaded, so a row
+          lines up whether or not its posts came with a reference. */}
+      {live && (live.images.length > 0 ? (
         <div className="jb-shot">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={live.images[0]} alt={`Reference for ${job.title}`} loading="lazy" referrerPolicy="no-referrer" />
           {live.images.length > 1 && <span className="jb-shot-count">+{live.images.length - 1}</span>}
         </div>
-      )}
+      ) : (
+        <div className="jb-shot jb-shot-empty" aria-hidden="true">
+          <span>{job.role.toUpperCase()}</span>
+        </div>
+      ))}
       <div className="jb-tile-head">
         <span className="jb-role">{job.role}</span>
         <span className={`jb-status${job.status === 'Open' ? ' jb-live' : ''}`}>

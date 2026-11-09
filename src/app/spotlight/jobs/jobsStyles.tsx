@@ -266,6 +266,22 @@ export default function JobsStyles() {
         background: #0f0f16;
       }
       .showcase .jb-shot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+      /* No reference image: the role, set large and faint on a hatch, so
+         the slot reads as intentional rather than broken. */
+      .showcase .jb-shot-empty {
+        display: grid;
+        place-items: center;
+        background:
+          radial-gradient(circle at 70% 20%, rgba(255, 217, 138, 0.08), transparent 60%),
+          repeating-linear-gradient(135deg, #12121a 0 10px, #0f0f16 10px 20px);
+      }
+      .showcase .jb-shot-empty span {
+        font-family: var(--font-display), 'Inter', sans-serif;
+        font-weight: 800;
+        font-size: 1.5rem;
+        letter-spacing: 0.08em;
+        color: rgba(255, 217, 138, 0.16);
+      }
       .showcase .jb-shot-count {
         position: absolute;
         top: 0.6rem;
