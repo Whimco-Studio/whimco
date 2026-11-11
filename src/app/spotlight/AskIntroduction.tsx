@@ -35,7 +35,7 @@ const BUDGET_MAX = 80;
 const OPEN_HASH = '#ask';
 
 /**
- * Ask for an introduction, from the portfolio page.
+ * Say hello 👋 (the introduction ask), from the portfolio page.
  *
  * The same ask the creator card offers in Discord. The creator gets a DM
  * with what the viewer needs and a Blacklight line on them, and decides;
@@ -142,7 +142,7 @@ export default function AskIntroduction({ creator, likes }: {
     return (
       <div className="pf-ask">
         <p className="pf-ask-state">
-          Request sent. Spotlight will DM you if {creator} says yes, and their handle will show here.
+          Hello sent. Spotlight will DM you if {creator} says yes, and their handle will show here.
           <br />
           Not in a Spotlight server? <a href={SUPPORT_INVITE_URL} target="_blank" rel="noopener noreferrer">Join the Support server ↗</a> so Spotlight can reach you.
         </p>
@@ -160,13 +160,13 @@ export default function AskIntroduction({ creator, likes }: {
     <div className="pf-ask">
       {!open && (
         <button type="button" className="pf-ask-btn" onClick={press}>
-          Ask for an introduction
+          Say hello 👋
         </button>
       )}
       {open && (
-        <div className="pf-ask-form" role="group" aria-label={`Ask ${creator} for an introduction`}>
+        <div className="pf-ask-form" role="group" aria-label={`Say hello to ${creator}`}>
           <label>
-            What do you need?
+            What&apos;s it about?
             <textarea
               value={need}
               maxLength={NEED_MAX}
@@ -176,7 +176,7 @@ export default function AskIntroduction({ creator, likes }: {
             />
           </label>
           <label>
-            Budget, if you have one
+            Budget (optional)
             <input
               type="text"
               value={budget}
