@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import VerifiedSeal from './VerifiedSeal';
+import { sendPress } from './arrival';
 import {
   CATEGORY_LABELS, CLAIM_URL, PortfolioLayout, ShowcaseItem, ShowcaseProfile, mediaKind
 } from './constants';
@@ -22,7 +23,7 @@ import {
     broadcast the post. This publishes nothing new either way: the handle is
     already the page title and the byline under every card, and the button
     copies what is on screen. The Discord user id stays out of the payload. */
-export function DiscordHandle({ handle }: { handle: string }) {
+export function DiscordHandle({ handle, creator = '' }: { handle: string; creator?: string }) {
   const [state, setState] = useState<'idle' | 'copied' | 'failed'>('idle');
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -30,6 +31,7 @@ export function DiscordHandle({ handle }: { handle: string }) {
 
   const copy = async () => {
     if (timer.current) clearTimeout(timer.current);
+    sendPress(creator, 'copy');
     try {
       await navigator.clipboard.writeText(handle);
       setState('copied');
@@ -153,8 +155,8 @@ function Counts({ author }: { author: HeaderProps['author'] }) {
 /** The link row, which is also where the Discord handle lives so it reads
     as one more way to reach this person. Renders for a creator with no
     links, and for an unclaimed one who has no profile block at all. */
-function Links({ profile, handle, className }: {
-  profile?: ShowcaseProfile | null; handle: string; className: string;
+function Links({ profile, handle, creator, className }: {
+  profile?: ShowcaseProfile | null; handle: string; creator: string; className: string;
 }) {
   if (!profile?.links.length && !handle) return null;
   return (
@@ -164,7 +166,7 @@ function Links({ profile, handle, className }: {
           {l.label} ↗
         </a>
       ))}
-      {!!handle && <DiscordHandle handle={handle} />}
+      {!!handle && <DiscordHandle handle={handle} creator={creator} />}
     </p>
   );
 }
@@ -230,7 +232,7 @@ function ClassicHead({ name, profile, author, handle, editControl, askControl }:
       </div>
       <Counts author={author} />
       {profile?.bio && <p className="pf-bio">{profile.bio}</p>}
-      <Links profile={profile} handle={handle} className="pf-links" />
+      <Links profile={profile} handle={handle} creator={name} className="pf-links" />
       {askControl}
       {profile?.contact && <p className="pf-contact">{profile.contact}</p>}
       <ClaimCta profile={profile} author={author} />
@@ -251,7 +253,7 @@ function SheetHead({ name, profile, author, handle, disciplines, editControl, as
       <Counts author={author} />
       <Chips disciplines={disciplines} withCounts />
       {profile?.bio && <p className="pf-bio">{profile.bio}</p>}
-      <Links profile={profile} handle={handle} className="pf-links pl-rail-links" />
+      <Links profile={profile} handle={handle} creator={name} className="pf-links pl-rail-links" />
       {askControl}
       {profile?.contact && <p className="pf-contact">{profile.contact}</p>}
       <ClaimCta profile={profile} author={author} />
@@ -288,7 +290,7 @@ function FeatureHead({
         <Counts author={author} />
         <Chips disciplines={disciplines} withCounts />
         {profile?.bio && <p className="pf-bio">{profile.bio}</p>}
-        <Links profile={profile} handle={handle} className="pf-links" />
+        <Links profile={profile} handle={handle} creator={name} className="pf-links" />
         {askControl}
         {profile?.contact && <p className="pf-contact">{profile.contact}</p>}
         <ClaimCta profile={profile} author={author} />
@@ -310,7 +312,7 @@ function CardHead({ name, profile, author, handle, disciplines, editControl, ask
       <Chips disciplines={disciplines} withCounts />
       {profile?.bio && <p className="pf-bio">{profile.bio}</p>}
       <Counts author={author} />
-      <Links profile={profile} handle={handle} className="pf-links pl-card-links" />
+      <Links profile={profile} handle={handle} creator={name} className="pf-links pl-card-links" />
       {askControl}
       {profile?.contact && <p className="pf-contact">{profile.contact}</p>}
       <ClaimCta profile={profile} author={author} />
@@ -333,7 +335,7 @@ function DisciplineHead({ name, profile, author, handle, editControl, askControl
           <Counts author={author} />
           {profile?.bio && <p className="pf-bio">{profile.bio}</p>}
         </div>
-        <Links profile={profile} handle={handle} className="pf-links" />
+        <Links profile={profile} handle={handle} creator={name} className="pf-links" />
         {askControl}
       </div>
       {profile?.contact && <p className="pf-contact">{profile.contact}</p>}
