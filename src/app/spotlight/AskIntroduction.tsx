@@ -5,7 +5,7 @@ import {
   CLAIM_START_URL, INTRODUCE_URL, INTRODUCTIONS_URL, SUPPORT_INVITE_URL,
 } from './constants';
 import { DiscordHandle } from './PortfolioHeader';
-import { readArrival } from './arrival';
+import { readArrival, sendPress } from './arrival';
 import type { Likes } from './useLikes';
 
 /** One ask as the server describes it. "waiting" covers a creator's no
@@ -70,7 +70,10 @@ export default function AskIntroduction({ creator, likes }: {
       // allowed, and clear the hash either way so a reload does not
       // reopen it.
       if (window.location.hash === OPEN_HASH) {
-        if (body.signed_in && body.can_ask) setOpen(true);
+        if (body.signed_in && body.can_ask) {
+          setOpen(true);
+          sendPress(creator, 'hello', 'signin');
+        }
         window.history.replaceState(null, '', window.location.pathname + window.location.search);
       }
     } catch {
@@ -86,6 +89,7 @@ export default function AskIntroduction({ creator, likes }: {
 
   const press = () => {
     if (!likes.ready) return;
+    sendPress(creator, 'hello');
     if (!likes.signedIn) {
       const here = window.location.href.split('#')[0] + OPEN_HASH;
       window.location.href = `${CLAIM_START_URL}?next=${encodeURIComponent(here)}`;
@@ -133,7 +137,7 @@ export default function AskIntroduction({ creator, likes }: {
       <div className="pf-ask">
         <p className="pf-ask-state">
           {creator} said yes. Message them on Discord:{' '}
-          <DiscordHandle handle={request.handle || creator} />
+          <DiscordHandle handle={request.handle || creator} creator={creator} />
         </p>
       </div>
     );

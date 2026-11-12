@@ -384,6 +384,8 @@ export const INTRODUCTIONS_URL = `${SPOTLIGHT_ORIGIN}/api/showcase/introductions
 export const INTRODUCE_URL = `${SPOTLIGHT_ORIGIN}/api/showcase/introduce`;
 /** One beacon per portfolio page load. See arrival.ts. */
 export const VIEW_URL = `${SPOTLIGHT_ORIGIN}/api/showcase/view`;
+/** A Say hello press or a handle copy on a portfolio page. See arrival.ts. */
+export const PRESS_URL = `${SPOTLIGHT_ORIGIN}/api/showcase/press`;
 
 /** Everything whimco.com's sitemap.xml lists from Spotlight, in one
     response: each creator once, with their creation ids and dates. */

@@ -12,7 +12,7 @@
     "Ask for an introduction" goes out through Discord sign-in and comes
     back with discord.com as the referrer. The ask reports the referrer
     of the visit that started it, not the bounce. */
-import { VIEW_URL } from './constants';
+import { PRESS_URL, VIEW_URL } from './constants';
 
 export type Arrival = { referrer: string; source: string; campaign: string; at: number };
 
@@ -73,4 +73,23 @@ export function recordArrival(creator: string): Arrival {
     }).catch(() => {});
   } catch { /* counting a view must never cost the page */ }
   return arrival;
+}
+
+/** One press on the page: "hello" for Say hello, "copy" for the Discord
+    handle chip, with step "signin" when the form reopens after sign-in.
+    Sent as text/plain so it needs no preflight: a signed-out Say hello
+    navigates to sign-in at once, and a preflighted keepalive request can
+    be lost on the way out. The server keeps the creator, the kind and,
+    if signed in, who pressed. Counting must never cost the page. */
+export function sendPress(creator: string, kind: 'hello' | 'copy', step: '' | 'signin' = ''): void {
+  if (!creator) return;
+  try {
+    fetch(PRESS_URL, {
+      method: 'POST',
+      credentials: 'include',
+      keepalive: true,
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ creator, kind, step }),
+    }).catch(() => {});
+  } catch { /* never block the press */ }
 }
