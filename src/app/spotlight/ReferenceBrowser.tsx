@@ -62,8 +62,10 @@ export default function ReferenceBrowser({ index, data, slug, style }: Props) {
   }, [more, autoLoads, loadNext]);
 
   const q = query.trim().toLowerCase();
+  // Matches a subject's other names too, so "mecha" finds Mech.
   const subjects = (index?.subjects ?? []).filter((t) => !q || t.label.toLowerCase().startsWith(q)
-    || t.slug.startsWith(q.replace(/\s+/g, '-')));
+    || t.slug.startsWith(q.replace(/\s+/g, '-'))
+    || (t.aliases ?? []).some((a) => a.startsWith(q)));
   const label = data?.tag.label ?? '';
   const isAll = slug === 'all';
 
