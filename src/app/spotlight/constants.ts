@@ -524,7 +524,9 @@ export const REFERENCES_INDEXABLE = false;
     fewer is a thin page (Product-Led SEO, crawl budget). */
 export const REFERENCE_MIN_INDEX = 6;
 
-export type ReferenceTag = { slug: string; label: string; count: number };
+/** aliases: other words searchers use for the same subject ("mecha" for
+    Mech). Optional so an older API still parses. */
+export type ReferenceTag = { slug: string; label: string; count: number; aliases?: string[] };
 export type ReferenceIndex = { subjects: ReferenceTag[]; styles: ReferenceTag[] };
 export type ReferencePage = {
   tag: { slug: string; label: string; kind: string; count: number };
