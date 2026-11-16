@@ -31,6 +31,10 @@ export type ShowcaseMedia = {
       the file path. Optional so a cached response from before the field
       existed still parses; mediaKind() fills the gap. */
   kind?: string;
+  /** Pixel size when the backend knows it, so a masonry tile can reserve
+      its shape before the image loads. */
+  w?: number;
+  h?: number;
 };
 
 export type MediaKind = 'image' | 'video' | 'audio' | 'other';
@@ -399,6 +403,9 @@ export type SitemapData = {
         an API from before it existed still parses; absent means indexable. */
     items: [number, string, boolean?][];
   }[];
+  /** [subject slug, confirmed creations], only subjects with enough work
+      to be worth a page. Optional so an older API still parses. */
+  references?: [string, number][];
 };
 
 /** A portfolio is offered to search engines when there is enough on it to
@@ -498,5 +505,90 @@ export async function fetchShowcaseItem(
     return data.item ?? null;
   } catch {
     return null;
+  }
+}
+
+
+/* ---------------------------------------------------------------------
+   Reference library (2026-11-16): creations tagged by subject and style,
+   confirmed by a curator, browsed as a masonry grid. Only confirmed tags
+   ever reach these endpoints.
+   --------------------------------------------------------------------- */
+
+export const REFERENCES_API_URL = `${SPOTLIGHT_ORIGIN}/api/showcase/references`;
+
+/** Off until Trendon turns search indexing on for the library. While
+    false every reference page is noindex and none is in the sitemap. */
+export const REFERENCES_INDEXABLE = false;
+/** A subject page is a search result only with this many creations;
+    fewer is a thin page (Product-Led SEO, crawl budget). */
+export const REFERENCE_MIN_INDEX = 6;
+
+export type ReferenceTag = { slug: string; label: string; count: number };
+export type ReferenceIndex = { subjects: ReferenceTag[]; styles: ReferenceTag[] };
+export type ReferencePage = {
+  tag: { slug: string; label: string; kind: string; count: number };
+  items: ShowcaseItem[];
+  page: number;
+  pages: number;
+  related: { slug: string; label: string }[];
+};
+
+/** The address of a subject page; 'all' is the index. Style is a filter,
+    so it rides as a query parameter and never gets its own canonical. */
+export function referencePath(slug: string, style = ''): string {
+  const base = slug === 'all' ? '/spotlight/references' : `/spotlight/references/${encodeURIComponent(slug)}`;
+  return style ? `${base}?style=${encodeURIComponent(style)}` : base;
+}
+
+/** A slug or style straight from a URL, narrowed before it reaches a fetch. */
+export function cleanSlug(raw: string | string[] | undefined): string {
+  const v = (Array.isArray(raw) ? raw[0] : raw) ?? '';
+  return /^[a-z0-9-]{1,48}$/.test(v) ? v : '';
+}
+
+export async function fetchReferenceIndex(): Promise<ReferenceIndex | null> {
+  try {
+    const res = await fetch(REFERENCES_API_URL, { next: { revalidate: 300 } });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+/** One page of a subject. 'missing' is the backend's 404 (unknown or
+    unapproved slug or style), kept apart from null, which is Spotlight
+    being unreachable, so the page 404s only when it should. */
+export async function fetchReferencePage(
+  slug: string, style = '', page = 1,
+): Promise<ReferencePage | 'missing' | null> {
+  const q = new URLSearchParams();
+  if (style) q.set('style', style);
+  if (page > 1) q.set('page', String(page));
+  try {
+    const res = await fetch(`${REFERENCES_API_URL}/${encodeURIComponent(slug)}?${q}`, {
+      next: { revalidate: 300 },
+    });
+    if (res.status === 404) return 'missing';
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+/** Creations sharing confirmed tags with one creation, from the same
+    response the permalink already fetches (Next dedupes the request). */
+export async function fetchMoreLikeThis(id: number, revalidate = 300): Promise<ShowcaseItem[]> {
+  try {
+    const res = await fetch(`${ITEM_URL}?id=${encodeURIComponent(String(id))}`, {
+      next: { revalidate },
+    });
+    if (!res.ok) return [];
+    const data: { more_like_this?: ShowcaseItem[] } = await res.json();
+    return data.more_like_this ?? [];
+  } catch {
+    return [];
   }
 }
