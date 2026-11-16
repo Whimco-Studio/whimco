@@ -85,6 +85,8 @@ export default async function MoreFromNetwork({ currentId }: { currentId: number
         </>
       )}
       <a className="all" href="/spotlight/creators">Browse every creator →</a>
+      {' '}
+      <a className="all" href="/spotlight/references">Browse references by subject →</a>
     </nav>
   );
 }

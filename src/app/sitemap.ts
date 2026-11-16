@@ -1,7 +1,8 @@
 import type { MetadataRoute } from 'next';
 import {
   CATEGORY_LABELS, SITE_ORIGIN, SITEMAP_API_URL, SitemapData,
-  isIndexablePortfolio, portfolioPath, postPath,
+  REFERENCES_INDEXABLE, REFERENCE_MIN_INDEX, isIndexablePortfolio, portfolioPath, postPath,
+  referencePath,
 } from './spotlight/constants';
 
 /** Rebuilt at most hourly. The API side is cached for the same hour per
@@ -49,6 +50,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const data = await getSitemapData();
   // Spotlight down: serve the static part rather than an empty sitemap.
   if (!data) return pages;
+
+  // Reference subject pages, only once indexing is turned on and only
+  // the ones with enough work to be a result. The page's robots tag reads
+  // the same two conditions, so the two always agree.
+  if (REFERENCES_INDEXABLE) {
+    pages.push({ url: `${SITE_ORIGIN}/spotlight/references`, priority: 0.7 });
+    for (const [slug, count] of data.references ?? []) {
+      if (count < REFERENCE_MIN_INDEX) continue;
+      pages.push({ url: `${SITE_ORIGIN}${referencePath(slug)}`, priority: 0.6 });
+    }
+  }
 
   // Only portfolios the page itself lets search engines index, and only
   // their creations. Listing a noindexed URL here would send the crawler

@@ -231,6 +231,9 @@ export default function GalleryBrowser({
             'The gallery is momentarily offline, check back shortly.'
           )}
         </p>
+        <p className="br-deep">
+          <a href="/spotlight/references">Looking for a reference? Browse by subject →</a>
+        </p>
       </header>
 
       <section
