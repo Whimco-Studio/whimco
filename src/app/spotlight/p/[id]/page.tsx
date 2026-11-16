@@ -9,6 +9,7 @@ import {
   playableVideo, postPath, postVideoPath, twimgVideoSize,
 } from '../../constants';
 import MoreFromNetwork from '../../MoreFromNetwork';
+import MoreLikeThis from '../../MoreLikeThis';
 
 export const revalidate = 300;
 
@@ -182,6 +183,7 @@ export default async function PostPage({ params }: { params: { id: string } }) {
     >
       <GlassNav />
       <PostPermalink item={item} />
+      <MoreLikeThis id={item.id} />
       <MoreFromNetwork currentId={item.id} />
     </div>
   );
