@@ -339,6 +339,23 @@ export default function FeedStyles() {
       }
       .feedpage .permalink-foot { margin-top: 0.9rem; }
       .feedpage .permalink-share { margin-left: auto; }
+      .feedpage .permalink-staff {
+        text-align: center;
+        font-size: 0.82rem;
+        color: #9ba0b4;
+        margin: 1rem 0 0;
+      }
+      .feedpage .permalink-staff-btn {
+        background: none;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 999px;
+        color: #9ba0b4;
+        font: inherit;
+        padding: 0.35rem 0.9rem;
+        cursor: pointer;
+      }
+      .feedpage .permalink-staff-btn:hover { color: #f4f5fa; border-color: rgba(255, 255, 255, 0.3); }
+      .feedpage .permalink-staff-armed { color: #ed4245; border-color: #ed4245; }
       .feedpage .note a { color: var(--beam); text-decoration: none; }
       .feedpage .note a:hover { text-decoration: underline; }
 

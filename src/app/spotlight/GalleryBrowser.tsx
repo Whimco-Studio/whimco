@@ -466,6 +466,9 @@ export default function GalleryBrowser({
 
         <GalleryGrid
           variant={variant}
+          // Your own removal or a curator's: the tile goes at once rather
+          // than lingering until the five-minute cache turns over.
+          onRemoved={(id) => setItems((prev) => prev.filter((it) => it.id !== id))}
           // Only the pins layout reads this, for its skeleton tiles; the
           // cards keep their own control below and never see it.
           loading={variant === 'pins' && loading}
