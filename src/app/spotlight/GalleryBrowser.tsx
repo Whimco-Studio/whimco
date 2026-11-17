@@ -25,22 +25,24 @@ const AUTO_LOADS = 4;
 /** One place that builds a link to this page, so the continue control,
     the crawler's route and the "start from the newest" escape can never
     disagree about what a view is called. */
-function viewHref(category: string, sort: SortMode, page = 1): string {
+function viewHref(category: string, sort: SortMode, page = 1, query = ''): string {
   const p = new URLSearchParams();
   if (page > 1) p.set('page', String(page));
   if (category) p.set('category', category);
   if (sort !== 'new') p.set('sort', sort);
+  if (query) p.set('q', query);
   const q = p.toString();
   return q ? `/spotlight/gallery?${q}` : '/spotlight/gallery';
 }
 
 export default function GalleryBrowser({
-  initialData, initialPage, initialCategory, initialSort,
+  initialData, initialPage, initialCategory, initialSort, initialQuery = '',
 }: {
   initialData: ShowcaseData | null;
   initialPage: number;
   initialCategory: string;
   initialSort: SortMode;
+  initialQuery?: string;
 }) {
   const [items, setItems] = useState<ShowcaseItem[]>(initialData?.items ?? []);
   const [page, setPage] = useState(initialData?.page ?? initialPage);
@@ -48,6 +50,11 @@ export default function GalleryBrowser({
   const [total, setTotal] = useState(initialData?.total ?? 0);
   const [category, setCategory] = useState(initialCategory);
   const [sort, setSort] = useState<SortMode>(initialSort);
+  // What the box shows, and the query the grid was last fetched for. Two
+  // values because typing is debounced: the box updates on every key, the
+  // grid only once the reader pauses.
+  const [draft, setDraft] = useState(initialQuery);
+  const [query, setQuery] = useState(initialQuery);
   const [loading, setLoading] = useState(false);
   const [autoLoads, setAutoLoads] = useState(0);
   // Whether this visit began partway into the set. State, not a read of
@@ -70,8 +77,8 @@ export default function GalleryBrowser({
   // read whatever is current when it fires, not what was current when it
   // was registered. Assigned during render rather than in an effect: an
   // effect runs after paint, and the sentinel can be crossed before that.
-  const stateRef = useRef({ page, pages, category, sort, autoLoads });
-  stateRef.current = { page, pages, category, sort, autoLoads };
+  const stateRef = useRef({ page, pages, category, sort, query, autoLoads });
+  stateRef.current = { page, pages, category, sort, query, autoLoads };
 
   // Counts requests the reader can see, so a scroll cannot start an
   // append while one is already out. A counter rather than a boolean
@@ -88,7 +95,7 @@ export default function GalleryBrowser({
   const fetchGen = useRef(0);
 
   const fetchPage = useCallback(async (
-    next: number, cat: string, mode: SortMode, append: boolean, silent = false,
+    next: number, cat: string, mode: SortMode, q: string, append: boolean, silent = false,
   ): Promise<'applied' | 'superseded' | 'failed'> => {
     const gen = ++fetchGen.current;
     if (!silent) {
@@ -101,6 +108,7 @@ export default function GalleryBrowser({
       // Only sent when it is not the default, so the common request keeps
       // one cache key on the API side rather than splitting it in two.
       if (mode !== 'new') params.set('sort', mode);
+      if (q) params.set('q', q);
       const res = await fetch(`${SHOWCASE_API_URL}?${params}`);
       if (!res.ok) throw new Error(`gallery fetch ${res.status}`);
       const data: ShowcaseData = await res.json();
@@ -139,25 +147,37 @@ export default function GalleryBrowser({
       nothing above it, which reads as a fault. ?page= is still honoured
       on arrival, for the crawler walk at the foot of the page and for
       anyone who builds one by hand. */
-  const reset = useCallback((cat: string, mode: SortMode) => {
+  const reset = useCallback((cat: string, mode: SortMode, q: string) => {
     setCategory(cat);
     setSort(mode);
+    setQuery(q);
     setAutoLoads(0);
     setDeepEntry(false);
-    window.history.replaceState(null, '', viewHref(cat, mode));
+    window.history.replaceState(null, '', viewHref(cat, mode, 1, q));
     // The reader may be hundreds of cards down. Leaving them there after
     // the grid under them was replaced drops them at an arbitrary point
     // in a set whose beginning they have not seen.
     headRef.current?.scrollIntoView({ block: 'start' });
-    fetchPage(1, cat, mode, false);
+    fetchPage(1, cat, mode, q, false);
   }, [fetchPage]);
+
+  // Search as the reader types, once they pause for a moment.
+  useEffect(() => {
+    const q = draft.trim().replace(/\s+/g, ' ').slice(0, 64);
+    if (q === stateRef.current.query) return;
+    const t = window.setTimeout(() => {
+      const s = stateRef.current;
+      reset(s.category, s.sort, q);
+    }, 300);
+    return () => window.clearTimeout(t);
+  }, [draft, reset]);
 
   const loadNext = useCallback((auto: boolean) => {
     const s = stateRef.current;
     if (inflight.current > 0 || s.page >= s.pages) return;
     // A deliberate click buys a fresh allowance; scrolling spends it.
     setAutoLoads(auto ? s.autoLoads + 1 : 0);
-    fetchPage(s.page + 1, s.category, s.sort, true);
+    fetchPage(s.page + 1, s.category, s.sort, s.query, true);
   }, [fetchPage]);
 
   // Auto-load while the allowance lasts. rootMargin trips this before the
@@ -193,7 +213,7 @@ export default function GalleryBrowser({
     let cancelled = false;
     const attempt = async () => {
       const s = stateRef.current;
-      const outcome = await fetchPage(1, s.category, s.sort, false, true);
+      const outcome = await fetchPage(1, s.category, s.sort, s.query, false, true);
       if (!cancelled && outcome === 'superseded') attempt();
     };
     attempt();
@@ -241,13 +261,25 @@ export default function GalleryBrowser({
         aria-label="Creations broadcast by Spotlight"
         aria-busy={loading}
       >
+        <form className="br-search" role="search" onSubmit={(e) => e.preventDefault()}>
+          <input
+            type="search"
+            className="br-search-input"
+            placeholder="Search creations: a subject, a style, a creator"
+            aria-label="Search creations"
+            value={draft}
+            maxLength={64}
+            onChange={(e) => setDraft(e.target.value)}
+          />
+        </form>
+
         <div className="sort-tabs" role="tablist" aria-label="Sort creations">
           <button
             type="button"
             role="tab"
             className={`sort-tab ${sort === 'new' ? 'sort-tab-on' : ''}`}
             aria-selected={sort === 'new'}
-            onClick={() => reset(category, 'new')}
+            onClick={() => reset(category, 'new', query)}
           >
             New
           </button>
@@ -256,7 +288,7 @@ export default function GalleryBrowser({
             role="tab"
             className={`sort-tab ${sort === 'top' ? 'sort-tab-on' : ''}`}
             aria-selected={sort === 'top'}
-            onClick={() => reset(category, 'top')}
+            onClick={() => reset(category, 'top', query)}
           >
             Top this week
           </button>
@@ -268,7 +300,7 @@ export default function GalleryBrowser({
               type="button"
               className={`chip ${category === '' ? 'chip-on' : ''}`}
               aria-pressed={category === ''}
-              onClick={() => reset('', sort)}
+              onClick={() => reset('', sort, query)}
             >
               All
             </button>
@@ -278,7 +310,7 @@ export default function GalleryBrowser({
                 type="button"
                 className={`chip ${category === c.category ? 'chip-on' : ''}`}
                 aria-pressed={category === c.category}
-                onClick={() => reset(c.category, sort)}
+                onClick={() => reset(c.category, sort, query)}
               >
                 {CATEGORY_LABELS[c.category] ?? c.category}
                 {' '}
@@ -295,7 +327,7 @@ export default function GalleryBrowser({
           <p className="br-deep">
             Opened at page {initialPage}.
             {' '}
-            <a href={viewHref(category, sort)}>Start from the newest</a>
+            <a href={viewHref(category, sort, 1, query)}>Start from the newest</a>
           </p>
         )}
 
@@ -304,7 +336,9 @@ export default function GalleryBrowser({
           likes={likes}
           showAuthor
           deep
-          emptyText={initialData
+          emptyText={query
+            ? `Nothing matches “${query}” yet.`
+            : initialData
             ? 'Nothing here yet — creations appear the moment they’re broadcast.'
             : 'The gallery is momentarily offline. The network is still broadcasting — check back shortly.'}
         />
@@ -324,7 +358,7 @@ export default function GalleryBrowser({
                 is the arrangement that quietly goes stale. */}
             <a
               className="cta-ghost more-btn br-more"
-              href={viewHref(category, sort, page + 1)}
+              href={viewHref(category, sort, page + 1, query)}
               aria-disabled={loading}
               onClick={(e) => { e.preventDefault(); loadNext(false); }}
             >

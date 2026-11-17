@@ -10,7 +10,7 @@ export const revalidate = 300;
 
 type RawParams = { [key: string]: string | string[] | undefined };
 
-type View = { page: number; category: string; sort: SortMode };
+type View = { page: number; category: string; sort: SortMode; q: string };
 
 /** Reading a search param is reading attacker-controlled text, and these
     three reach a fetch URL, a page title and a canonical tag. Narrowed
@@ -26,6 +26,9 @@ function readView(raw: RawParams): View {
     page: Number.isFinite(n) && n > 1 ? Math.min(n, 999) : 1,
     category: CATEGORY_LABELS[category] ? category : '',
     sort: first(raw.sort) === 'top' ? 'top' : 'new',
+    // Free text, so only trimmed and bounded; it goes to the API as a
+    // query parameter and into nothing the page renders as markup.
+    q: (first(raw.q) ?? '').trim().replace(/\s+/g, ' ').slice(0, 64),
   };
 }
 
@@ -34,7 +37,7 @@ function readView(raw: RawParams): View {
     the browser for the controls; they are checked against each other by
     the fact that a mismatch would show up as a canonical pointing at a
     different view than the one rendered. */
-function viewPath({ page, category, sort }: View): string {
+function viewPath({ page, category, sort }: Pick<View, 'page' | 'category' | 'sort'>): string {
   const p = new URLSearchParams();
   if (page > 1) p.set('page', String(page));
   if (category) p.set('category', category);
@@ -47,6 +50,7 @@ async function getShowcase(view: View): Promise<ShowcaseData | null> {
   const params = new URLSearchParams({ page: String(view.page) });
   if (view.category) params.set('category', view.category);
   if (view.sort !== 'new') params.set('sort', view.sort);
+  if (view.q) params.set('q', view.q);
   try {
     const res = await fetch(`${SHOWCASE_API_URL}?${params}`, {
       next: { revalidate: 300 },
@@ -82,7 +86,10 @@ export async function generateMetadata(
     // Paginated views self-canonicalise rather than all pointing at page
     // one: they hold different creations, and collapsing them would tell
     // a crawler that everything past the first 24 is a duplicate.
+    // A search result points back at the plain view and stays out of the
+    // index: every typed query would otherwise be its own thin page.
     alternates: { canonical: viewPath(view) },
+    ...(view.q ? { robots: { index: false, follow: true } } : {}),
     // video.twimg.com 403s any request carrying a foreign Referer, so this
     // page must send none for inline X video playback to work, the same as
     // the showcase.
@@ -112,6 +119,7 @@ export default async function GalleryPage(
         initialPage={view.page}
         initialCategory={view.category}
         initialSort={view.sort}
+        initialQuery={view.q}
       />
     </div>
   );
