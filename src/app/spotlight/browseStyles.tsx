@@ -36,6 +36,13 @@ export default function BrowseStyles() {
          controls rather than opening its own gap above them. */
       .showcase .br-section { padding-top: 0.4rem; }
 
+      .showcase .br-search { display: flex; justify-content: center; margin: 0 0 1rem; }
+      .showcase .br-search-input {
+        width: min(32rem, 100%); background: #14141f; border: 1px solid #2a2a3d; color: #f4f5fa;
+        border-radius: 999px; padding: 0.7rem 1.1rem; font-size: 0.95rem;
+      }
+      .showcase .br-search-input:focus { outline: none; border-color: var(--beam); }
+
       .showcase .br-deep {
         font-family: var(--font-mono), monospace;
         font-size: 0.72rem;
