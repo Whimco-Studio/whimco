@@ -486,7 +486,13 @@ export default function GalleryBrowser({
         {/* Above the control on purpose: it trips while the control is
             still off screen, so during the allowance the reader never has
             to look at a button they are not being asked to press. */}
-        {more && <div ref={sentinelRef} className="br-sentinel" aria-hidden />}
+        {/* Always mounted, even when this view has no more pages. The
+            observer above attaches once, to this node; unmounting it
+            when a search or tab ran out (more false) and mounting a new
+            one on the next tab left the observer watching a detached
+            node, so no tab after that loaded past its first page.
+            loadNext already refuses once page reaches pages. */}
+        <div ref={sentinelRef} className="br-sentinel" aria-hidden />
 
         {/* Always rendered, endless or not: it is the real link a crawler
             walks the gallery by. On the wall the sentinel above trips
