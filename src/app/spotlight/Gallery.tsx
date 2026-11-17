@@ -89,7 +89,12 @@ function RemoveButton({
 
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
 
-  if (!likes?.isMine(item.id)) return null;
+  const mine = !!likes?.isMine(item.id);
+  // A curator gets the same control on everyone's work. Their own path:
+  // a staff hide, not the author's remove, so the author's drawer never
+  // offers to restore something staff took down.
+  const staff = !mine && !!likes?.isCurator;
+  if (!likes || (!mine && !staff)) return null;
 
   const disarm = () => {
     if (timer.current) clearTimeout(timer.current);
@@ -107,7 +112,7 @@ function RemoveButton({
     }
     disarm();
     setBusy(true);
-    const ok = await likes.setRemoved(item, true);
+    const ok = staff ? await likes.hide(item.id, true) : await likes.setRemoved(item, true);
     setBusy(false);
     if (ok) onRemoved?.(item.id); else setFailed(true);
   };
@@ -123,6 +128,8 @@ function RemoveButton({
         disabled={busy}
         title={armed
           ? 'Press again to take this off whimco.com'
+          : staff
+          ? 'Staff: remove this from whimco.com. Copies already shared in Discord stay.'
           : 'Remove this from whimco.com. Copies already shared in Discord stay.'}
       >
         {armed ? 'Remove?' : '✕'}

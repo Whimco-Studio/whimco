@@ -4,7 +4,7 @@ import {
   useCallback, useEffect, useRef, useState,
 } from 'react';
 import {
-  CLAIM_START_URL, LIKE_URL, ME_URL, RECATEGORIZE_URL, REMOVE_URL, ShowcaseItem,
+  CLAIM_START_URL, HIDE_URL, LIKE_URL, ME_URL, RECATEGORIZE_URL, REMOVE_URL, ShowcaseItem,
 } from './constants';
 
 export type Likes = {
@@ -30,6 +30,9 @@ export type Likes = {
   /** Take one of your own creations off whimco.com, or put it back.
       Gallery only: the Discord copies stay live. */
   setRemoved: (item: ShowcaseItem, removed: boolean) => Promise<boolean>;
+  /** Curator only: take anyone's creation off whimco.com, or put it back.
+      Also gallery only; the Discord copies stay. */
+  hide: (itemId: number, hidden: boolean) => Promise<boolean>;
 };
 
 /** Viewer state for the gallery: heart state, and whether this visitor
@@ -195,6 +198,20 @@ export default function useLikes(): Likes {
     [categories],
   );
 
+  const hide = useCallback(async (itemId: number, hidden: boolean) => {
+    try {
+      const r = await fetch(HIDE_URL, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ item_id: itemId, hidden }),
+      });
+      return r.ok;
+    } catch {
+      return false;
+    }
+  }, []);
+
   return {
     ready,
     signedIn,
@@ -211,5 +228,6 @@ export default function useLikes(): Likes {
     recategorize,
     isMine: useCallback((id: number) => own.has(id), [own]),
     setRemoved,
+    hide,
   };
 }

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import FeedStyles from './feedStyles';
 import ShareButton from './ShareButton';
+import useLikes from './useLikes';
 import VerifiedSeal from './VerifiedSeal';
 import AudioTile from './AudioTile';
 import {
@@ -40,6 +41,45 @@ function Media({ item }: { item: ShowcaseMedia }) {
     here means someone followed a link to this creation specifically, so
     the media gets the room and the surrounding timeline is a link rather
     than a column to scroll. */
+/** Curator only: take this post off whimco.com from its own page, with an
+    undo, since the page itself is where a bad post is usually found.
+    Nothing for anyone else. The Discord copies stay either way. */
+function StaffRemove({ id }: { id: number }) {
+  const likes = useLikes();
+  const [state, setState] = useState<'idle' | 'armed' | 'busy' | 'gone' | 'failed'>('idle');
+  if (!likes.isCurator) return null;
+
+  const act = async (hidden: boolean) => {
+    setState('busy');
+    const ok = await likes.hide(id, hidden);
+    setState(ok ? (hidden ? 'gone' : 'idle') : 'failed');
+  };
+
+  if (state === 'gone') {
+    return (
+      <p className="permalink-staff" role="status">
+        Removed from whimco.com. It disappears from the gallery within a few minutes.
+        {' '}
+        <button type="button" className="permalink-staff-btn" onClick={() => act(false)}>Undo</button>
+      </p>
+    );
+  }
+  return (
+    <p className="permalink-staff">
+      <button
+        type="button"
+        className={`permalink-staff-btn ${state === 'armed' ? 'permalink-staff-armed' : ''}`}
+        disabled={state === 'busy'}
+        onBlur={() => { if (state === 'armed') setState('idle'); }}
+        onClick={() => (state === 'armed' ? act(true) : setState('armed'))}
+      >
+        {state === 'armed' ? 'Press again to remove' : 'Remove from gallery (staff)'}
+      </button>
+      {state === 'failed' && <span role="alert"> Not removed, try again.</span>}
+    </p>
+  );
+}
+
 export default function PostPermalink({ item }: { item: ShowcaseItem }) {
   const caption = cleanCaption(item.content || '');
   const x = xLink(item.content || '');
@@ -85,6 +125,8 @@ export default function PostPermalink({ item }: { item: ShowcaseItem }) {
             <ShareButton id={item.id} authorName={item.author_name} className="permalink-share" />
           </div>
         </article>
+
+        <StaffRemove id={item.id} />
 
         <p className="note">
           <a href={`/spotlight/feed?post=${item.id}`}>See it in the feed</a>

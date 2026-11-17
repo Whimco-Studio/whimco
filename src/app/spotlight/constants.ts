@@ -379,6 +379,8 @@ export const CLAIM_START_URL = `${SPOTLIGHT_ORIGIN}/claim/start`;
     Origin-gated, like the like and remove endpoints beside it. */
 export const APPEARANCE_URL = `${SPOTLIGHT_ORIGIN}/api/showcase/appearance`;
 export const RECATEGORIZE_URL = `${SPOTLIGHT_ORIGIN}/api/showcase/recategorize`;
+/** Curator only: take any creation off whimco.com, or put it back. */
+export const HIDE_URL = `${SPOTLIGHT_ORIGIN}/api/showcase/hide`;
 /** A creator taking their own work off whimco.com, and their drawer of
     what they have taken off. Gallery only: the Discord copies already
     broadcast to member servers stay where they are. */
