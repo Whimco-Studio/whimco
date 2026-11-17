@@ -247,7 +247,7 @@ export default function GalleryBrowser({
           <div ref={headRef} />
           <div className="pn-bar">
             <a className="pn-home" href="/spotlight" aria-label="Spotlight home">
-              <img src="/spotlight-logo.png" alt="" width={28} height={28} />
+              <img src="/spotlight-logo.png" alt="" width={84} height={30} />
             </a>
             <form className="pn-search" role="search" onSubmit={(e) => e.preventDefault()}>
               <span className="pn-search-icon" aria-hidden>⌕</span>

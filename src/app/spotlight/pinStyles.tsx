@@ -18,8 +18,11 @@ export default function PinStyles() {
         backdrop-filter: blur(14px);
         -webkit-backdrop-filter: blur(14px);
       }
-      .showcase .pn-home { display: flex; flex-shrink: 0; border-radius: 999px; }
-      .showcase .pn-home img { display: block; border-radius: 999px; }
+      /* The wordmark is about 2.8 to 1; drawn at its own shape, never
+         squeezed into a square. */
+      .showcase .pn-home { display: flex; flex-shrink: 0; padding: 0.25rem; border-radius: 8px; }
+      .showcase .pn-home:focus-visible { outline: 2px solid var(--beam); }
+      .showcase .pn-home img { display: block; height: 30px; width: auto; }
       .showcase .pn-search {
         position: relative;
         flex: 1;
@@ -167,7 +170,8 @@ export default function PinStyles() {
       .showcase .pn-section .br-deep { text-align: center; }
 
       @media (max-width: 640px) {
-        .showcase .pn-bar { padding: 0.6rem 0.75rem; }
+        .showcase .pn-bar { padding: 0.6rem 0.75rem; gap: 0.6rem; }
+        .showcase .pn-home img { height: 24px; }
         .showcase .pn-cats { padding: 0.2rem 0.5rem 0.8rem; }
         .showcase .pn-section { padding: 0 0.5rem 4rem; }
         .showcase .masonry-pins { gap: 0.6rem; }

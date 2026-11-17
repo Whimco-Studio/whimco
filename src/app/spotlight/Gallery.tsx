@@ -300,6 +300,91 @@ function PinCard({
   );
 }
 
+/** Height over width for each tile in the pins layout, learned before the
+    tile is placed. The API rarely knows a size, so images (and video
+    posters) are fetched off-screen just to read their dimensions; the
+    browser cache means the real <img> then costs nothing extra. Anything
+    still unknown after a couple of seconds is treated as square, so one
+    slow or dead URL cannot hold the rest of the wall back. */
+function usePinRatios(items: ShowcaseItem[], on: boolean) {
+  const [ratios, setRatios] = useState<Map<number, number>>(() => new Map());
+  const asked = useRef(new Set<number>());
+
+  useEffect(() => {
+    if (!on) return;
+    const learned = new Map<number, number>();
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const flush = () => {
+      timer = null;
+      if (learned.size === 0) return;
+      const batch = new Map(learned);
+      learned.clear();
+      setRatios((prev) => {
+        const next = new Map(prev);
+        batch.forEach((r, id) => next.set(id, r));
+        return next;
+      });
+    };
+    // Batched, so 24 images arriving in a burst cost one re-layout, not 24.
+    const learn = (id: number, r: number) => {
+      learned.set(id, Number.isFinite(r) && r > 0 ? Math.min(Math.max(r, 0.4), 2.6) : 1);
+      if (!timer) timer = setTimeout(flush, 60);
+    };
+    for (const item of items) {
+      if (asked.current.has(item.id)) continue;
+      asked.current.add(item.id);
+      const m = item.media[0];
+      if (!m) { learn(item.id, 0.75); continue; } // caption-only text tile
+      if (m.w && m.h) { learn(item.id, m.h / m.w); continue; }
+      const kind = mediaKind(m);
+      if (kind === 'audio') { learn(item.id, 9 / 16); continue; }
+      const src = kind === 'image' ? m.url : (kind === 'video' ? m.thumbnail : undefined);
+      if (!src) { learn(item.id, 9 / 16); continue; }
+      const img = new Image();
+      img.referrerPolicy = 'no-referrer';
+      const give = setTimeout(() => learn(item.id, 1), 2500);
+      img.onload = () => { clearTimeout(give); learn(item.id, img.naturalHeight / img.naturalWidth); };
+      img.onerror = () => { clearTimeout(give); learn(item.id, 1); };
+      img.src = src;
+    }
+    return () => { if (timer) { clearTimeout(timer); flush(); } };
+  }, [items, on]);
+
+  return ratios;
+}
+
+/** Pinterest's placement: each tile, in order, goes to whichever column
+    is currently shortest. A tile is placed once and then stays put, so
+    nothing already on screen jumps when a later image reports its size;
+    the walk stops at the first tile whose size is not known yet, which
+    keeps the order close to the feed's. Starts over only when the
+    column count changes or the set is replaced. */
+function usePinColumns(items: ShowcaseItem[], cols: number, ratios: Map<number, number>) {
+  const placed = useRef<{ cols: number; at: Map<number, number>; heights: number[]; order: number[][] }>(
+    { cols: 0, at: new Map(), heights: [], order: [] },
+  );
+  const p = placed.current;
+  const ids = new Set(items.map((i) => i.id));
+  const replaced = p.at.size > 0 && Array.from(p.at.keys()).some((id) => !ids.has(id));
+  if (p.cols !== cols || replaced) {
+    placed.current = { cols, at: new Map(), heights: Array(cols).fill(0), order: Array.from({ length: cols }, () => []) };
+  }
+  const q = placed.current;
+  for (const item of items) {
+    if (q.at.has(item.id)) continue;
+    const r = ratios.get(item.id);
+    if (r === undefined) break;
+    let c = 0;
+    for (let k = 1; k < cols; k += 1) if (q.heights[k] < q.heights[c] - 0.01) c = k;
+    q.at.set(item.id, c);
+    q.order[c].push(item.id);
+    // The name line under each tile, in units of the column's width.
+    q.heights[c] += r + 0.14;
+  }
+  const byId = new Map(items.map((i) => [i.id, i]));
+  return q.order.map((col) => col.map((id) => byId.get(id)).filter(Boolean) as ShowcaseItem[]);
+}
+
 function Lightbox({
   item, onClose, likes, onRemoved,
 }: {
@@ -404,6 +489,21 @@ export default function GalleryGrid({
   const [selected, setSelected] = useState<ShowcaseItem | null>(null);
   const [cols, setCols] = useState(4);
   const galleryRef = useRef<HTMLDivElement>(null);
+  // Until every tile on screen has a size, the pins layout deals
+  // round-robin like the cards: the server's HTML and a reader without
+  // JavaScript get a full grid, and nobody sees it empty while sizes
+  // arrive. It switches once and stays switched; tiles appended later
+  // simply wait for their size before appearing.
+  const pinRatios = usePinRatios(items, variant === 'pins');
+  const pinCols = usePinColumns(items, cols, pinRatios);
+  const [pinReady, setPinReady] = useState(false);
+  const pinPlaced = pinCols.reduce((n, col) => n + col.length, 0);
+  useEffect(() => {
+    if (!pinReady && variant === 'pins' && items.length > 0 && pinPlaced >= items.length) setPinReady(true);
+  }, [pinReady, variant, items.length, pinPlaced]);
+  const columnItems = (c: number) => (variant === 'pins' && pinReady
+    ? pinCols[c] ?? []
+    : items.filter((_, i) => i % cols === c));
 
   /* An open creation gets a URL, which is what makes the address bar a
      share link and the back button a close button. Raw history rather
@@ -485,8 +585,7 @@ export default function GalleryGrid({
             <div className={`masonry ${variant === 'pins' ? 'masonry-pins' : ''}`}>
               {Array.from({ length: cols }, (_, c) => (
                 <div className="masonry-col" key={c}>
-                  {items
-                    .filter((_, i) => i % cols === c)
+                  {columnItems(c)
                     .map((item) => (variant === 'pins' ? (
                       <PinCard
                         key={item.id}
