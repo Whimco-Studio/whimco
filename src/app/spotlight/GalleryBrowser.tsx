@@ -6,6 +6,7 @@ import ShowcaseStyles from './styles';
 import BrowseStyles from './browseStyles';
 import PinStyles from './pinStyles';
 import useLikes from './useLikes';
+import { navLinks } from '../components/GlassNav';
 import {
   CATEGORY_LABELS, SHOWCASE_API_URL, ShowcaseData, ShowcaseItem, SortMode,
   creationsIn,
@@ -279,6 +280,35 @@ export default function GalleryBrowser({
                 onChange={(e) => setDraft(e.target.value)}
               />
             </form>
+            {/* The site's own glass pill, made compact, so the demo keeps a
+                way back to the rest of whimco.com without a second bar
+                above the search. Folds into a menu on narrow screens. */}
+            <nav className="pn-site" aria-label="Site">
+              {navLinks.map((l) => (
+                <a
+                  key={l.href}
+                  href={l.href}
+                  className={`pn-site-link ${l.href === '/spotlight' ? 'pn-site-on' : ''}`}
+                  aria-current={l.href === '/spotlight' ? 'page' : undefined}
+                >
+                  {l.label}
+                </a>
+              ))}
+            </nav>
+            <details className="pn-menu">
+              <summary aria-label="Site menu">Menu</summary>
+              <div className="pn-menu-list">
+                {navLinks.map((l) => (
+                  <a
+                    key={l.href}
+                    href={l.href}
+                    className={l.href === '/spotlight' ? 'pn-site-on' : ''}
+                  >
+                    {l.label}
+                  </a>
+                ))}
+              </div>
+            </details>
           </div>
           <nav className="pn-cats" aria-label="Filter by category">
             <button
@@ -301,6 +331,11 @@ export default function GalleryBrowser({
               </button>
             ))}
             <span className="pn-gap" aria-hidden />
+            {initialData && (
+              <span className="pn-count">
+                <b>{total.toLocaleString('en-US')}</b> creations
+              </span>
+            )}
             <button
               type="button"
               className={`pn-cat pn-sort ${sort === 'new' ? 'pn-cat-on' : ''}`}
