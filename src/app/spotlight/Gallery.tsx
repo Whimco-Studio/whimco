@@ -362,6 +362,9 @@ function usePinRatios(items: ShowcaseItem[], on: boolean) {
     are known, so nothing already on screen moves. Within a batch, "New"
     gives way to shape; across batches the feed order holds. */
 const PIN_BATCH = 24;
+/** Height over width for the loading stand-ins, varied so the skeleton
+    has the wall's own uneven rhythm rather than a row of equal boxes. */
+const SKELETON_SHAPES = [1.35, 0.8, 1.6, 1.05, 0.72, 1.45, 0.95, 1.2];
 function usePinColumns(items: ShowcaseItem[], cols: number, ratios: Map<number, number>) {
   const out: ShowcaseItem[][] = Array.from({ length: cols }, () => []);
   let dealt = 0;
@@ -496,6 +499,11 @@ export default function GalleryGrid({
   useEffect(() => {
     if (!pinReady && variant === 'pins' && items.length > 0 && pinPlaced >= items.length) setPinReady(true);
   }, [pinReady, variant, items.length, pinPlaced]);
+  // Grey stand-ins at the foot of every column, Pinterest's skeleton,
+  // while the next page is fetching or its sizes are still being read,
+  // and in place of an empty grid while a filter or search loads.
+  const pinWaiting = variant === 'pins'
+    && (loading || (pinReady && pinPlaced < items.length));
   const columnItems = (c: number) => (variant === 'pins' && pinReady
     ? pinCols[c] ?? []
     : items.filter((_, i) => i % cols === c));
@@ -552,7 +560,7 @@ export default function GalleryGrid({
 
   return (
     <>
-      {items.length === 0 ? (
+      {items.length === 0 && !(variant === 'pins' && loading) ? (
         <div className="empty">{emptyText}</div>
       ) : (
         <div className="masonry-wrap" ref={galleryRef} onMouseMove={onGalleryMove}>
@@ -600,6 +608,14 @@ export default function GalleryGrid({
                         onOpen={() => openItem(item)}
                       />
                     )))}
+                  {pinWaiting && [0, 1].map((k) => (
+                    <div
+                      key={`skeleton-${k}`}
+                      className="pin-skeleton"
+                      aria-hidden
+                      style={{ aspectRatio: `1 / ${SKELETON_SHAPES[(c * 3 + k * 5) % SKELETON_SHAPES.length]}` }}
+                    />
+                  ))}
                 </div>
               ))}
             </div>

@@ -66,6 +66,9 @@ export default function GalleryBrowser({
   const [query, setQuery] = useState(initialQuery);
   const [loading, setLoading] = useState(false);
   const [autoLoads, setAutoLoads] = useState(0);
+  // The last scroll-triggered page failed: the endless layout then shows
+  // the continue control so the reader has a way to try again.
+  const [failed, setFailed] = useState(false);
   // Whether this visit began partway into the set. State, not a read of
   // initialPage: once the reader picks a filter they are at the top of a
   // fresh view, and scrolling back down to page five later must not make
@@ -161,6 +164,7 @@ export default function GalleryBrowser({
     setSort(mode);
     setQuery(q);
     setAutoLoads(0);
+    setFailed(false);
     setDeepEntry(false);
     window.history.replaceState(null, '', viewHref(cat, mode, 1, q, basePath));
     // The reader may be hundreds of cards down. Leaving them there after
@@ -186,8 +190,13 @@ export default function GalleryBrowser({
     if (inflight.current > 0 || s.page >= s.pages) return;
     // A deliberate click buys a fresh allowance; scrolling spends it.
     setAutoLoads(auto ? s.autoLoads + 1 : 0);
-    fetchPage(s.page + 1, s.category, s.sort, s.query, true);
+    fetchPage(s.page + 1, s.category, s.sort, s.query, true)
+      .then((outcome) => { if (outcome !== 'superseded') setFailed(outcome === 'failed'); });
   }, [fetchPage]);
+
+  // The pins demo scrolls without end: it has no footer pitch to keep
+  // reachable, which is the only reason the live gallery stops and asks.
+  const endless = variant === 'pins';
 
   // Auto-load while the allowance lasts. rootMargin trips this before the
   // reader reaches the bottom, so the next page is usually already in
@@ -198,12 +207,21 @@ export default function GalleryBrowser({
     if (!el) return;
     const obs = new IntersectionObserver((entries) => {
       if (!entries.some((e) => e.isIntersecting)) return;
-      if (stateRef.current.autoLoads >= AUTO_LOADS) return;
+      if (!endless && stateRef.current.autoLoads >= AUTO_LOADS) return;
       loadNext(true);
     }, { rootMargin: '700px 0px' });
     obs.observe(el);
     return () => obs.disconnect();
-  }, [loadNext]);
+  }, [loadNext, endless]);
+
+  // The observer only fires when the sentinel crosses into range. If a
+  // page lands and the sentinel is still in range (a short page, a tall
+  // window), nothing crosses, so look again after every append.
+  useEffect(() => {
+    if (!endless || failed) return;
+    const el = sentinelRef.current;
+    if (el && el.getBoundingClientRect().top < window.innerHeight + 700) loadNext(true);
+  }, [endless, failed, items.length, loadNext]);
 
   // A curator retags from this grid and the write lands in Postgres at
   // once, but the fetch that rendered this page is cached for five
@@ -409,6 +427,9 @@ export default function GalleryBrowser({
 
         <GalleryGrid
           variant={variant}
+          // Only the pins layout reads this, for its skeleton tiles; the
+          // cards keep their own control below and never see it.
+          loading={variant === 'pins' && loading}
           items={items}
           likes={likes}
           showAuthor
@@ -425,7 +446,7 @@ export default function GalleryBrowser({
             to look at a button they are not being asked to press. */}
         {more && <div ref={sentinelRef} className="br-sentinel" aria-hidden />}
 
-        {more && (
+        {more && (!endless || failed) && (
           <div className="more-row">
             {/* A real link to a real server-rendered page, so this works
                 with no JavaScript and a crawler can walk the whole
