@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import GalleryGrid from './Gallery';
 import ShowcaseStyles from './styles';
 import BrowseStyles from './browseStyles';
+import PinStyles from './pinStyles';
 import useLikes from './useLikes';
 import {
   CATEGORY_LABELS, SHOWCASE_API_URL, ShowcaseData, ShowcaseItem, SortMode,
@@ -25,24 +26,32 @@ const AUTO_LOADS = 4;
 /** One place that builds a link to this page, so the continue control,
     the crawler's route and the "start from the newest" escape can never
     disagree about what a view is called. */
-function viewHref(category: string, sort: SortMode, page = 1, query = ''): string {
+function viewHref(
+  category: string, sort: SortMode, page = 1, query = '', base = '/spotlight/gallery',
+): string {
   const p = new URLSearchParams();
   if (page > 1) p.set('page', String(page));
   if (category) p.set('category', category);
   if (sort !== 'new') p.set('sort', sort);
   if (query) p.set('q', query);
   const q = p.toString();
-  return q ? `/spotlight/gallery?${q}` : '/spotlight/gallery';
+  return q ? `${base}?${q}` : base;
 }
 
 export default function GalleryBrowser({
   initialData, initialPage, initialCategory, initialSort, initialQuery = '',
+  variant = 'cards', basePath = '/spotlight/gallery',
 }: {
   initialData: ShowcaseData | null;
   initialPage: number;
   initialCategory: string;
   initialSort: SortMode;
   initialQuery?: string;
+  /** 'pins' is the Pinterest-shaped demo at /lab/gallery: search pinned
+      at the top, categories as one row of words, an image-only wall. */
+  variant?: 'cards' | 'pins';
+  /** Where this page lives, so every link it builds stays on it. */
+  basePath?: string;
 }) {
   const [items, setItems] = useState<ShowcaseItem[]>(initialData?.items ?? []);
   const [page, setPage] = useState(initialData?.page ?? initialPage);
@@ -153,13 +162,13 @@ export default function GalleryBrowser({
     setQuery(q);
     setAutoLoads(0);
     setDeepEntry(false);
-    window.history.replaceState(null, '', viewHref(cat, mode, 1, q));
+    window.history.replaceState(null, '', viewHref(cat, mode, 1, q, basePath));
     // The reader may be hundreds of cards down. Leaving them there after
     // the grid under them was replaced drops them at an arbitrary point
     // in a set whose beginning they have not seen.
     headRef.current?.scrollIntoView({ block: 'start' });
     fetchPage(1, cat, mode, q, false);
-  }, [fetchPage]);
+  }, [fetchPage, basePath]);
 
   // Search as the reader types, once they pause for a moment.
   useEffect(() => {
@@ -228,7 +237,71 @@ export default function GalleryBrowser({
     <div className="showcase">
       <ShowcaseStyles />
       <BrowseStyles />
+      {variant === 'pins' && <PinStyles />}
 
+      {variant === 'pins' ? (
+        <>
+          {/* Zero height, above the sticky bar: what a filter change
+              scrolls back to. Scrolling to the bar itself would leave the
+              reader wherever the stuck bar happened to be. */}
+          <div ref={headRef} />
+          <div className="pn-bar">
+            <a className="pn-home" href="/spotlight" aria-label="Spotlight home">
+              <img src="/spotlight-logo.png" alt="" width={28} height={28} />
+            </a>
+            <form className="pn-search" role="search" onSubmit={(e) => e.preventDefault()}>
+              <span className="pn-search-icon" aria-hidden>⌕</span>
+              <input
+                type="search"
+                className="pn-search-input"
+                placeholder="Search Spotlight"
+                aria-label="Search creations: a subject, a style, a creator"
+                value={draft}
+                maxLength={64}
+                onChange={(e) => setDraft(e.target.value)}
+              />
+            </form>
+          </div>
+          <nav className="pn-cats" aria-label="Filter by category">
+            <button
+              type="button"
+              className={`pn-cat ${category === '' ? 'pn-cat-on' : ''}`}
+              aria-pressed={category === ''}
+              onClick={() => reset('', sort, query)}
+            >
+              All
+            </button>
+            {facets.map((c) => (
+              <button
+                key={c.category}
+                type="button"
+                className={`pn-cat ${category === c.category ? 'pn-cat-on' : ''}`}
+                aria-pressed={category === c.category}
+                onClick={() => reset(c.category, sort, query)}
+              >
+                {CATEGORY_LABELS[c.category] ?? c.category}
+              </button>
+            ))}
+            <span className="pn-gap" aria-hidden />
+            <button
+              type="button"
+              className={`pn-cat pn-sort ${sort === 'new' ? 'pn-cat-on' : ''}`}
+              aria-pressed={sort === 'new'}
+              onClick={() => reset(category, 'new', query)}
+            >
+              New
+            </button>
+            <button
+              type="button"
+              className={`pn-cat pn-sort ${sort === 'top' ? 'pn-cat-on' : ''}`}
+              aria-pressed={sort === 'top'}
+              onClick={() => reset(category, 'top', query)}
+            >
+              Top this week
+            </button>
+          </nav>
+        </>
+      ) : (
       <header className="br-head" ref={headRef}>
         <a className="pf-back" href="/spotlight">← THE SHOWCASE</a>
         <h1 className="br-title">THE GALLERY</h1>
@@ -255,12 +328,14 @@ export default function GalleryBrowser({
           <a href="/spotlight/references">Looking for a reference? Browse by subject →</a>
         </p>
       </header>
+      )}
 
       <section
-        className="gallery-section br-section"
+        className={`gallery-section br-section ${variant === 'pins' ? 'pn-section' : ''}`}
         aria-label="Creations broadcast by Spotlight"
         aria-busy={loading}
       >
+        {variant !== 'pins' && (<>
         <form className="br-search" role="search" onSubmit={(e) => e.preventDefault()}>
           <input
             type="search"
@@ -319,6 +394,7 @@ export default function GalleryBrowser({
             ))}
           </div>
         )}
+        </>)}
 
         {/* Somebody who opened a ?page= link is looking at a slice with
             nothing above it. Say so and offer the top, rather than leave
@@ -327,11 +403,12 @@ export default function GalleryBrowser({
           <p className="br-deep">
             Opened at page {initialPage}.
             {' '}
-            <a href={viewHref(category, sort, 1, query)}>Start from the newest</a>
+            <a href={viewHref(category, sort, 1, query, basePath)}>Start from the newest</a>
           </p>
         )}
 
         <GalleryGrid
+          variant={variant}
           items={items}
           likes={likes}
           showAuthor
@@ -358,7 +435,7 @@ export default function GalleryBrowser({
                 is the arrangement that quietly goes stale. */}
             <a
               className="cta-ghost more-btn br-more"
-              href={viewHref(category, sort, page + 1, query)}
+              href={viewHref(category, sort, page + 1, query, basePath)}
               aria-disabled={loading}
               onClick={(e) => { e.preventDefault(); loadNext(false); }}
             >
