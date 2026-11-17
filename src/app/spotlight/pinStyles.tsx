@@ -4,19 +4,21 @@
 export default function PinStyles() {
   return (
     <style jsx global>{`
-      /* No GlassNav on the demo: the search bar is the top of the page,
-         and it stays there while the wall scrolls under it. */
+      /* The demo's top bar carries the site: the wordmark, the search,
+         and GlassNav's pill made compact. Same frosted glass as
+         GlassNav, so it reads as whimco.com rather than a new app. */
       .showcase .pn-bar {
         position: sticky;
         top: 0;
         z-index: 40;
         display: flex;
         align-items: center;
-        gap: 0.9rem;
-        padding: 0.7rem 1.25rem;
-        background: rgba(10, 10, 15, 0.92);
-        backdrop-filter: blur(14px);
-        -webkit-backdrop-filter: blur(14px);
+        gap: 1rem;
+        padding: 0.75rem 1.25rem;
+        background: rgba(10, 10, 15, 0.72);
+        backdrop-filter: blur(20px) saturate(180%);
+        -webkit-backdrop-filter: blur(20px) saturate(180%);
+        border-bottom: 1px solid var(--edge);
       }
       /* The wordmark is about 2.8 to 1; drawn at its own shape, never
          squeezed into a square. */
@@ -26,12 +28,12 @@ export default function PinStyles() {
       .showcase .pn-search {
         position: relative;
         flex: 1;
-        max-width: 36rem;
+        max-width: 34rem;
         margin: 0 auto;
       }
       .showcase .pn-search-icon {
         position: absolute;
-        left: 1rem;
+        left: 1.05rem;
         top: 50%;
         transform: translateY(-50%);
         color: var(--stext-dim);
@@ -40,50 +42,147 @@ export default function PinStyles() {
       }
       .showcase .pn-search-input {
         width: 100%;
-        background: #1b1b24;
-        border: 1px solid #2a2a36;
-        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.13);
+        border-radius: 999px;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
         color: var(--stext);
         font-size: 0.95rem;
-        padding: 0.72rem 1rem 0.72rem 2.5rem;
+        padding: 0.68rem 1.1rem 0.68rem 2.6rem;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
       }
       .showcase .pn-search-input::placeholder { color: var(--stext-dim); }
-      .showcase .pn-search-input:focus { outline: none; border-color: var(--beam); }
+      .showcase .pn-search-input:focus {
+        outline: none;
+        border-color: rgba(255, 217, 138, 0.55);
+        box-shadow: 0 0 0 3px var(--beam-dim);
+      }
 
-      /* One row of words, scrolling sideways when it runs out of room,
-         never wrapping into a second row of buttons. */
+      /* GlassNav's pill, one size down. */
+      .showcase .pn-site {
+        display: flex;
+        flex-shrink: 0;
+        gap: 0.2rem;
+        padding: 0.3rem;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 999px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+      }
+      .showcase .pn-site-link {
+        padding: 0.42rem 0.95rem;
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 0.82rem;
+        font-weight: 500;
+        text-decoration: none;
+        border-radius: 999px;
+        white-space: nowrap;
+        transition: background 0.2s ease, color 0.2s ease;
+      }
+      .showcase .pn-site-link:hover { color: #fff; background: rgba(255, 255, 255, 0.1); }
+      .showcase .pn-site-link:focus-visible { outline: 2px solid var(--beam); }
+      .showcase .pn-site-link.pn-site-on {
+        color: #fff;
+        background: rgba(255, 255, 255, 0.15);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+      }
+
+      /* Narrow screens: the same links behind one pill. */
+      .showcase .pn-menu { display: none; position: relative; flex-shrink: 0; }
+      .showcase .pn-menu summary {
+        list-style: none;
+        cursor: pointer;
+        padding: 0.5rem 0.95rem;
+        font-size: 0.82rem;
+        font-weight: 500;
+        color: rgba(255, 255, 255, 0.85);
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 999px;
+      }
+      .showcase .pn-menu summary::-webkit-details-marker { display: none; }
+      .showcase .pn-menu summary:focus-visible { outline: 2px solid var(--beam); }
+      .showcase .pn-menu-list {
+        position: absolute;
+        right: 0;
+        top: calc(100% + 0.5rem);
+        display: flex;
+        flex-direction: column;
+        min-width: 11rem;
+        padding: 0.4rem;
+        background: rgba(20, 20, 29, 0.96);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 16px;
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+      }
+      .showcase .pn-menu-list a {
+        padding: 0.6rem 0.8rem;
+        color: rgba(255, 255, 255, 0.85);
+        text-decoration: none;
+        font-size: 0.9rem;
+        border-radius: 10px;
+      }
+      .showcase .pn-menu-list a:hover { background: rgba(255, 255, 255, 0.08); }
+      .showcase .pn-menu-list a.pn-site-on { color: var(--beam); }
+
+      /* One row of words in the site's mono, scrolling sideways when it
+         runs out of room, never wrapping. The chosen one lights in the
+         beam gold the live gallery uses for its chosen chip. */
       .showcase .pn-cats {
         display: flex;
         align-items: center;
-        gap: 0.2rem;
+        gap: 0.15rem;
         overflow-x: auto;
         scrollbar-width: none;
-        padding: 0.2rem 1.25rem 1rem;
+        padding: 0.85rem 1.25rem 1rem;
       }
       .showcase .pn-cats::-webkit-scrollbar { display: none; }
       .showcase .pn-cat {
+        position: relative;
         flex-shrink: 0;
         background: none;
         border: none;
-        color: var(--stext);
-        font: inherit;
-        font-size: 0.95rem;
+        color: var(--stext-dim);
+        font-family: var(--font-mono), monospace;
+        font-size: 0.8rem;
+        letter-spacing: 0.04em;
         padding: 0.45rem 0.7rem;
-        border-radius: 10px;
+        border-radius: 999px;
         cursor: pointer;
         white-space: nowrap;
+        transition: color 0.15s ease, background 0.15s ease;
       }
-      .showcase .pn-cat:hover { background: rgba(255, 255, 255, 0.07); }
+      .showcase .pn-cat:hover { color: var(--stext); background: rgba(255, 255, 255, 0.06); }
       .showcase .pn-cat:focus-visible { outline: 2px solid var(--beam); outline-offset: 1px; }
-      .showcase .pn-cat-on {
+      .showcase .pn-cat-on,
+      .showcase .pn-cat-on:hover {
+        color: #14110a;
+        background: var(--beam);
         font-weight: 700;
-        text-decoration: underline;
-        text-underline-offset: 0.45rem;
-        text-decoration-thickness: 2px;
+        box-shadow: 0 0 14px rgba(255, 217, 138, 0.28);
       }
       .showcase .pn-gap { flex: 1; min-width: 1.5rem; }
-      .showcase .pn-sort { color: var(--stext-dim); font-size: 0.85rem; }
-      .showcase .pn-sort.pn-cat-on { color: var(--stext); }
+      .showcase .pn-count {
+        flex-shrink: 0;
+        font-family: var(--font-mono), monospace;
+        font-size: 0.74rem;
+        letter-spacing: 0.1em;
+        color: var(--stext-dim);
+        margin-right: 0.6rem;
+        white-space: nowrap;
+      }
+      .showcase .pn-count b { color: var(--beam); }
+      /* The sort reads as tabs, the way the live gallery's New / Top this
+         week do: gold text and a gold rule, no filled pill. */
+      .showcase .pn-sort { border-radius: 0; padding-bottom: 0.5rem; }
+      .showcase .pn-sort.pn-cat-on,
+      .showcase .pn-sort.pn-cat-on:hover {
+        color: var(--beam);
+        background: none;
+        box-shadow: inset 0 -2px 0 var(--beam);
+      }
 
       /* Edge to edge, the way the reference fills the window. */
       .showcase .pn-section { max-width: none; padding: 0 1rem 5rem; }
@@ -100,6 +199,16 @@ export default function PinStyles() {
         background: #17171f;
         text-decoration: none;
       }
+      .showcase .pin-hit::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+        transition: box-shadow 0.2s ease;
+        pointer-events: none;
+      }
+      .showcase .pin:hover .pin-hit::after { box-shadow: inset 0 0 0 1px rgba(255, 217, 138, 0.45); }
       .showcase .pin-hit:focus-visible { outline: 2px solid var(--beam); outline-offset: 2px; }
       .showcase .pin .card-media img,
       .showcase .pin .card-media video { width: 100%; display: block; }
@@ -193,6 +302,13 @@ export default function PinStyles() {
       .showcase .pn-section .br-end,
       .showcase .pn-section .br-deep { text-align: center; }
 
+      @media (max-width: 1100px) {
+        .showcase .pn-site { display: none; }
+        .showcase .pn-menu { display: block; }
+      }
+      @media (max-width: 760px) {
+        .showcase .pn-count { display: none; }
+      }
       @media (max-width: 640px) {
         .showcase .pn-bar { padding: 0.6rem 0.75rem; gap: 0.6rem; }
         .showcase .pn-home img { height: 24px; }
