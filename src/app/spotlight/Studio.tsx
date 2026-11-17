@@ -6,7 +6,9 @@ import ShowcaseStyles from './styles';
 import StudioStyles from './studioStyles';
 import VerifiedSeal from './VerifiedSeal';
 import useLikes from './useLikes';
-import { CATEGORY_LABELS, SHOWCASE_API_URL, ShowcaseData, ShowcaseServer } from './constants';
+import {
+  CATEGORY_LABELS, SHOWCASE_API_URL, SHOW_HEART_COUNTS, ShowcaseData, ShowcaseServer,
+} from './constants';
 
 const nf = new Intl.NumberFormat('en-US');
 
@@ -148,7 +150,7 @@ export default function Studio({
                   <b>{nf.format(server.creations)}</b> creation{server.creations === 1 ? '' : 's'}
                   {' by '}
                   <b>{nf.format(server.creators)}</b> creator{server.creators === 1 ? '' : 's'}
-                  {server.hearts > 0 && (
+                  {server.hearts > 0 && SHOW_HEART_COUNTS && (
                     <>
                       {', '}
                       <b>{nf.format(server.hearts)}</b> heart{server.hearts === 1 ? '' : 's'}

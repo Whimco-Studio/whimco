@@ -19,7 +19,7 @@ export default function ReferenceTile({ item }: { item: ShowcaseItem }) {
       // eslint-disable-next-line jsx-a11y/media-has-caption
       : <video src={m.url} muted playsInline preload="metadata" />;
   } else if (m) {
-    visual = <img src={m.url} alt="" loading="lazy" />;
+    visual = <img src={m.thumb || m.url} alt="" loading="lazy" />;
   }
   return (
     <figure className="rf-tile">

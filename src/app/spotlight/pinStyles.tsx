@@ -103,6 +103,9 @@ export default function PinStyles() {
       .showcase .pin-hit:focus-visible { outline: 2px solid var(--beam); outline-offset: 2px; }
       .showcase .pin .card-media img,
       .showcase .pin .card-media video { width: 100%; display: block; }
+      .showcase .pin-frame[style] .card-media,
+      .showcase .pin-frame[style] .card-media img { height: 100%; }
+      .showcase .pin-frame[style] .card-media img { object-fit: cover; }
       /* A clip with no poster and preload="none" has no frame to size
          itself by and collapses to nothing; hold a 16:9 shape instead. */
       .showcase .pin .card-media video:not([poster]) {

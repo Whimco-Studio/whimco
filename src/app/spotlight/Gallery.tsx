@@ -4,7 +4,8 @@ import React, {
   useCallback, useEffect, useRef, useState,
 } from 'react';
 import {
-  CATEGORY_LABELS, ShowcaseItem, ShowcaseMedia, cleanCaption, postPath, xLink, mediaKind, mediaPath
+  CATEGORY_LABELS, SHOW_HEART_COUNTS, ShowcaseItem, ShowcaseMedia, cleanCaption, postPath, xLink,
+  mediaKind, mediaPath,
 } from './constants';
 import ShareButton from './ShareButton';
 import VerifiedSeal from './VerifiedSeal';
@@ -47,7 +48,7 @@ function HeartButton({ item, likes }: { item: ShowcaseItem; likes?: Likes }) {
   if (!likes) {
     // Read-only (the removed drawer). A bare heart with no number and no
     // press is just decoration, so at zero there is nothing worth drawing.
-    if (item.hearts < 1) return null;
+    if (item.hearts < 1 || !SHOW_HEART_COUNTS) return null;
     return <span className="card-hearts">♥ {item.hearts.toLocaleString('en-US')}</span>;
   }
   const on = likes.isLiked(item.id);
@@ -62,7 +63,7 @@ function HeartButton({ item, likes }: { item: ShowcaseItem; likes?: Likes }) {
       onClick={(e) => { e.stopPropagation(); likes.toggle(item); }}
     >
       {on ? '♥' : '♡'}
-      {count > 0 ? ` ${count.toLocaleString('en-US')}` : ''}
+      {count > 0 && SHOW_HEART_COUNTS ? ` ${count.toLocaleString('en-US')}` : ''}
     </button>
   );
 }
@@ -185,7 +186,11 @@ function CardMedia({ item, deep }: { item: ShowcaseItem; deep: boolean }) {
         {/* Presigned S3 URLs rotate every revalidate — plain img, not
             next/image, so the optimizer cache never 403s on expiry. */}
         <img
-          src={media.url}
+          // The small copy when there is one. If it fails (a thumbnail
+          // missing from S3, an X size that is not served), fall back to
+          // the original once rather than hiding the tile.
+          src={media.thumb || media.url}
+          data-full={media.thumb ? media.url : undefined}
           referrerPolicy="no-referrer"
           alt={cleanCaption(item.content).slice(0, 80)
             || `${item.category && CATEGORY_LABELS[item.category] ? `Roblox ${CATEGORY_LABELS[item.category]}` : 'Roblox creation'} by ${item.author_name}`}
@@ -196,7 +201,16 @@ function CardMedia({ item, deep }: { item: ShowcaseItem; deep: boolean }) {
           // that window an unhandled failure paints the alt text across
           // the card at full size, which reads as a broken site rather
           // than a withdrawn creation.
-          onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }}
+          onError={(e) => {
+            const img = e.currentTarget;
+            const full = img.dataset.full;
+            if (full) {
+              delete img.dataset.full;
+              img.src = full;
+              return;
+            }
+            img.style.visibility = 'hidden';
+          }}
         />
         {item.media.length > 1 && (
           <span className="count-badge">+{item.media.length - 1}</span>
@@ -283,7 +297,17 @@ function PinCard({
         aria-label={`Open creation by ${item.author_name}`}
       >
         {item.media.length > 0
-          ? <CardMedia item={item} deep={deep} />
+          ? (
+            // The tile's shape is reserved from the stored size, so the
+            // wall does not reflow as each image arrives.
+            <div
+              className="pin-frame"
+              style={item.media[0].w && item.media[0].h && mediaKind(item.media[0]) === 'image'
+                ? { aspectRatio: `${item.media[0].w} / ${item.media[0].h}` } : undefined}
+            >
+              <CardMedia item={item} deep={deep} />
+            </div>
+          )
           : <p className="pin-text">{caption}</p>}
         <span className="pin-shade" aria-hidden />
       </a>
@@ -300,57 +324,20 @@ function PinCard({
   );
 }
 
-/** Height over width for each tile in the pins layout, learned before the
-    tile is placed. The API rarely knows a size, so images (and video
-    posters) are fetched off-screen just to read their dimensions; the
-    browser cache means the real <img> then costs nothing extra. Anything
-    still unknown after a couple of seconds is treated as square, so one
-    slow or dead URL cannot hold the rest of the wall back. */
-function usePinRatios(items: ShowcaseItem[], on: boolean) {
-  const [ratios, setRatios] = useState<Map<number, number>>(() => new Map());
-  const asked = useRef(new Set<number>());
+/** Height over width for a tile in the pins layout, from the data alone.
 
-  useEffect(() => {
-    if (!on) return;
-    const learned = new Map<number, number>();
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    const flush = () => {
-      timer = null;
-      if (learned.size === 0) return;
-      const batch = new Map(learned);
-      learned.clear();
-      setRatios((prev) => {
-        const next = new Map(prev);
-        batch.forEach((r, id) => next.set(id, r));
-        return next;
-      });
-    };
-    // Batched, so 24 images arriving in a burst cost one re-layout, not 24.
-    const learn = (id: number, r: number) => {
-      learned.set(id, Number.isFinite(r) && r > 0 ? Math.min(Math.max(r, 0.4), 2.6) : 1);
-      if (!timer) timer = setTimeout(flush, 60);
-    };
-    for (const item of items) {
-      if (asked.current.has(item.id)) continue;
-      asked.current.add(item.id);
-      const m = item.media[0];
-      if (!m) { learn(item.id, 0.75); continue; } // caption-only text tile
-      if (m.w && m.h) { learn(item.id, m.h / m.w); continue; }
-      const kind = mediaKind(m);
-      if (kind === 'audio') { learn(item.id, 9 / 16); continue; }
-      const src = kind === 'image' ? m.url : (kind === 'video' ? m.thumbnail : undefined);
-      if (!src) { learn(item.id, 9 / 16); continue; }
-      const img = new Image();
-      img.referrerPolicy = 'no-referrer';
-      const give = setTimeout(() => learn(item.id, 1), 2500);
-      img.onload = () => { clearTimeout(give); learn(item.id, img.naturalHeight / img.naturalWidth); };
-      img.onerror = () => { clearTimeout(give); learn(item.id, 1); };
-      img.src = src;
-    }
-    return () => { if (timer) { clearTimeout(timer); flush(); } };
-  }, [items, on]);
-
-  return ratios;
+    The API sends each image's width and height (Spotlight's own uploads
+    since 2026-10, X images since 2026-11-17), so nothing is downloaded to
+    measure it and the server and the browser compute the same order. An
+    image with no size counts as square, a clip or track as 16:9, a
+    caption-only creation as a short text tile. */
+function pinRatio(item: ShowcaseItem): number {
+  const m = item.media[0];
+  if (!m) return 0.75;
+  if (m.w && m.h) return Math.min(Math.max(m.h / m.w, 0.4), 2.6);
+  const kind = mediaKind(m);
+  if (kind === 'video' || kind === 'audio') return 9 / 16;
+  return 1;
 }
 
 /** Pins placement: each batch of 24 (one API page) is sorted tallest
@@ -358,21 +345,19 @@ function usePinRatios(items: ShowcaseItem[], on: boolean) {
     than filling the shortest column, keeps the ragged staggered edge
     Trendon liked; tallest first puts the portrait work, which reads best
     in a narrow column, at the top of every batch instead of scattered
-    among wide Studio screenshots. A batch appears only once all its sizes
-    are known, so nothing already on screen moves. Within a batch, "New"
-    gives way to shape; across batches the feed order holds. */
+    among wide Studio screenshots. Sizes come from the data, so the order
+    is fixed the moment a page arrives and nothing on screen moves. Within a batch, "New" gives way to shape;
+    across batches the feed order holds. */
 const PIN_BATCH = 24;
 /** Height over width for the loading stand-ins, varied so the skeleton
     has the wall's own uneven rhythm rather than a row of equal boxes. */
 const SKELETON_SHAPES = [1.35, 0.8, 1.6, 1.05, 0.72, 1.45, 0.95, 1.2];
-function usePinColumns(items: ShowcaseItem[], cols: number, ratios: Map<number, number>) {
+function pinColumns(items: ShowcaseItem[], cols: number): ShowcaseItem[][] {
   const out: ShowcaseItem[][] = Array.from({ length: cols }, () => []);
   let dealt = 0;
   for (let start = 0; start < items.length; start += PIN_BATCH) {
-    const batch = items.slice(start, start + PIN_BATCH);
-    if (batch.some((i) => !ratios.has(i.id))) break;
-    const sorted = batch
-      .map((item, k) => ({ item, k, r: ratios.get(item.id) as number }))
+    const sorted = items.slice(start, start + PIN_BATCH)
+      .map((item, k) => ({ item, k, r: pinRatio(item) }))
       // Stable on ties, so equal shapes keep their feed order.
       .sort((x, y) => (y.r - x.r) || (x.k - y.k));
     for (const { item } of sorted) {
@@ -487,24 +472,12 @@ export default function GalleryGrid({
   const [selected, setSelected] = useState<ShowcaseItem | null>(null);
   const [cols, setCols] = useState(4);
   const galleryRef = useRef<HTMLDivElement>(null);
-  // Until every tile on screen has a size, the pins layout deals
-  // round-robin like the cards: the server's HTML and a reader without
-  // JavaScript get a full grid, and nobody sees it empty while sizes
-  // arrive. It switches once and stays switched; tiles appended later
-  // simply wait for their size before appearing.
-  const pinRatios = usePinRatios(items, variant === 'pins');
-  const pinCols = usePinColumns(items, cols, pinRatios);
-  const [pinReady, setPinReady] = useState(false);
-  const pinPlaced = pinCols.reduce((n, col) => n + col.length, 0);
-  useEffect(() => {
-    if (!pinReady && variant === 'pins' && items.length > 0 && pinPlaced >= items.length) setPinReady(true);
-  }, [pinReady, variant, items.length, pinPlaced]);
+  const pinCols = variant === 'pins' ? pinColumns(items, cols) : [];
   // Grey stand-ins at the foot of every column, Pinterest's skeleton,
-  // while the next page is fetching or its sizes are still being read,
-  // and in place of an empty grid while a filter or search loads.
-  const pinWaiting = variant === 'pins'
-    && (loading || (pinReady && pinPlaced < items.length));
-  const columnItems = (c: number) => (variant === 'pins' && pinReady
+  // while the next page is fetching, and in place of an empty grid while a
+  // filter or search loads.
+  const pinWaiting = variant === 'pins' && loading;
+  const columnItems = (c: number) => (variant === 'pins'
     ? pinCols[c] ?? []
     : items.filter((_, i) => i % cols === c));
 

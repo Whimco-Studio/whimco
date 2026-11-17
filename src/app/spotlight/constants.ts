@@ -35,7 +35,16 @@ export type ShowcaseMedia = {
       its shape before the image loads. */
   w?: number;
   h?: number;
+  /** A small copy for grid tiles (about 480px wide): our stored WebP, or
+      X's own "small" size. The lightbox and permalink keep `url`. */
+  thumb?: string;
 };
+
+/** Whether public pages print heart totals. Off since 2026-11-17: in a
+    play test, a "1" or "2" under someone's work read as "nobody liked
+    this". The heart button stays, so people still heart, and every count
+    is still recorded; turning this back on shows them all again. */
+export const SHOW_HEART_COUNTS = false;
 
 export type MediaKind = 'image' | 'video' | 'audio' | 'other';
 

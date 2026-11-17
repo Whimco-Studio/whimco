@@ -6,6 +6,7 @@ import ShowcaseStyles from './styles';
 import VerifiedSeal from './VerifiedSeal';
 import {
   CATEGORY_LABELS, CREATORS_API_URL, Creator, CreatorsData,
+  SHOW_HEART_COUNTS,
 } from './constants';
 
 /** Monogram stand-in for the ~80% of creators who have not claimed a
@@ -69,7 +70,7 @@ function CreatorCard({ creator, active }: { creator: Creator; active: string }) 
     <a
       className="cr-card"
       href={`/spotlight/@${encodeURIComponent(name)}`}
-      aria-label={`${name}, ${creations} creation${creations === 1 ? '' : 's'}, ${hearts} heart${hearts === 1 ? '' : 's'}`}
+      aria-label={`${name}, ${creations} creation${creations === 1 ? '' : 's'}${SHOW_HEART_COUNTS ? `, ${hearts} heart${hearts === 1 ? '' : 's'}` : ''}`}
     >
       <CoverMosaic covers={covers} name={name} />
       <div className="cr-body">
@@ -87,8 +88,12 @@ function CreatorCard({ creator, active }: { creator: Creator; active: string }) 
         {creator.bio && <p className="cr-bio">{creator.bio}</p>}
         <p className="cr-stats">
           <b>{creations.toLocaleString('en-US')}</b> creation{creations === 1 ? '' : 's'}
-          {' · '}
-          <b>{hearts.toLocaleString('en-US')}</b> heart{hearts === 1 ? '' : 's'}
+          {SHOW_HEART_COUNTS && (
+            <>
+              {' · '}
+              <b>{hearts.toLocaleString('en-US')}</b> heart{hearts === 1 ? '' : 's'}
+            </>
+          )}
         </p>
         {creator.contact && <p className="cr-contact">↳ {creator.contact}</p>}
       </div>
