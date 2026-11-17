@@ -264,6 +264,9 @@ export default function GalleryBrowser({
               scrolls back to. Scrolling to the bar itself would leave the
               reader wherever the stuck bar happened to be. */}
           <div ref={headRef} />
+          {/* The wall has no visible title, but the page still has one for
+              screen readers and search, the words the live title used. */}
+          <h1 className="pn-sr">Roblox creations gallery</h1>
           <div className="pn-bar">
             <a className="pn-home" href="/spotlight" aria-label="Spotlight home">
               <img src="/spotlight-logo.png" alt="" width={84} height={30} />
@@ -331,6 +334,7 @@ export default function GalleryBrowser({
               </button>
             ))}
             <span className="pn-gap" aria-hidden />
+            <a className="pn-ref" href="/spotlight/references">References</a>
             {initialData && (
               <span className="pn-count">
                 <b>{total.toLocaleString('en-US')}</b> creations
@@ -481,8 +485,12 @@ export default function GalleryBrowser({
             to look at a button they are not being asked to press. */}
         {more && <div ref={sentinelRef} className="br-sentinel" aria-hidden />}
 
-        {more && (!endless || failed) && (
-          <div className="more-row">
+        {/* Always rendered, endless or not: it is the real link a crawler
+            walks the gallery by. On the wall the sentinel above trips
+            first, so a reader only meets it if a page fails to load or
+            scripts are off. */}
+        {more && (
+          <div className={`more-row ${endless && !failed ? 'pn-more-quiet' : ''}`}>
             {/* A real link to a real server-rendered page, so this works
                 with no JavaScript and a crawler can walk the whole
                 gallery through it. The handler intercepts the click and

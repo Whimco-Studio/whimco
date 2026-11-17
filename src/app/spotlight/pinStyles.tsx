@@ -164,6 +164,30 @@ export default function PinStyles() {
         box-shadow: 0 0 14px rgba(255, 217, 138, 0.28);
       }
       .showcase .pn-gap { flex: 1; min-width: 1.5rem; }
+      .showcase .pn-sr {
+        position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+        overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+      }
+      .showcase .pn-ref {
+        flex-shrink: 0;
+        font-family: var(--font-mono), monospace;
+        font-size: 0.74rem;
+        letter-spacing: 0.1em;
+        color: var(--stext-dim);
+        text-decoration: none;
+        margin-right: 1rem;
+        white-space: nowrap;
+      }
+      .showcase .pn-ref:hover { color: var(--beam); }
+      .showcase .pn-ref:focus-visible { outline: 2px solid var(--beam); outline-offset: 2px; }
+      /* While the wall is loading by itself the link is only a fallback,
+         so it sits small and dim rather than as a button to press. */
+      .showcase .pn-more-quiet .more-btn {
+        background: none;
+        border-color: transparent;
+        color: var(--stext-dim);
+        font-size: 0.8rem;
+      }
       .showcase .pn-count {
         flex-shrink: 0;
         font-family: var(--font-mono), monospace;
@@ -306,7 +330,9 @@ export default function PinStyles() {
         .showcase .pn-site { display: none; }
         .showcase .pn-menu { display: block; }
       }
-      @media (max-width: 760px) {
+      /* Thirteen category words plus References, the count and two tabs
+         overflow a 1440px window; the count goes first. */
+      @media (max-width: 1600px) {
         .showcase .pn-count { display: none; }
       }
       @media (max-width: 640px) {
