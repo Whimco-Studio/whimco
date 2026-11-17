@@ -103,6 +103,13 @@ export default function PinStyles() {
       .showcase .pin-hit:focus-visible { outline: 2px solid var(--beam); outline-offset: 2px; }
       .showcase .pin .card-media img,
       .showcase .pin .card-media video { width: 100%; display: block; }
+      /* A clip with no poster and preload="none" has no frame to size
+         itself by and collapses to nothing; hold a 16:9 shape instead. */
+      .showcase .pin .card-media video:not([poster]) {
+        aspect-ratio: 16 / 9;
+        object-fit: cover;
+        background: #1c1c25;
+      }
       .showcase .pin-shade {
         position: absolute;
         inset: 0;
@@ -149,6 +156,20 @@ export default function PinStyles() {
       .showcase .pin span.card-hearts { display: none; }
       @media (hover: none) {
         .showcase .pin button.heart-btn { opacity: 1; }
+      }
+
+      .showcase .pin-skeleton {
+        border-radius: 16px;
+        background: #1c1c25;
+        animation: pin-pulse 1.4s ease-in-out infinite;
+      }
+      .showcase .masonry-col .pin-skeleton:nth-of-type(2) { animation-delay: 0.2s; }
+      @keyframes pin-pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.55; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .showcase .pin-skeleton { animation: none; }
       }
 
       .showcase .pin-author {
