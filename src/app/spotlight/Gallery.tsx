@@ -353,36 +353,31 @@ function usePinRatios(items: ShowcaseItem[], on: boolean) {
   return ratios;
 }
 
-/** Pinterest's placement: each tile, in order, goes to whichever column
-    is currently shortest. A tile is placed once and then stays put, so
-    nothing already on screen jumps when a later image reports its size;
-    the walk stops at the first tile whose size is not known yet, which
-    keeps the order close to the feed's. Starts over only when the
-    column count changes or the set is replaced. */
+/** Pins placement: each batch of 24 (one API page) is sorted tallest
+    first and then dealt into the columns in turn. Dealing in turn, rather
+    than filling the shortest column, keeps the ragged staggered edge
+    Trendon liked; tallest first puts the portrait work, which reads best
+    in a narrow column, at the top of every batch instead of scattered
+    among wide Studio screenshots. A batch appears only once all its sizes
+    are known, so nothing already on screen moves. Within a batch, "New"
+    gives way to shape; across batches the feed order holds. */
+const PIN_BATCH = 24;
 function usePinColumns(items: ShowcaseItem[], cols: number, ratios: Map<number, number>) {
-  const placed = useRef<{ cols: number; at: Map<number, number>; heights: number[]; order: number[][] }>(
-    { cols: 0, at: new Map(), heights: [], order: [] },
-  );
-  const p = placed.current;
-  const ids = new Set(items.map((i) => i.id));
-  const replaced = p.at.size > 0 && Array.from(p.at.keys()).some((id) => !ids.has(id));
-  if (p.cols !== cols || replaced) {
-    placed.current = { cols, at: new Map(), heights: Array(cols).fill(0), order: Array.from({ length: cols }, () => []) };
+  const out: ShowcaseItem[][] = Array.from({ length: cols }, () => []);
+  let dealt = 0;
+  for (let start = 0; start < items.length; start += PIN_BATCH) {
+    const batch = items.slice(start, start + PIN_BATCH);
+    if (batch.some((i) => !ratios.has(i.id))) break;
+    const sorted = batch
+      .map((item, k) => ({ item, k, r: ratios.get(item.id) as number }))
+      // Stable on ties, so equal shapes keep their feed order.
+      .sort((x, y) => (y.r - x.r) || (x.k - y.k));
+    for (const { item } of sorted) {
+      out[dealt % cols].push(item);
+      dealt += 1;
+    }
   }
-  const q = placed.current;
-  for (const item of items) {
-    if (q.at.has(item.id)) continue;
-    const r = ratios.get(item.id);
-    if (r === undefined) break;
-    let c = 0;
-    for (let k = 1; k < cols; k += 1) if (q.heights[k] < q.heights[c] - 0.01) c = k;
-    q.at.set(item.id, c);
-    q.order[c].push(item.id);
-    // The name line under each tile, in units of the column's width.
-    q.heights[c] += r + 0.14;
-  }
-  const byId = new Map(items.map((i) => [i.id, i]));
-  return q.order.map((col) => col.map((id) => byId.get(id)).filter(Boolean) as ShowcaseItem[]);
+  return out;
 }
 
 function Lightbox({
