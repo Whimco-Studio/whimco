@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import { display, mono } from '../../fonts';
-import GlassNav from '../../components/GlassNav';
 import GalleryBrowser from '../GalleryBrowser';
 import { CATEGORY_LABELS, creationsIn } from '../constants';
 import {
@@ -58,8 +57,10 @@ export default async function GalleryPage(
       className={`${display.variable} ${mono.variable}`}
       style={{ background: '#0a0a0f', minHeight: '100vh' }}
     >
-      <GlassNav />
+      {/* No GlassNav: the gallery's own top bar carries the site links,
+          so the wall starts at the top of the window (brain 658). */}
       <GalleryBrowser
+        variant="pins"
         initialData={data}
         initialPage={view.page}
         initialCategory={view.category}

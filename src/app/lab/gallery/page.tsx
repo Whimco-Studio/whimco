@@ -1,42 +1,15 @@
-import type { Metadata } from 'next';
-import { display, mono } from '../../fonts';
-import GalleryBrowser from '../../spotlight/GalleryBrowser';
-import { RawParams, getShowcase, readView } from '../../spotlight/galleryView';
+import { redirect } from 'next/navigation';
+import { RawParams } from '../../spotlight/galleryView';
 
-/** A demo of the gallery shaped like Pinterest: search pinned at the top,
-    categories as one row of words, an image-only wall up to seven
-    columns wide. Same data, search, hearts and lightbox as
-    /spotlight/gallery. Under /lab, so robots.txt already keeps crawlers
-    out, and noindexed here as well; nothing on the site links to it. */
-export const metadata: Metadata = {
-  title: 'Gallery layout demo',
-  robots: { index: false, follow: false },
-  // Same reason as the live gallery: video.twimg.com refuses requests
-  // carrying a foreign Referer.
-  referrer: 'no-referrer',
-};
+export const dynamic = 'force-dynamic';
 
-export const revalidate = 300;
-
-export default async function GalleryDemoPage(
-  { searchParams }: { searchParams: RawParams },
-) {
-  const view = readView(searchParams);
-  const data = await getShowcase(view);
-  return (
-    <div
-      className={`${display.variable} ${mono.variable}`}
-      style={{ background: '#0a0a0f', minHeight: '100vh' }}
-    >
-      <GalleryBrowser
-        variant="pins"
-        basePath="/lab/gallery"
-        initialData={data}
-        initialPage={view.page}
-        initialCategory={view.category}
-        initialSort={view.sort}
-        initialQuery={view.q}
-      />
-    </div>
-  );
+/** The Pinterest-shaped demo became the live gallery on 2026-11-17, so
+    any link to the demo goes there, filters and search kept. */
+export default function GalleryDemoPage({ searchParams }: { searchParams: RawParams }) {
+  const qs = new URLSearchParams();
+  for (const [k, v] of Object.entries(searchParams ?? {})) {
+    if (typeof v === 'string') qs.set(k, v);
+  }
+  const tail = qs.toString();
+  redirect(`/spotlight/gallery${tail ? `?${tail}` : ''}`);
 }
