@@ -6,7 +6,8 @@ import ShareButton from './ShareButton';
 import VerifiedSeal from './VerifiedSeal';
 import AudioTile from './AudioTile';
 import {
-  CATEGORY_LABELS, ShowcaseItem, ShowcaseMedia, cleanCaption, xLink, mediaKind, mediaPath
+  CATEGORY_LABELS, ShowcaseItem, ShowcaseMedia, cleanCaption, xLink, mediaKind, mediaPath,
+  SHOW_HEART_COUNTS,
 } from './constants';
 
 function Media({ item }: { item: ShowcaseMedia }) {
@@ -74,7 +75,7 @@ export default function PostPermalink({ item }: { item: ShowcaseItem }) {
           {caption && <p className="permalink-caption">{caption}</p>}
 
           <div className="foot permalink-foot">
-            {item.hearts > 0 && <span className="hearts">&#9829; {item.hearts}</span>}
+            {item.hearts > 0 && SHOW_HEART_COUNTS && <span className="hearts">&#9829; {item.hearts}</span>}
             <span className="tag">#{item.tag}</span>
             {x && (
               <a className="xlink" href={x} target="_blank" rel="noopener noreferrer">

@@ -3,7 +3,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import VerifiedSeal from './VerifiedSeal';
 import {
-  CATEGORY_LABELS, CLAIM_URL, PortfolioLayout, ShowcaseItem, ShowcaseProfile, mediaKind
+  CATEGORY_LABELS, CLAIM_URL, PortfolioLayout, ShowcaseItem, ShowcaseProfile, mediaKind,
+  SHOW_HEART_COUNTS,
 } from './constants';
 
 /** The creator's Discord handle, click to copy.
@@ -139,7 +140,7 @@ function Counts({ author }: { author: HeaderProps['author'] }) {
     <p className="pf-sub">
       <b>{author.creations.toLocaleString('en-US')}</b> creation
       {author.creations === 1 ? '' : 's'} broadcast
-      {author.hearts > 0 && (
+      {author.hearts > 0 && SHOW_HEART_COUNTS && (
         <>
           {' · '}
           <b>{author.hearts.toLocaleString('en-US')}</b> heart
