@@ -258,6 +258,48 @@ function GalleryCard({
   );
 }
 
+/** The tile for the Pinterest-shaped layout: the work and nothing else
+    until the pointer arrives. No panel, no border, no caption, so the
+    grid reads as one wall of images. The creator's name stays under every
+    tile, because a wall that loses who made what has stopped being
+    Spotlight. Retagging and removal live in the lightbox in this layout;
+    on a tile this small they are clutter at best and a misclick at worst. */
+function PinCard({
+  item, onOpen, likes, deep,
+}: {
+  item: ShowcaseItem; onOpen: () => void; likes?: Likes; deep: boolean;
+}) {
+  const caption = cleanCaption(item.content);
+  return (
+    <article className={`pin ${likes?.isLiked(item.id) ? 'pin-liked' : ''}`}>
+      <a
+        href={postPath(item.id)}
+        className="pin-hit"
+        onClick={(e) => {
+          if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+          e.preventDefault();
+          onOpen();
+        }}
+        aria-label={`Open creation by ${item.author_name}`}
+      >
+        {item.media.length > 0
+          ? <CardMedia item={item} deep={deep} />
+          : <p className="pin-text">{caption}</p>}
+        <span className="pin-shade" aria-hidden />
+      </a>
+      <HeartButton item={item} likes={likes} />
+      <a
+        className="pin-author"
+        href={`/spotlight/@${encodeURIComponent(item.author_name)}`}
+        title={`View ${item.author_name}'s portfolio`}
+      >
+        {item.author_name}
+        {item.author_claimed && <VerifiedSeal className="card-seal" />}
+      </a>
+    </article>
+  );
+}
+
 function Lightbox({
   item, onClose, likes, onRemoved,
 }: {
@@ -324,7 +366,7 @@ function Lightbox({
     parent owns items/pagination state. */
 export default function GalleryGrid({
   items, emptyText, showAuthor = true, canLoadMore = false, loading = false,
-  onLoadMore, likes, onRemoved, deep = false, arrangement = 'masonry',
+  onLoadMore, likes, onRemoved, deep = false, arrangement = 'masonry', variant = 'cards',
   maxCols = 4,
 }: {
   items: ShowcaseItem[];
@@ -355,6 +397,9 @@ export default function GalleryGrid({
       on any monitor, and four columns in it made thumbnails so small the
       date elided to "A...". */
   maxCols?: number;
+  /** 'cards' is the live look. 'pins' is the image-only wall on
+      /lab/gallery: more, narrower columns and a bare tile. */
+  variant?: 'cards' | 'pins';
 }) {
   const [selected, setSelected] = useState<ShowcaseItem | null>(null);
   const [cols, setCols] = useState(4);
@@ -389,12 +434,17 @@ export default function GalleryGrid({
   useEffect(() => {
     const compute = () => {
       const w = window.innerWidth;
-      setCols(Math.min(maxCols, w < 640 ? 1 : w < 900 ? 2 : w < 1200 ? 3 : 4));
+      // Pins are narrow by design: two across even on a phone, up to
+      // seven on a wide monitor, about 236px each like the reference.
+      const n = variant === 'pins'
+        ? (w < 760 ? 2 : w < 1020 ? 3 : w < 1280 ? 4 : w < 1540 ? 5 : w < 1800 ? 6 : 7)
+        : (w < 640 ? 1 : w < 900 ? 2 : w < 1200 ? 3 : 4);
+      setCols(variant === 'pins' ? n : Math.min(maxCols, n));
     };
     compute();
     window.addEventListener('resize', compute);
     return () => window.removeEventListener('resize', compute);
-  }, [maxCols]);
+  }, [maxCols, variant]);
 
   // The beam: warm light follows the cursor across the gallery.
   const onGalleryMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
@@ -411,7 +461,7 @@ export default function GalleryGrid({
         <div className="empty">{emptyText}</div>
       ) : (
         <div className="masonry-wrap" ref={galleryRef} onMouseMove={onGalleryMove}>
-          <div className="beam-overlay" aria-hidden />
+          {variant !== 'pins' && <div className="beam-overlay" aria-hidden />}
           {arrangement === 'squares' ? (
             /* One flat container, so the cards keep document order. The
                masonry below deals them round-robin into real columns,
@@ -432,12 +482,20 @@ export default function GalleryGrid({
               ))}
             </div>
           ) : (
-            <div className="masonry">
+            <div className={`masonry ${variant === 'pins' ? 'masonry-pins' : ''}`}>
               {Array.from({ length: cols }, (_, c) => (
                 <div className="masonry-col" key={c}>
                   {items
                     .filter((_, i) => i % cols === c)
-                    .map((item) => (
+                    .map((item) => (variant === 'pins' ? (
+                      <PinCard
+                        key={item.id}
+                        item={item}
+                        likes={likes}
+                        deep={deep}
+                        onOpen={() => openItem(item)}
+                      />
+                    ) : (
                       <GalleryCard
                         key={item.id}
                         item={item}
@@ -447,7 +505,7 @@ export default function GalleryGrid({
                         deep={deep}
                         onOpen={() => openItem(item)}
                       />
-                    ))}
+                    )))}
                 </div>
               ))}
             </div>
