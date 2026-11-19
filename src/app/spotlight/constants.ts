@@ -38,6 +38,10 @@ export type ShowcaseMedia = {
   /** A small copy for grid tiles (about 480px wide): our stored WebP, or
       X's own "small" size. The lightbox and permalink keep `url`. */
   thumb?: string;
+  /** A light copy of a heavy video (720p, about 2.5 Mbps) made for link
+      previews. The video.mp4 hop sends Discord here, so an embed starts
+      at once instead of buffering an 18 MB original. */
+  embed?: string;
 };
 
 /** Whether public pages print heart totals. Off since 2026-11-17: in a

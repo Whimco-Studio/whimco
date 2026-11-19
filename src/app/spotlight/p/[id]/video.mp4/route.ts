@@ -32,7 +32,9 @@ export async function GET(
   return new Response(null, {
     status: 302,
     headers: {
-      Location: video.url,
+      // The light preview copy when there is one: Discord streams this
+      // through its proxy, and the original can be 8 Mbps or more.
+      Location: video.embed ?? video.url,
       // video.twimg.com 403s a request carrying a foreign Referer. A
       // redirect does not add one, but the header costs nothing and
       // removes the question.
