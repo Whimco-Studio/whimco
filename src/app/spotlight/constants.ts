@@ -605,3 +605,9 @@ export async function fetchMoreLikeThis(id: number, revalidate = 300): Promise<S
     return [];
   }
 }
+
+/** Saved creators, the private rolodex (Spotlight brain 691). The site
+    names creators by portfolio handle only; ids stay server side. */
+export const SAVED_URL = `${SPOTLIGHT_ORIGIN}/api/saved`;
+export const SAVED_MERGE_URL = `${SPOTLIGHT_ORIGIN}/api/saved/merge`;
+export const SAVED_LOOKUP_URL = `${SPOTLIGHT_ORIGIN}/api/saved/lookup`;

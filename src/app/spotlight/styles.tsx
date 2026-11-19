@@ -823,6 +823,23 @@ export default function ShowcaseStyles() {
       .showcase .pf-ask-btn:hover { background: rgba(255, 217, 138, 0.26); transform: translateY(-1px); }
       .showcase .pf-ask-btn:disabled { opacity: 0.5; cursor: default; transform: none; }
       .showcase .pf-ask-state { line-height: 1.6; text-align: center; }
+      /* Save creator (SaveCreatorButton): quieter than Ask, same pill. */
+      .showcase .pf-save {
+        display: flex; flex-direction: column; align-items: center; gap: 0.4rem;
+        font-family: var(--font-mono), monospace; font-size: 0.74rem;
+        letter-spacing: 0.1em; color: var(--stext-dim);
+      }
+      .showcase .pf-save-btn {
+        padding: 0.45rem 1rem; border-radius: 999px;
+        border: 1px solid var(--edge); background: transparent;
+        color: var(--stext-dim); font: inherit; letter-spacing: inherit;
+        text-transform: uppercase; cursor: pointer;
+        transition: color 0.16s ease, border-color 0.16s ease;
+      }
+      .showcase .pf-save-btn:hover { color: var(--beam); border-color: var(--beam); }
+      .showcase .pf-save-on { color: var(--beam); border-color: var(--beam); }
+      .showcase .pf-save-note { text-align: center; line-height: 1.6; }
+      .showcase .pf-save-note a { color: var(--beam); }
       .showcase .pf-ask-state a { color: var(--beam); }
       .showcase .pf-ask-form {
         width: min(100%, 26rem);
