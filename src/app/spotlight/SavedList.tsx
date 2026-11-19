@@ -67,7 +67,15 @@ export default function SavedList() {
           <li key={c.handle}>
             <a className="sv-row" href={`/spotlight/@${encodeURIComponent(c.handle)}`}>
               {c.avatar
-                ? <img className="sv-av" src={c.avatar} alt="" />
+                ? (
+                  <img
+                    className="sv-av" src={c.avatar} alt=""
+                    // A stored avatar hash goes stale when the creator
+                    // changes their picture; fall back to the plain circle
+                    // rather than a broken-image icon.
+                    onError={(e) => { e.currentTarget.removeAttribute('src'); }}
+                  />
+                )
                 : <span className="sv-av" aria-hidden />}
               <span className="sv-who">
                 <span className="sv-name">{c.handle}</span>
