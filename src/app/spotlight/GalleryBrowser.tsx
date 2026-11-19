@@ -335,6 +335,7 @@ export default function GalleryBrowser({
             ))}
             <span className="pn-gap" aria-hidden />
             <a className="pn-ref" href="/spotlight/references">References</a>
+            <a className="pn-ref" href="/spotlight/saved">Saved</a>
             {initialData && (
               <span className="pn-count">
                 <b>{total.toLocaleString('en-US')}</b> creations

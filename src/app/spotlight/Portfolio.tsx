@@ -9,6 +9,7 @@ import RemovedDrawer from './RemovedDrawer';
 import ShowcaseStyles from './styles';
 import useLikes from './useLikes';
 import AskIntroduction from './AskIntroduction';
+import SaveCreatorButton from './SaveCreatorButton';
 import { recordArrival } from './arrival';
 import useInviteUrl from './useInviteUrl';
 import {
@@ -249,7 +250,10 @@ export default function Portfolio({
           </button>
         ) : null}
         askControl={handle && !isOwner ? (
-          <AskIntroduction creator={name} likes={likes} />
+          <>
+            <AskIntroduction creator={name} likes={likes} />
+            <SaveCreatorButton handle={name} />
+          </>
         ) : null}
       />
 
