@@ -2,7 +2,7 @@
 
     The click table on the Spotlight side only sees presses on links we
     own, so it only ever counts the readers a broadcast sent. The beacon
-    counts everyone: one POST per page load with the creator, the source
+    counts everyone: one POST per visit with the creator, the source
     server and campaign if the Spotlight hop tagged the URL, and the
     referrer. The
     server keeps the referrer's host and nothing else, and stores no IP,
@@ -11,7 +11,15 @@
     The arrival is also remembered for the tab, because a signed-out
     "Ask for an introduction" goes out through Discord sign-in and comes
     back with discord.com as the referrer. The ask reports the referrer
-    of the visit that started it, not the bounce. */
+    of the visit that started it, not the bounce.
+
+    The POST waits for the first sign of a person: a scroll, a tap, a
+    pointer move or a key. A browser that declares itself automated
+    (navigator.webdriver) never sends it. Since 2026-11-24, because a
+    proxy botnet running current Chrome loaded one portfolio per visit
+    from 107 countries and every load counted as a view (Spotlight's
+    "none" views went from about 80 to about 400 a day). A reader who
+    lands and leaves without touching the page is no longer counted. */
 import { VIEW_URL } from './constants';
 
 export type Arrival = { referrer: string; source: string; campaign: string; at: number };
@@ -63,14 +71,32 @@ export function recordArrival(creator: string): Arrival {
 
   const arrival: Arrival = { referrer, source, campaign, at: Date.now() };
   try { sessionStorage.setItem(key(creator), JSON.stringify(arrival)); } catch { /* private mode */ }
-  try {
-    fetch(VIEW_URL, {
-      method: 'POST',
-      credentials: 'include',
-      keepalive: true,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ creator, source, campaign, referrer }),
-    }).catch(() => {});
-  } catch { /* counting a view must never cost the page */ }
+  whenPersonActs(() => {
+    try {
+      fetch(VIEW_URL, {
+        method: 'POST',
+        credentials: 'include',
+        keepalive: true,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ creator, source, campaign, referrer }),
+      }).catch(() => {});
+    } catch { /* counting a view must never cost the page */ }
+  });
   return arrival;
+}
+
+const HUMAN_EVENTS = ['pointermove', 'pointerdown', 'scroll', 'keydown', 'touchstart', 'wheel'] as const;
+
+/** Run `send` once, on the first scroll, tap, pointer move or key, and
+    never in a browser that says it is automated. */
+function whenPersonActs(send: () => void): void {
+  if (typeof window === 'undefined' || navigator.webdriver) return;
+  let done = false;
+  const fire = () => {
+    if (done) return;
+    done = true;
+    HUMAN_EVENTS.forEach((e) => window.removeEventListener(e, fire, true));
+    send();
+  };
+  HUMAN_EVENTS.forEach((e) => window.addEventListener(e, fire, { capture: true, passive: true }));
 }
