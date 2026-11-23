@@ -8,7 +8,6 @@ import PortfolioLayoutStyles from './portfolioLayoutStyles';
 import RemovedDrawer from './RemovedDrawer';
 import ShowcaseStyles from './styles';
 import useLikes from './useLikes';
-import AskIntroduction from './AskIntroduction';
 import SaveCreatorButton from './SaveCreatorButton';
 import { recordArrival } from './arrival';
 import useInviteUrl from './useInviteUrl';
@@ -249,11 +248,11 @@ export default function Portfolio({
             ✎
           </button>
         ) : null}
+        // Say hello (AskIntroduction) is off for plan 715, 23 Nov-6 Dec
+        // 2026: 107 Creator presses in a week led to 0 asks. The component
+        // stays; put it back here before SaveCreatorButton to restore it.
         askControl={handle && !isOwner ? (
-          <>
-            <AskIntroduction creator={name} likes={likes} />
-            <SaveCreatorButton handle={name} />
-          </>
+          <SaveCreatorButton handle={name} />
         ) : null}
       />
 
