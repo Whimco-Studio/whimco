@@ -1,6 +1,9 @@
 'use client';
 
-/** Styles for /spotlight/feed, the live timeline. Kept beside
+/** Styles for a single creation's page (/spotlight/p/<id>). They were
+    written for /spotlight/feed, the live timeline retired on 2026-11-24
+    (the gallery opens newest first and covers it), and the permalink kept
+    them. Kept beside
     browseStyles and creatorsStyles rather than folded into styles.tsx:
     this page renders a single column of posts, not a masonry of cards,
     and the two share tokens but no layout.

@@ -129,8 +129,6 @@ export default function PostPermalink({ item }: { item: ShowcaseItem }) {
         <StaffRemove id={item.id} />
 
         <p className="note">
-          <a href={`/spotlight/feed?post=${item.id}`}>See it in the feed</a>
-          {' · '}
           <a href={`/spotlight/@${encodeURIComponent(item.author_name)}`}>
             More from {item.author_name}
           </a>
